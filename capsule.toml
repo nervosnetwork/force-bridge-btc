@@ -1,0 +1,5 @@
+deployment = "deployment.toml"
+
+[[contracts]]
+name = "toCKB"
+template_type = "Rust"
