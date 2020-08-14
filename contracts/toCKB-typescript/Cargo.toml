@@ -1,0 +1,26 @@
+[package]
+name = "toCKB-typescript"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ckb-std = "0.6.0"
+types = { path = "types", package = "toCKB-types" }
+btc = { path = "btc", package = "btc-to-ckb" }
+eth = { path = "eth", package = "eth-to-ckb" }
+
+[workspace]
+members = [
+    "types",
+    "btc",
+    "eth",
+]
+
+[profile.release]
+overflow-checks = true
+opt-level = 's'
+lto = true
+codegen-units = 1
+panic = 'abort'

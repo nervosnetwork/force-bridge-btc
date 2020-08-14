@@ -3,6 +3,11 @@
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
+#![allow(non_snake_case)]
+
+mod switch;
+mod internal_verify;
+mod external_verify;
 
 // Import from `core` instead of from `std` since we are in no-std mode
 use core::result::Result;
@@ -22,6 +27,8 @@ use ckb_std::{
     ckb_types::{bytes::Bytes, prelude::*},
 };
 
+use switch::verify;
+
 entry!(entry);
 default_alloc!();
 
@@ -36,7 +43,7 @@ fn entry() -> i8 {
 
 /// Error
 #[repr(i8)]
-enum Error {
+pub enum Error {
     IndexOutOfBound = 1,
     ItemMissing,
     LengthNotEnough,
@@ -58,16 +65,5 @@ impl From<SysError> for Error {
 }
 
 fn main() -> Result<(), Error> {
-    // remove below examples and write your code here
-
-    let script = load_script()?;
-    let args: Bytes = script.args().unpack();
-    debug!("script args is {:?}", args);
-
-    let tx_hash = load_tx_hash()?;
-    debug!("tx hash is {:?}", tx_hash);
-
-    let _buf: Vec<_> = vec![0u8; 32];
-
-    Ok(())
+    verify()
 }

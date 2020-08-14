@@ -1,5 +1,5 @@
 deployment = "deployment.toml"
 
 [[contracts]]
-name = "toCKB"
+name = "toCKB-typescript"
 template_type = "Rust"

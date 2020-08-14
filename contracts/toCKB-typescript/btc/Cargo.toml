@@ -1,16 +1,10 @@
 [package]
-name = "toCKB"
+name = "btc-to-ckb"
 version = "0.1.0"
+authors = ["vincent <vyclzn@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ckb-std = "0.6.0"
-
-[profile.release]
-overflow-checks = true
-opt-level = 's'
-lto = true
-codegen-units = 1
-panic = 'abort'
+types = { path = "../types", package = "toCKB-types" }
