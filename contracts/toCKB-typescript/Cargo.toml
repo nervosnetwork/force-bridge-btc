@@ -7,16 +7,6 @@ edition = "2018"
 
 [dependencies]
 ckb-std = "0.6.0"
-types = { path = "types", package = "toCKB-types" }
-btc = { path = "btc", package = "btc-to-ckb" }
-eth = { path = "eth", package = "eth-to-ckb" }
-
-[workspace]
-members = [
-    "types",
-    "btc",
-    "eth",
-]
 
 [profile.release]
 overflow-checks = true

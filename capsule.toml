@@ -3,3 +3,7 @@ deployment = "deployment.toml"
 [[contracts]]
 name = "toCKB-typescript"
 template_type = "Rust"
+
+[[contracts]]
+name = "toCKB-lockscript"
+template_type = "Rust"
