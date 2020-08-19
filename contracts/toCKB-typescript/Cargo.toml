@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 ckb-std = "0.6.0"
 molecule = { version = "=0.6.0", default-features = false }
+int-enum = { version = "0.4", default-features = false }
 
 [profile.release]
 overflow-checks = true
