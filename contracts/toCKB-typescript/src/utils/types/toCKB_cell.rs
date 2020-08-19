@@ -2,6 +2,7 @@ use super::error::Error;
 use super::generated::toCKB_cell_data::ToCKBCellDataReader;
 use ckb_std::ckb_types::bytes::Bytes;
 use core::result::Result;
+use int_enum::IntEnum;
 use molecule::prelude::*;
 
 pub struct ToCKBCellDataView {
@@ -20,8 +21,8 @@ impl ToCKBCellDataView {
     pub fn from_slice(slice: &[u8]) -> Result<ToCKBCellDataView, Error> {
         ToCKBCellDataReader::verify(slice, false).map_err(|_| Error::Encoding)?;
         let data_reader = ToCKBCellDataReader::new_unchecked(slice);
-        let status = ToCKBStatus::from_byte(data_reader.status().to_entity())?;
-        let kind = XChainKind::from_byte(data_reader.kind().to_entity())?;
+        let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
+        let kind = XChainKind::from_int(data_reader.kind().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];
         let user_lockscript_hash = data_reader.user_lockscript_hash().to_entity().as_bytes();
         let x_lock_address = data_reader.x_lock_address().to_entity().as_bytes();
@@ -50,12 +51,7 @@ impl ToCKBCellDataView {
 
     pub fn get_btc_lot_size(&self) -> Result<BtcLotSize, Error> {
         if let XChainKind::Btc = self.kind {
-            match self.lot_size {
-                1 => Ok(BtcLotSize::Quarter),
-                2 => Ok(BtcLotSize::Half),
-                3 => Ok(BtcLotSize::Single),
-                _ => Err(Error::Encoding),
-            }
+            BtcLotSize::from_int(self.lot_size).map_err(|_e| Error::Encoding)
         } else {
             Err(Error::XChainMismatch)
         }
@@ -63,15 +59,7 @@ impl ToCKBCellDataView {
 
     pub fn get_eth_lot_size(&self) -> Result<EthLotSize, Error> {
         if let XChainKind::Eth = self.kind {
-            match self.lot_size {
-                1 => Ok(EthLotSize::Quarter),
-                2 => Ok(EthLotSize::Half),
-                3 => Ok(EthLotSize::Single),
-                4 => Ok(EthLotSize::Two),
-                5 => Ok(EthLotSize::Three),
-                6 => Ok(EthLotSize::Four),
-                _ => Err(Error::Encoding),
-            }
+            EthLotSize::from_int(self.lot_size).map_err(|_e| Error::Encoding)
         } else {
             Err(Error::XChainMismatch)
         }
@@ -79,67 +67,40 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
+#[derive(Clone, Copy, IntEnum)]
 pub enum ToCKBStatus {
     Initial = 1,
-    Bonding,
-    Warranty,
-    Redeeming,
-    LiquidationTimeout,
-    LiquidationUndercollateral,
-    LiquidationFaultyWhenWarranty,
-    LiquidationFaultyWhenRedeeming,
-}
-
-impl ToCKBStatus {
-    pub fn from_byte(b: Byte) -> Result<ToCKBStatus, Error> {
-        let num = b.as_slice()[0];
-        use ToCKBStatus::*;
-        match num {
-            1 => Ok(Initial),
-            2 => Ok(Bonding),
-            3 => Ok(Warranty),
-            4 => Ok(Redeeming),
-            5 => Ok(LiquidationTimeout),
-            6 => Ok(LiquidationUndercollateral),
-            7 => Ok(LiquidationFaultyWhenWarranty),
-            8 => Ok(LiquidationFaultyWhenRedeeming),
-            _ => Err(Error::Encoding),
-        }
-    }
+    Bonding = 2,
+    Warranty = 3,
+    Redeeming = 4,
+    LiquidationTimeout = 5,
+    LiquidationUndercollateral = 6,
+    LiquidationFaultyWhenWarranty = 7,
+    LiquidationFaultyWhenRedeeming = 8,
 }
 
 #[repr(u8)]
-#[derive(PartialEq)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum XChainKind {
     Btc = 1,
-    Eth,
-}
-
-impl XChainKind {
-    pub fn from_byte(b: Byte) -> Result<XChainKind, Error> {
-        let num = b.as_slice()[0];
-        use XChainKind::*;
-        match num {
-            1 => Ok(Btc),
-            2 => Ok(Eth),
-            _ => Err(Error::Encoding),
-        }
-    }
+    Eth = 2,
 }
 
 #[repr(u8)]
+#[derive(Clone, Copy, IntEnum)]
 pub enum BtcLotSize {
     Quarter = 1,
-    Half,
-    Single,
+    Half = 2,
+    Single = 3,
 }
 
 #[repr(u8)]
+#[derive(Clone, Copy, IntEnum)]
 pub enum EthLotSize {
     Quarter = 1,
-    Half,
-    Single,
-    Two,
-    Three,
-    Four,
+    Half = 2,
+    Single = 3,
+    Two = 4,
+    Three = 5,
+    Four = 6,
 }

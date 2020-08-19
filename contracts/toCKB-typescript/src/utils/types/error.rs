@@ -1,4 +1,5 @@
 use ckb_std::error::SysError;
+use int_enum::{IntEnum, IntEnumError};
 
 #[repr(i8)]
 pub enum Error {
@@ -25,5 +26,11 @@ impl From<SysError> for Error {
             Encoding => Self::Encoding,
             Unknown(err_code) => panic!("unexpected sys error {}", err_code),
         }
+    }
+}
+
+impl<T: IntEnum> From<IntEnumError<T>> for Error {
+    fn from(_err: IntEnumError<T>) -> Self {
+        Error::Encoding
     }
 }
