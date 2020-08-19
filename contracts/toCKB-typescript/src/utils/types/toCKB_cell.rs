@@ -17,7 +17,7 @@ pub struct ToCKBCellDataView {
 }
 
 impl ToCKBCellDataView {
-    pub fn from_molecule(slice: &[u8]) -> Result<ToCKBCellDataView, Error> {
+    pub fn from_slice(slice: &[u8]) -> Result<ToCKBCellDataView, Error> {
         ToCKBCellDataReader::verify(slice,false).map_err(|_| Error::Encoding)?;
         let data_reader = ToCKBCellDataReader::new_unchecked(slice);
         let status = ToCKBStatus::from_byte(data_reader.status().to_entity())?;

@@ -61,7 +61,7 @@ fn get_toCKB_data(source: Source) -> Result<Option<ToCKBCellDataView>, Error> {
     let toCKB_data_list = QueryIter::new(load_cell_data, source).collect::<Vec<Vec<u8>>>();
     match toCKB_data_list.len() {
         0 => Ok(None),
-        1 => Ok(Some(ToCKBCellDataView::from_molecule(toCKB_data_list[0].as_slice())?)),
+        1 => Ok(Some(ToCKBCellDataView::from_slice(toCKB_data_list[0].as_slice())?)),
         _ => Err(Error::TxInvalid)
     }
 }
