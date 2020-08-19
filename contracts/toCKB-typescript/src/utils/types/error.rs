@@ -10,7 +10,7 @@ pub enum Error {
     XChainMismatch,
     TxInvalid,
     LotSizeInvalid,
-    PledgeInvalid
+    PledgeInvalid,
 }
 
 impl From<SysError> for Error {

@@ -14,10 +14,7 @@ use core::result::Result;
 
 // Import CKB syscalls and structures
 // https://nervosnetwork.github.io/ckb-std/riscv64imac-unknown-none-elf/doc/ckb_std/index.html
-use ckb_std::{
-    entry,
-    default_alloc,
-};
+use ckb_std::{default_alloc, entry};
 
 use switch::verify;
 use utils::types::Error;
@@ -33,7 +30,6 @@ fn entry() -> i8 {
         Err(err) => err as i8,
     }
 }
-
 
 fn main() -> Result<(), Error> {
     verify()
