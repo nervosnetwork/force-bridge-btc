@@ -1,17 +1,16 @@
-use core::result::Result;
-use ckb_std::{
-    ckb_constants::Source,
-    high_level::load_cell_capacity
-};
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
-    types::{ToCKBCellDataView, Error},
-    config::PLEDGE
+    config::PLEDGE,
+    types::{Error, ToCKBCellDataView},
 };
-
+use ckb_std::{ckb_constants::Source, high_level::load_cell_capacity};
+use core::result::Result;
 
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
-    let toCKB_data = toCKB_data_tuple.1.as_ref().expect("outputs contain toCKB cell");
+    let toCKB_data = toCKB_data_tuple
+        .1
+        .as_ref()
+        .expect("outputs contain toCKB cell");
     verify_capacity()?;
     verify_lot_size(toCKB_data)
 }
