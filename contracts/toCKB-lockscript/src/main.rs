@@ -3,6 +3,7 @@
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
+#![allow(non_snake_case)]
 
 // Import from `core` instead of from `std` since we are in no-std mode
 use core::result::Result;

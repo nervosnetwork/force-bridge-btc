@@ -1,0 +1,14 @@
+array Byte32 [byte; 32];
+vector Bytes <byte>;
+
+table ToCKBCellData {
+    status: byte,
+    kind: byte,
+    lot_size: byte,
+    user_lockscript_hash: Byte32,
+    x_lock_address: Bytes,
+    signer_lockscript_hash: Byte32,
+    x_unlock_address: Bytes,
+    redeemer_lockscript_hash: Byte32,
+    liquidation_trigger_lockscript_hash: Byte32,
+}

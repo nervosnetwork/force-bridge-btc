@@ -62,4 +62,5 @@ name = "toCKB-typescript"
 version = "0.1.0"
 dependencies = [
  "ckb-std",
+ "molecule",
 ]

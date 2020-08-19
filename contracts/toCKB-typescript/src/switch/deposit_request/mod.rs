@@ -1,22 +1,38 @@
 use core::result::Result;
-use crate::Error;
-use crate::switch::ToCKBCellTuple;
+use ckb_std::{
+    ckb_constants::Source,
+    high_level::load_cell_capacity
+};
+use crate::switch::ToCKBCellDataTuple;
+use crate::utils::{
+    types::{ToCKBCellDataView, XChainKind, Error},
+    config::PLEDGE
+};
 
-#[repr(i8)]
-enum BTCLotSize {
-    Quarter = 1,
-    Half,
-    Single
+
+pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
+    let toCKB_data = toCKB_data_tuple.1.as_ref().expect("outputs contain toCKB cell");
+    verify_capacity()?;
+    verify_lot_size(toCKB_data)
 }
 
-#[repr(i8)]
-enum ETHLotSize {
-    Half = 1,
-    Single,
-    Two,
-    Three
+fn verify_capacity() -> Result<(), Error> {
+    let capacity = load_cell_capacity(0, Source::GroupOutput)?;
+    if capacity != PLEDGE {
+        return Err(Error::PledgeInvalid);
+    }
+    Ok(())
 }
 
-pub fn verify(toCKB_cells: &ToCKBCellTuple) -> Result<(), Error> {
+fn verify_lot_size(toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
+    if let XChainKind::Btc = toCKB_data.kind {
+        if toCKB_data.get_btc_lot_size().is_err() {
+            return Err(Error::LotSizeInvalid);
+        }
+    } else {
+        if toCKB_data.get_eth_lot_size().is_err() {
+            return  Err(Error::LotSizeInvalid);
+        }
+    }
     Ok(())
 }

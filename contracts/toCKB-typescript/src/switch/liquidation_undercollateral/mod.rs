@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 
 use core::result::Result;
-use crate::Error;
-use crate::switch::ToCKBCellTuple;
+use crate::utils::types::Error;
+use crate::switch::ToCKBCellDataTuple;
 
-pub fn verify(toCKB_cells: &ToCKBCellTuple) -> Result<(), Error> {
+pub fn verify(_toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     Ok(())
 }
