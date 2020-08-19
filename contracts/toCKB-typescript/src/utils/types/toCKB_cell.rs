@@ -7,7 +7,7 @@ use molecule::prelude::*;
 pub struct ToCKBCellDataView {
     pub status: ToCKBStatus,
     pub kind: XChainKind,
-    lot_size: u8,
+    pub lot_size: u8,
     pub user_lockscript_hash: Bytes,
     pub x_lock_address: Bytes,
     pub signer_lockscript_hash: Bytes,
@@ -109,6 +109,7 @@ impl ToCKBStatus {
 }
 
 #[repr(u8)]
+#[derive(PartialEq)]
 pub enum XChainKind {
     Btc = 1,
     Eth,

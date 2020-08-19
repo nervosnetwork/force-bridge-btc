@@ -11,6 +11,8 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
+    // MintXT Error
+    InvalidDataChange,
 }
 
 impl From<SysError> for Error {

@@ -12,3 +12,8 @@ table ToCKBCellData {
     redeemer_lockscript_hash: Byte32,
     liquidation_trigger_lockscript_hash: Byte32,
 }
+
+table MintXTWitness {
+    spv_proof: Bytes,
+    cell_dep_index_list: Bytes,
+}
