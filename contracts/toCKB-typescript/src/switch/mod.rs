@@ -88,10 +88,13 @@ fn get_generation_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
 }
 
 fn get_transformation_tx_type(
-    _input_data: &ToCKBCellDataView,
-    _output_data: &ToCKBCellDataView,
+    input_data: &ToCKBCellDataView,
+    output_data: &ToCKBCellDataView,
 ) -> Result<TxType, Error> {
-    unimplemented!()
+    match (input_data.status, output_data.status) {
+        (ToCKBStatus::Bonding, ToCKBStatus::Warranty) => Ok(TxType::MintXT),
+        _ => Err(Error::TxInvalid),
+    }
 }
 
 fn get_deletion_tx_type(_data: &ToCKBCellDataView) -> Result<TxType, Error> {
