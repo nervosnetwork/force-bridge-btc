@@ -16,9 +16,9 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     if toCKB_data_tuple.1.is_none() {
         return Err(Error::OutputDataInvalid)
     }
-    let data = toCKB_data_tuple;
-    let input_data = data.0.as_ref().unwrap();
-    let output_data = data.1.as_ref().unwrap();
+
+    let input_data = toCKB_data_tuple.0.as_ref().unwrap();
+    let output_data = toCKB_data_tuple.1.as_ref().unwrap();
 
     // `get_toCKB_data_tuple` has checked cell nums == 1 in both inputs and outputs
     // Todo: check since n4
