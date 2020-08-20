@@ -2916,6 +2916,7 @@ version = "0.1.0"
 dependencies = [
  "ckb-testtool",
  "ckb-tool",
+ "molecule",
 ]
 
 [[package]]
