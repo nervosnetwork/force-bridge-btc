@@ -8,7 +8,7 @@ use molecule::prelude::*;
 pub struct ToCKBCellDataView {
     pub status: ToCKBStatus,
     pub kind: XChainKind,
-    pub lot_size: u8,
+    lot_size: u8,
     pub user_lockscript_hash: Bytes,
     pub x_lock_address: Bytes,
     pub signer_lockscript_hash: Bytes,
@@ -67,16 +67,16 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum, PartialEq)]
+#[derive(Clone, Copy, IntEnum)]
 pub enum ToCKBStatus {
     Initial = 1,
-    Bonding = 2,
+    Bonded = 2,
     Warranty = 3,
     Redeeming = 4,
-    LiquidationTimeout = 5,
-    LiquidationUndercollateral = 6,
-    LiquidationFaultyWhenWarranty = 7,
-    LiquidationFaultyWhenRedeeming = 8,
+    SignerTimeout = 5,
+    Undercollateral = 6,
+    FaultyWhenWarranty = 7,
+    FaultyWhenRedeeming = 8,
 }
 
 #[repr(u8)]
