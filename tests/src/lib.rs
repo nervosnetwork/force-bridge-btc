@@ -1,11 +1,14 @@
+#![allow(non_snake_case)]
+#![allow(dead_code)]
+
+mod toCKB_lockscript;
+mod toCKB_typescript;
+
 use ckb_tool::ckb_types::bytes::Bytes;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
-
-#[cfg(test)]
-mod tests;
 
 const TEST_ENV_VAR: &str = "CAPSULE_TEST_ENV";
 

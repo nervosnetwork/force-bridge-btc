@@ -67,7 +67,7 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum ToCKBStatus {
     Initial = 1,
     Bonding = 2,
