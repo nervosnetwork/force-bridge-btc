@@ -19,7 +19,7 @@ use crate::utils::types::{Error, ToCKBCellDataView, ToCKBStatus};
 use alloc::vec::Vec;
 use ckb_std::{
     ckb_constants::Source,
-    high_level::{load_cell_data, QueryIter},
+    high_level::{load_cell_data, load_input_since, QueryIter},
 };
 
 enum TxType {
@@ -28,11 +28,11 @@ enum TxType {
     WithdrawPledge,
     WithdrawPledgeAndCollateral,
     MintXT,
-    PreTermRedeem,
-    AtTermRedeem,
+    PretermRedeem,
+    AttermRedeem,
     WithdrawCollateral,
     LiquidationSignerTimeout,
-    LiquidationUnderCollateral,
+    LiquidationUndercollateral,
     LiquidationFaultyWhenWarranty,
     LiquidationFaultyWhenRedeeming,
     AuctionSignerTimeout,
@@ -88,14 +88,43 @@ fn get_generation_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
 }
 
 fn get_transformation_tx_type(
-    _input_data: &ToCKBCellDataView,
-    _output_data: &ToCKBCellDataView,
+    input_data: &ToCKBCellDataView,
+    output_data: &ToCKBCellDataView,
 ) -> Result<TxType, Error> {
-    unimplemented!()
+    use ToCKBStatus::*;
+    use TxType::*;
+    let status_transformation = (input_data.status, output_data.status);
+    match status_transformation {
+        (Initial, Bonded) => Ok(Bonding),
+        (Bonded, Warranty) => Ok(MintXT),
+        (Warranty, Redeeming) => {
+            if let 0 = load_input_since(0, Source::GroupInput)? {
+                Ok(PretermRedeem)
+            } else {
+                Ok(AttermRedeem)
+            }
+        }
+        (Redeeming, SignerTimeout) => Ok(LiquidationSignerTimeout),
+        (Warranty, Undercollateral) => Ok(LiquidationUndercollateral),
+        (Warranty, FaultyWhenWarranty) => Ok(LiquidationFaultyWhenWarranty),
+        (Redeeming, FaultyWhenRedeeming) => Ok(LiquidationFaultyWhenRedeeming),
+        _ => Err(Error::TxInvalid),
+    }
 }
 
-fn get_deletion_tx_type(_data: &ToCKBCellDataView) -> Result<TxType, Error> {
-    unimplemented!()
+fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
+    use ToCKBStatus::*;
+    use TxType::*;
+    match data.status {
+        Initial => Ok(WithdrawPledge),
+        Bonded => Ok(WithdrawPledgeAndCollateral),
+        Redeeming => Ok(WithdrawCollateral),
+        SignerTimeout => Ok(AuctionSignerTimeout),
+        Undercollateral => Ok(AuctionUnderCollateral),
+        FaultyWhenWarranty => Ok(AuctionFaultyWhenWarranty),
+        FaultyWhenRedeeming => Ok(AuctionFaultyWhenRedeeming),
+        _ => Err(Error::TxInvalid),
+    }
 }
 
 fn switch(tx_type: &TxType, toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
@@ -116,10 +145,10 @@ fn switch(tx_type: &TxType, toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(),
         MintXT => {
             mint_xt::verify(toCKB_data_tuple)?;
         }
-        PreTermRedeem => {
+        PretermRedeem => {
             preterm_redeem::verify(toCKB_data_tuple)?;
         }
-        AtTermRedeem => {
+        AttermRedeem => {
             atterm_redeem::verify(toCKB_data_tuple)?;
         }
         WithdrawCollateral => {
@@ -128,7 +157,7 @@ fn switch(tx_type: &TxType, toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(),
         LiquidationSignerTimeout => {
             liquidation_signertimeout::verify(toCKB_data_tuple)?;
         }
-        LiquidationUnderCollateral => {
+        LiquidationUndercollateral => {
             liquidation_undercollateral::verify(toCKB_data_tuple)?;
         }
         LiquidationFaultyWhenWarranty => {

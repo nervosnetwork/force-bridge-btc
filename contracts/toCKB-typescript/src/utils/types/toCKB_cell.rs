@@ -70,13 +70,13 @@ impl ToCKBCellDataView {
 #[derive(Clone, Copy, IntEnum)]
 pub enum ToCKBStatus {
     Initial = 1,
-    Bonding = 2,
+    Bonded = 2,
     Warranty = 3,
     Redeeming = 4,
-    LiquidationTimeout = 5,
-    LiquidationUndercollateral = 6,
-    LiquidationFaultyWhenWarranty = 7,
-    LiquidationFaultyWhenRedeeming = 8,
+    SignerTimeout = 5,
+    Undercollateral = 6,
+    FaultyWhenWarranty = 7,
+    FaultyWhenRedeeming = 8,
 }
 
 #[repr(u8)]
