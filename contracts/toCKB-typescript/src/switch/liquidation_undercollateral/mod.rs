@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::types::Error;
 use core::result::Result;
