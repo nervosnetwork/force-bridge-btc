@@ -6,3 +6,5 @@ schema:
 
 fmt:
 	cd contracts/toCKB-typescript && cargo fmt
+
+.PHONY: schema fmt watch
