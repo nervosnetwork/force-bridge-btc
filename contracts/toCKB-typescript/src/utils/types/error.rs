@@ -12,6 +12,12 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
+    KindMismatch = 100,
+    BTCLotSizeMismatch,
+    ETHLotSizeMismatch,
+    UserLockScriptHashMismatch,
+    StatusInvalid,
+    CollateralMismatch,
 }
 
 impl From<SysError> for Error {

@@ -67,7 +67,7 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum ToCKBStatus {
     Initial = 1,
     Bonded = 2,
@@ -80,14 +80,14 @@ pub enum ToCKBStatus {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum XChainKind {
     Btc = 1,
     Eth = 2,
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum BtcLotSize {
     Quarter = 1,
     Half = 2,
@@ -95,7 +95,7 @@ pub enum BtcLotSize {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum EthLotSize {
     Quarter = 1,
     Half = 2,
