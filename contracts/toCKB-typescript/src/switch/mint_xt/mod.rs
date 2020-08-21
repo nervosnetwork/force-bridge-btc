@@ -1,7 +1,8 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::{SIGNER_FEE_RATE, TX_PROOF_DIFFICULTY_FACTOR};
 use crate::utils::types::{
-    toCKB_cell_data::{BTCDifficultyReader, BTCSPVProofReader, MintXTWitnessReader},
+    btc_difficulty::BTCDifficultyReader,
+    mint_xt_witness::{BTCSPVProofReader, MintXTWitnessReader},
     BtcLotSize, Error, ToCKBCellDataView, XChainKind,
 };
 use bitcoin_spv::{

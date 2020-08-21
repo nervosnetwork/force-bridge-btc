@@ -1,7 +1,4 @@
-array Byte32 [byte; 32];
-vector Bytes <byte>;
-array Byte4 [byte; 4];
-array Uint32 [byte; 4];
+import basic;
 
 table ToCKBCellData {
     status: byte,
@@ -15,24 +12,3 @@ table ToCKBCellData {
     liquidation_trigger_lockscript_hash: Byte32,
 }
 
-table MintXTWitness {
-    spv_proof: Bytes,
-    cell_dep_index_list: Bytes,
-}
-
-table BTCSPVProof {
-    version: Byte4,
-    vin: Bytes,
-    vout: Bytes,
-    locktime: Byte4,
-    tx_id: Byte32,
-    index: Uint32,
-    headers: Bytes,
-    intermediate_nodes: Bytes,
-    funding_output_index: byte,
-}
-
-table BTCDifficulty {
-    current: Bytes,
-    previous: Bytes,
-}
