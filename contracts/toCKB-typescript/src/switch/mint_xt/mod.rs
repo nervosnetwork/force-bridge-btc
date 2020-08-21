@@ -5,6 +5,7 @@ use crate::utils::types::{
     mint_xt_witness::{BTCSPVProofReader, MintXTWitnessReader},
     BtcLotSize, Error, ToCKBCellDataView, XChainKind,
 };
+use bech32::{self, ToBase32};
 use bitcoin_spv::{
     btcspv,
     types::{HeaderArray, MerkleArray, PayloadType, Vin, Vout},
@@ -81,9 +82,10 @@ fn verify_btc_witness(
     let funding_output_index: u8 = proof_reader.funding_output_index().into();
     let vout = Vout::new(proof_reader.vout().raw_data())?;
     let tx_out = vout.index(funding_output_index.into())?;
-    if let PayloadType::WPKH(wpkh) = tx_out.script_pubkey().payload()? {
-        // TODO: should calc and compare base58 encoding addr here
-        if wpkh != data.x_lock_address.as_ref() {
+    let script_pubkey = tx_out.script_pubkey();
+    if let PayloadType::WPKH(_) = script_pubkey.payload()? {
+        let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
+        if addr.as_bytes() != data.x_lock_address.as_ref() {
             return Err(Error::WrongFundingAddr);
         }
     } else {

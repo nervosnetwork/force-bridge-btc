@@ -11,6 +11,7 @@ molecule = { version = "=0.6.0", default-features = false }
 int-enum = { version = "0.4", default-features = false }
 bitcoin-spv = { git = "https://github.com/huwenchao/bitcoin-spv.git", branch = "rust-no-std", default-features = false }
 num = { version = "0.3", default-features = false, features = ["alloc"] }
+bech32 = { git = "https://github.com/reuvenpo/rust-bech32.git", branch = "support-no_std", default-features = false }
 
 [profile.release]
 overflow-checks = true
