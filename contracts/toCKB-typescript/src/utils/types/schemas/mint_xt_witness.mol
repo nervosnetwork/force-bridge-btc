@@ -1,0 +1,18 @@
+import basic;
+
+table MintXTWitness {
+    spv_proof: Bytes,
+    cell_dep_index_list: Bytes,
+}
+
+table BTCSPVProof {
+    version: Byte4,
+    vin: Bytes,
+    vout: Bytes,
+    locktime: Byte4,
+    tx_id: Byte32,
+    index: Uint32,
+    headers: Bytes,
+    intermediate_nodes: Bytes,
+    funding_output_index: byte,
+}
