@@ -92,35 +92,37 @@ fn get_transformation_tx_type(
     output_data: &ToCKBCellDataView,
 ) -> Result<TxType, Error> {
     use ToCKBStatus::*;
+    use TxType::*;
     let status_transformation = (input_data.status, output_data.status);
     match status_transformation {
-        (Initial, Bonded) => Ok(TxType::Bonding),
-        (Bonded, Warranty) => Ok(TxType::MintXT),
+        (Initial, Bonded) => Ok(Bonding),
+        (Bonded, Warranty) => Ok(MintXT),
         (Warranty, Redeeming) => {
             if let 0 = load_input_since(0, Source::GroupInput)? {
-                Ok(TxType::PretermRedeem)
+                Ok(PretermRedeem)
             } else {
-                Ok(TxType::AttermRedeem)
+                Ok(AttermRedeem)
             }
         }
-        (Redeeming, SignerTimeout) => Ok(TxType::LiquidationSignerTimeout),
-        (Warranty, Undercollateral) => Ok(TxType::LiquidationUndercollateral),
-        (Warranty, FaultyWhenWarranty) => Ok(TxType::LiquidationFaultyWhenWarranty),
-        (Redeeming, FaultyWhenRedeeming) => Ok(TxType::LiquidationFaultyWhenRedeeming),
+        (Redeeming, SignerTimeout) => Ok(LiquidationSignerTimeout),
+        (Warranty, Undercollateral) => Ok(LiquidationUndercollateral),
+        (Warranty, FaultyWhenWarranty) => Ok(LiquidationFaultyWhenWarranty),
+        (Redeeming, FaultyWhenRedeeming) => Ok(LiquidationFaultyWhenRedeeming),
         _ => Err(Error::TxInvalid),
     }
 }
 
 fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
     use ToCKBStatus::*;
+    use TxType::*;
     match data.status {
-        Initial => Ok(TxType::WithdrawPledge),
-        Bonded => Ok(TxType::WithdrawPledgeAndCollateral),
-        Redeeming => Ok(TxType::WithdrawCollateral),
-        SignerTimeout => Ok(TxType::AuctionSignerTimeout),
-        Undercollateral => Ok(TxType::AuctionUnderCollateral),
-        FaultyWhenWarranty => Ok(TxType::AuctionFaultyWhenWarranty),
-        FaultyWhenRedeeming => Ok(TxType::AuctionFaultyWhenRedeeming),
+        Initial => Ok(WithdrawPledge),
+        Bonded => Ok(WithdrawPledgeAndCollateral),
+        Redeeming => Ok(WithdrawCollateral),
+        SignerTimeout => Ok(AuctionSignerTimeout),
+        Undercollateral => Ok(AuctionUnderCollateral),
+        FaultyWhenWarranty => Ok(AuctionFaultyWhenWarranty),
+        FaultyWhenRedeeming => Ok(AuctionFaultyWhenRedeeming),
         _ => Err(Error::TxInvalid),
     }
 }

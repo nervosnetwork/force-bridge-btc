@@ -1,7 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::PLEDGE,
-    types::{Error, ToCKBCellDataView, XChainKind},
+    types::{Error, ToCKBCellDataView},
 };
 use ckb_std::{ckb_constants::Source, high_level::load_cell_capacity};
 use core::result::Result;
@@ -24,14 +24,8 @@ fn verify_capacity() -> Result<(), Error> {
 }
 
 fn verify_lot_size(toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
-    if let XChainKind::Btc = toCKB_data.kind {
-        if toCKB_data.get_btc_lot_size().is_err() {
-            return Err(Error::LotSizeInvalid);
-        }
-    } else {
-        if toCKB_data.get_eth_lot_size().is_err() {
-            return Err(Error::LotSizeInvalid);
-        }
+    if toCKB_data.get_btc_lot_size().is_err() && toCKB_data.get_eth_lot_size().is_err() {
+        return Err(Error::LotSizeInvalid);
     }
     Ok(())
 }
