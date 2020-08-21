@@ -90,13 +90,13 @@ fn verify_btc_witness(
     }
     let lot_size = data.get_btc_lot_size()?;
     let value = tx_out.value();
-    if btc_lot_size_to_u64(lot_size) != value {
+    if btc_lot_size_to_u128(lot_size) != value as u128 {
         return Err(Error::FundingNotEnough);
     }
     Ok(())
 }
 
-fn btc_lot_size_to_u64(lot_size: BtcLotSize) -> u64 {
+fn btc_lot_size_to_u128(lot_size: BtcLotSize) -> u128 {
     match lot_size {
         BtcLotSize::Single => 100_000_000,
         BtcLotSize::Half => 50_000_000,
@@ -181,7 +181,7 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     let mut output_index = 0;
     let mut user_checked = false;
     let mut signer_checked = false;
-    let xt_amount = btc_lot_size_to_u64(data.get_btc_lot_size()?);
+    let xt_amount = btc_lot_size_to_u128(data.get_btc_lot_size()?);
     loop {
         let type_hash_res = load_cell_type_hash(output_index, Source::Output);
         match type_hash_res {
@@ -196,9 +196,9 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
                 }
                 let lock_hash = load_cell_lock_hash(output_index, Source::Output)?;
                 let cell_data = load_cell_data(output_index, Source::Output)?;
-                let mut amount_vec = [0u8; 8];
+                let mut amount_vec = [0u8; 16];
                 amount_vec.copy_from_slice(&cell_data);
-                let token_amount = u64::from_le_bytes(amount_vec);
+                let token_amount = u128::from_le_bytes(amount_vec);
                 if lock_hash.as_ref() == data.user_lockscript_hash.as_ref() {
                     if user_checked {
                         return Err(Error::InvalidXTMint);
