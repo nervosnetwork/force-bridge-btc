@@ -1,53 +1,36 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::types::{Error, ToCKBCellDataView, ToCKBStatus, XChainKind};
+use crate::utils::config::COLLATERAL_PERCENT;
+use crate::utils::types::{Error, ToCKBCellDataView, XChainKind};
 use ckb_std::ckb_constants::Source;
 use ckb_std::ckb_types::{bytes::Bytes, prelude::*};
 use ckb_std::high_level::{load_cell_capacity, load_witness_args};
 use core::result::Result;
-use int_enum::IntEnum;
-
-pub const COLLATERAL_PERCENT: u8 = 150;
 
 pub fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
     out_toCKB_data: &ToCKBCellDataView,
 ) -> Result<(), Error> {
     if input_toCKB_data.kind != out_toCKB_data.kind {
-        return Err(Error::LotSizeInvalid);
+        return Err(Error::InvariantDataMutated);
     }
 
-    let witness_args = load_witness_args(0, Source::Input)?.input_type();
-    let price_bytes: Bytes = witness_args.to_opt().unwrap().unpack();
-    let price: u8 = price_bytes[0].into();
-
-    let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
-    let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
-    let diff_capacity = output_capacity - input_capacity;
     match input_toCKB_data.kind {
         XChainKind::Btc => {
-            let btc_lot_size = input_toCKB_data.get_btc_lot_size()?;
-            if out_toCKB_data.get_btc_lot_size()? != btc_lot_size {
-                return Err(Error::BTCLotSizeMismatch);
+            if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
+                return Err(Error::InvariantDataMutated);
             }
-            if (btc_lot_size.int_value() * COLLATERAL_PERCENT * price) as u64 != diff_capacity * 100
-            {
-                return Err(Error::CollateralMismatch);
-            }
+
+            //todo: check btc address valid
             if out_toCKB_data.x_lock_address.len() != 25 {
-                return Err(Error::InvalidAddress);
+                return Err(Error::XChainAddressInvalid);
             }
         }
         XChainKind::Eth => {
-            let eth_lot_size = input_toCKB_data.get_eth_lot_size()?;
-            if out_toCKB_data.get_eth_lot_size()? != eth_lot_size {
-                return Err(Error::ETHLotSizeMismatch);
-            }
-            if (eth_lot_size.int_value() * COLLATERAL_PERCENT * price) as u64 != diff_capacity * 100
-            {
-                return Err(Error::CollateralMismatch);
+            if out_toCKB_data.get_eth_lot_size()? != input_toCKB_data.get_eth_lot_size()? {
+                return Err(Error::InvariantDataMutated);
             }
             if out_toCKB_data.x_lock_address.len() != 20 {
-                return Err(Error::InvalidAddress);
+                return Err(Error::XChainAddressInvalid);
             }
         }
     }
@@ -55,13 +38,26 @@ pub fn verify_data(
     if input_toCKB_data.user_lockscript_hash.as_ref()
         != out_toCKB_data.user_lockscript_hash.as_ref()
     {
-        return Err(Error::UserLockScriptHashMismatch);
+        return Err(Error::InvariantDataMutated);
     }
 
-    if out_toCKB_data.status != ToCKBStatus::Bonded {
-        return Err(Error::StatusInvalid);
-    }
+    Ok(())
+}
 
+pub fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
+    let witness_args = load_witness_args(0, Source::Input)?.input_type();
+    if witness_args.is_none() {
+        return Err(Error::InvalidWitness);
+    }
+    let price_bytes: Bytes = witness_args.to_opt().unwrap().unpack();
+    let price: u8 = price_bytes[0].into();
+
+    let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
+    let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
+    let diff_capacity = output_capacity - input_capacity;
+    if lot_amount * COLLATERAL_PERCENT as u128 * price as u128 != (diff_capacity * 100) as u128 {
+        return Err(Error::CollateralInvalid);
+    }
     Ok(())
 }
 
@@ -75,4 +71,8 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .as_ref()
         .expect("outputs contain toCKB cell");
     verify_data(input_toCKB_data, output_toCKB_data)
+
+    // todo: verify lot amount
+    // let lot_amount = input_toCKB_data.get_lot_amount()?
+    // verify_collateral(lot_amount)
 }
