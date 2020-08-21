@@ -4,8 +4,9 @@ use ckb_std::ckb_constants::Source;
 use ckb_std::ckb_types::{bytes::Bytes, prelude::*};
 use ckb_std::high_level::{load_cell_capacity, load_witness_args};
 use core::result::Result;
+use int_enum::IntEnum;
 
-pub const COLLATERAL_PERCENT: u64 = 150;
+pub const COLLATERAL_PERCENT: u8 = 150;
 
 pub fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
@@ -17,7 +18,7 @@ pub fn verify_data(
 
     let witness_args = load_witness_args(0, Source::Input)?.input_type();
     let price_bytes: Bytes = witness_args.to_opt().unwrap().unpack();
-    let price = price_bytes[0];
+    let price: u8 = price_bytes[0].into();
 
     let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
     let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
@@ -28,11 +29,25 @@ pub fn verify_data(
             if out_toCKB_data.get_btc_lot_size()? != btc_lot_size {
                 return Err(Error::BTCLotSizeMismatch);
             }
+            if (btc_lot_size.int_value() * COLLATERAL_PERCENT * price) as u64 != diff_capacity * 100
+            {
+                return Err(Error::CollateralMismatch);
+            }
+            if out_toCKB_data.x_lock_address.len() != 25 {
+                return Err(Error::InvalidAddress);
+            }
         }
         XChainKind::Eth => {
             let eth_lot_size = input_toCKB_data.get_eth_lot_size()?;
             if out_toCKB_data.get_eth_lot_size()? != eth_lot_size {
                 return Err(Error::ETHLotSizeMismatch);
+            }
+            if (eth_lot_size.int_value() * COLLATERAL_PERCENT * price) as u64 != diff_capacity * 100
+            {
+                return Err(Error::CollateralMismatch);
+            }
+            if out_toCKB_data.x_lock_address.len() != 20 {
+                return Err(Error::InvalidAddress);
             }
         }
     }

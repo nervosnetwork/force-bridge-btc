@@ -18,6 +18,7 @@ pub enum Error {
     UserLockScriptHashMismatch,
     StatusInvalid,
     CollateralMismatch,
+    InvalidAddress,
 }
 
 impl From<SysError> for Error {
