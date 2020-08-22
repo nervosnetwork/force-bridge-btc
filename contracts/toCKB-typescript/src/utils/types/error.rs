@@ -13,18 +13,9 @@ pub enum Error {
     LotSizeInvalid,
     PledgeInvalid,
 
-    InputDataInvalid,
-    OutputDataInvalid,
-    ToCKBStatusMismatch,
     CapacityInvalid,
-    KindInvalid,
-    BTCLotSizeInvalid,
-    ETHLotSizeInvalid,
-    UserLockInvalid,
-    XLockAddressInvalid,
-    SignerLockInvalid,
-    XUnlockAddressInvalid,
-    RedeemerLockInvalid
+    InvariantDataMutated,
+    InputSinceInvalid
 }
 
 impl From<SysError> for Error {
