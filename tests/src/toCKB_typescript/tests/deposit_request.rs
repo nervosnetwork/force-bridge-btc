@@ -1,4 +1,4 @@
-use super::{Byte32, ToCKBCellData};
+use super::{Script, ToCKBCellData};
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -20,11 +20,10 @@ const ENCODING: i8 = 4;
 fn test_correct_tx() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
-        .kind(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -36,11 +35,10 @@ fn test_correct_tx() {
 fn test_wrong_pledge() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
-        .kind(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(9999, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, 9999, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(PLEDGE_INVALID));
@@ -50,11 +48,10 @@ fn test_wrong_pledge() {
 fn test_wrong_status() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
-        .kind(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(TX_INVALID));
@@ -64,11 +61,10 @@ fn test_wrong_status() {
 fn test_wrong_xchain() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
-        .kind(Byte::new(3u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(3, 10000, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(ENCODING));
@@ -78,17 +74,16 @@ fn test_wrong_xchain() {
 fn test_wrong_lot_size() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
-        .kind(Byte::new(1u8))
         .lot_size(Byte::new(9u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(LOT_SIZE_INVALID));
 }
 
-fn build_test_context(pledge: u64, toCKB_data: Bytes) -> (Context, TransactionView) {
+fn build_test_context(kind: u8, pledge: u64, toCKB_data: Bytes) -> (Context, TransactionView) {
     // deploy contract
     let mut context = Context::default();
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
@@ -97,7 +92,7 @@ fn build_test_context(pledge: u64, toCKB_data: Bytes) -> (Context, TransactionVi
 
     // prepare scripts
     let toCKB_typescript = context
-        .build_script(&toCKB_typescript_out_point, Default::default())
+        .build_script(&toCKB_typescript_out_point, [kind; 1].to_vec().into())
         .expect("script");
     let toCKB_typescript_dep = CellDep::new_builder()
         .out_point(toCKB_typescript_out_point)
