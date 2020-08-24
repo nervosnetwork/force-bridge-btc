@@ -1,9 +1,12 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::config::{SIGNER_FEE_RATE, TX_PROOF_DIFFICULTY_FACTOR};
-use crate::utils::types::{
-    btc_difficulty::BTCDifficultyReader,
-    mint_xt_witness::{BTCSPVProofReader, MintXTWitnessReader},
-    BtcLotSize, Error, ToCKBCellDataView, XChainKind,
+use crate::utils::{
+    config::{SIGNER_FEE_RATE, TX_PROOF_DIFFICULTY_FACTOR},
+    tools::{get_xchain_kind, XChainKind},
+    types::{
+        btc_difficulty::BTCDifficultyReader,
+        mint_xt_witness::{BTCSPVProofReader, MintXTWitnessReader},
+        BtcLotSize, Error, ToCKBCellDataView,
+    },
 };
 use bech32::{self, ToBase32};
 use bitcoin_spv::{
@@ -16,7 +19,7 @@ use ckb_std::{
     debug,
     error::SysError,
     high_level::{
-        load_cell_data, load_cell_lock_hash, load_cell_type_hash, load_witness_args, QueryIter,
+        load_cell_data, load_cell_lock, load_cell_type_hash, load_witness_args, QueryIter,
     },
 };
 use core::result::Result;
@@ -27,9 +30,8 @@ fn verify_data(
     input_data: &ToCKBCellDataView,
     output_data: &ToCKBCellDataView,
 ) -> Result<(), Error> {
-    if input_data.kind != output_data.kind
-        || input_data.signer_lockscript_hash.as_ref() != output_data.signer_lockscript_hash.as_ref()
-        || input_data.user_lockscript_hash.as_ref() != output_data.user_lockscript_hash.as_ref()
+    if input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
+        || input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
         || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
     {
         return Err(Error::InvalidDataChange);
@@ -50,7 +52,7 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     let witness = MintXTWitnessReader::new_unchecked(&witness_args);
     let proof = witness.spv_proof().raw_data();
     let cell_dep_index_list = witness.cell_dep_index_list().raw_data();
-    match data.kind {
+    match get_xchain_kind()? {
         XChainKind::Btc => verify_btc_witness(data, proof, cell_dep_index_list),
         XChainKind::Eth => todo!(),
     }
@@ -165,7 +167,7 @@ fn verify_btc_spv(proof: BTCSPVProofReader, difficulty: BTCDifficultyReader) -> 
 }
 
 fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
-    match data.kind {
+    match get_xchain_kind()? {
         XChainKind::Btc => verify_btc_xt_issue(data),
         XChainKind::Eth => todo!(),
     }
@@ -197,12 +199,12 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
                 if !(type_hash.is_some() && type_hash.unwrap() == btc_xt_type_hash) {
                     continue;
                 }
-                let lock_hash = load_cell_lock_hash(output_index, Source::Output)?;
+                let lock = load_cell_lock(output_index, Source::Output)?;
                 let cell_data = load_cell_data(output_index, Source::Output)?;
                 let mut amount_vec = [0u8; 16];
                 amount_vec.copy_from_slice(&cell_data);
                 let token_amount = u128::from_le_bytes(amount_vec);
-                if lock_hash.as_ref() == data.user_lockscript_hash.as_ref() {
+                if lock.as_slice() == data.user_lockscript.as_ref() {
                     if user_checked {
                         return Err(Error::InvalidXTMint);
                     }
@@ -211,7 +213,7 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
                         return Err(Error::InvalidXTMint);
                     }
                     user_checked = true;
-                } else if lock_hash.as_ref() == data.signer_lockscript_hash.as_ref() {
+                } else if lock.as_slice() == data.signer_lockscript.as_ref() {
                     if signer_checked {
                         return Err(Error::InvalidXTMint);
                     }
