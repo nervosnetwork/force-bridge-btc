@@ -9,22 +9,46 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
+use int_enum::IntEnum;
+
 
 const MAX_CYCLES: u64 = 10_000_000;
 const PLEDGE_INVALID: i8 = 8;
 const LOT_SIZE_INVALID: i8 = 7;
 const TX_INVALID: i8 = 6;
 const ENCODING: i8 = 4;
+const INVARIANT_DATA_MUTATED: i8 = 10;
+
+#[repr(u8)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
+pub enum ToCKBStatus {
+    Initial = 1,
+    Bonded = 2,
+    Warranty = 3,
+    Redeeming = 4,
+    SignerTimeout = 5,
+    Undercollateral = 6,
+    FaultyWhenWarranty = 7,
+    FaultyWhenRedeeming = 8,
+}
+
 
 #[test]
 fn test_correct_tx() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(1u8))
+    let input_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::Redeeming as u8))
         .kind(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(10000, toCKB_data.as_bytes());
+
+    let output_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(1u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let (context, tx) =
+        build_test_context(input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -33,7 +57,100 @@ fn test_correct_tx() {
 }
 
 
-fn build_test_context(pledge: u64, toCKB_data: Bytes) -> (Context, TransactionView) {
+#[test]
+fn test_wrong_status() {
+    let input_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(1u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let output_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(1u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let (context, tx) =
+        build_test_context(input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(err, ScriptError::ValidationFailure(TX_INVALID));
+}
+
+
+#[test]
+fn test_wrong_redeemer() {
+    let input_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::Redeeming as u8))
+        .kind(Byte::new(1u8))
+        .lot_size(Byte::new(1u8))
+        .redeemer_lockscript_hash(Byte32::new_builder().build())
+        .build();
+
+    let wrong_lock_hash = {
+        let data = [1u8; 32];
+        Byte32::from_slice(data.as_ref()).expect("should not happen")
+    };
+
+    let output_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(1u8))
+        .lot_size(Byte::new(1u8))
+        .redeemer_lockscript_hash(wrong_lock_hash)
+        .build();
+
+    let (context, tx) =
+        build_test_context(input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(err, ScriptError::ValidationFailure(INVARIANT_DATA_MUTATED));
+}
+
+
+#[test]
+fn test_wrong_xchain() {
+    // wrong kind
+    let input_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(3u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let output_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(3u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let (context, tx) =
+        build_test_context(input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(err, ScriptError::ValidationFailure(ENCODING));
+
+    // kind mismatch
+    let input_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(1u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let output_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .kind(Byte::new(2u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let (context, tx) =
+        build_test_context(input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(err, ScriptError::ValidationFailure(TX_INVALID));
+}
+
+
+fn build_test_context(input_toCKB_data: Bytes, output_toCKB_data: Bytes) -> (Context, TransactionView) {
     // deploy contract
     let mut context = Context::default();
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
@@ -54,23 +171,28 @@ fn build_test_context(pledge: u64, toCKB_data: Bytes) -> (Context, TransactionVi
         .out_point(always_success_out_point)
         .build();
 
-    // prepare cells
+    let capacity = 10000u64;
+
+    // prepare inputs
     let input_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(11000u64.pack())
+            .capacity(capacity.pack())
             .lock(always_success_lockscript.clone())
+            .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
-        Bytes::new(),
+        input_toCKB_data,
     );
     let input = CellInput::new_builder()
         .previous_output(input_out_point)
         .build();
+
+    // prepare outputs
     let outputs = vec![CellOutput::new_builder()
-        .capacity(pledge.pack())
+        .capacity(capacity.pack())
         .type_(Some(toCKB_typescript.clone()).pack())
         .lock(always_success_lockscript)
         .build()];
-    let outputs_data = vec![toCKB_data; 1];
+    let outputs_data = vec![output_toCKB_data; 1];
 
     // build transaction
     let tx = TransactionBuilder::default()
