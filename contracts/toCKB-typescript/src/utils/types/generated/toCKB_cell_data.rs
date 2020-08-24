@@ -22,33 +22,22 @@ impl ::core::fmt::Display for ToCKBCellData {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "status", self.status())?;
-        write!(f, ", {}: {}", "kind", self.kind())?;
         write!(f, ", {}: {}", "lot_size", self.lot_size())?;
-        write!(
-            f,
-            ", {}: {}",
-            "user_lockscript_hash",
-            self.user_lockscript_hash()
-        )?;
+        write!(f, ", {}: {}", "user_lockscript", self.user_lockscript())?;
         write!(f, ", {}: {}", "x_lock_address", self.x_lock_address())?;
-        write!(
-            f,
-            ", {}: {}",
-            "signer_lockscript_hash",
-            self.signer_lockscript_hash()
-        )?;
+        write!(f, ", {}: {}", "signer_lockscript", self.signer_lockscript())?;
         write!(f, ", {}: {}", "x_unlock_address", self.x_unlock_address())?;
         write!(
             f,
             ", {}: {}",
-            "redeemer_lockscript_hash",
-            self.redeemer_lockscript_hash()
+            "redeemer_lockscript",
+            self.redeemer_lockscript()
         )?;
         write!(
             f,
             ", {}: {}",
-            "liquidation_trigger_lockscript_hash",
-            self.liquidation_trigger_lockscript_hash()
+            "liquidation_trigger_lockscript",
+            self.liquidation_trigger_lockscript()
         )?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -60,19 +49,22 @@ impl ::core::fmt::Display for ToCKBCellData {
 impl ::core::default::Default for ToCKBCellData {
     fn default() -> Self {
         let v: Vec<u8> = vec![
-            179, 0, 0, 0, 40, 0, 0, 0, 41, 0, 0, 0, 42, 0, 0, 0, 43, 0, 0, 0, 75, 0, 0, 0, 79, 0,
-            0, 0, 111, 0, 0, 0, 115, 0, 0, 0, 147, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 1, 0, 0, 36, 0, 0, 0, 37, 0, 0, 0, 38, 0, 0, 0, 91, 0, 0, 0, 95, 0, 0, 0, 148, 0, 0,
+            0, 152, 0, 0, 0, 205, 0, 0, 0, 0, 0, 53, 0, 0, 0, 16, 0, 0, 0, 48, 0, 0, 0, 49, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 16, 0, 0, 0, 48, 0, 0, 0, 49, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 16, 0, 0, 0, 48, 0, 0, 0, 49, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 16, 0, 0, 0, 48, 0, 0, 0, 49, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
         ];
         ToCKBCellData::new_unchecked(v.into())
     }
 }
 impl ToCKBCellData {
-    pub const FIELD_COUNT: usize = 9;
+    pub const FIELD_COUNT: usize = 8;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -95,56 +87,50 @@ impl ToCKBCellData {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         Byte::new_unchecked(self.0.slice(start..end))
     }
-    pub fn kind(&self) -> Byte {
+    pub fn lot_size(&self) -> Byte {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
         Byte::new_unchecked(self.0.slice(start..end))
     }
-    pub fn lot_size(&self) -> Byte {
+    pub fn user_lockscript(&self) -> Script {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         let end = molecule::unpack_number(&slice[16..]) as usize;
-        Byte::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn user_lockscript_hash(&self) -> Byte32 {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[16..]) as usize;
-        let end = molecule::unpack_number(&slice[20..]) as usize;
-        Byte32::new_unchecked(self.0.slice(start..end))
+        Script::new_unchecked(self.0.slice(start..end))
     }
     pub fn x_lock_address(&self) -> Bytes {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[20..]) as usize;
-        let end = molecule::unpack_number(&slice[24..]) as usize;
+        let start = molecule::unpack_number(&slice[16..]) as usize;
+        let end = molecule::unpack_number(&slice[20..]) as usize;
         Bytes::new_unchecked(self.0.slice(start..end))
     }
-    pub fn signer_lockscript_hash(&self) -> Byte32 {
+    pub fn signer_lockscript(&self) -> Script {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[24..]) as usize;
-        let end = molecule::unpack_number(&slice[28..]) as usize;
-        Byte32::new_unchecked(self.0.slice(start..end))
+        let start = molecule::unpack_number(&slice[20..]) as usize;
+        let end = molecule::unpack_number(&slice[24..]) as usize;
+        Script::new_unchecked(self.0.slice(start..end))
     }
     pub fn x_unlock_address(&self) -> Bytes {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[28..]) as usize;
-        let end = molecule::unpack_number(&slice[32..]) as usize;
+        let start = molecule::unpack_number(&slice[24..]) as usize;
+        let end = molecule::unpack_number(&slice[28..]) as usize;
         Bytes::new_unchecked(self.0.slice(start..end))
     }
-    pub fn redeemer_lockscript_hash(&self) -> Byte32 {
+    pub fn redeemer_lockscript(&self) -> Script {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[28..]) as usize;
+        let end = molecule::unpack_number(&slice[32..]) as usize;
+        Script::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn liquidation_trigger_lockscript(&self) -> Script {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[32..]) as usize;
-        let end = molecule::unpack_number(&slice[36..]) as usize;
-        Byte32::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn liquidation_trigger_lockscript_hash(&self) -> Byte32 {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[36..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[40..]) as usize;
-            Byte32::new_unchecked(self.0.slice(start..end))
+            let end = molecule::unpack_number(&slice[36..]) as usize;
+            Script::new_unchecked(self.0.slice(start..end))
         } else {
-            Byte32::new_unchecked(self.0.slice(start..))
+            Script::new_unchecked(self.0.slice(start..))
         }
     }
     pub fn as_reader<'r>(&'r self) -> ToCKBCellDataReader<'r> {
@@ -175,14 +161,13 @@ impl molecule::prelude::Entity for ToCKBCellData {
     fn as_builder(self) -> Self::Builder {
         Self::new_builder()
             .status(self.status())
-            .kind(self.kind())
             .lot_size(self.lot_size())
-            .user_lockscript_hash(self.user_lockscript_hash())
+            .user_lockscript(self.user_lockscript())
             .x_lock_address(self.x_lock_address())
-            .signer_lockscript_hash(self.signer_lockscript_hash())
+            .signer_lockscript(self.signer_lockscript())
             .x_unlock_address(self.x_unlock_address())
-            .redeemer_lockscript_hash(self.redeemer_lockscript_hash())
-            .liquidation_trigger_lockscript_hash(self.liquidation_trigger_lockscript_hash())
+            .redeemer_lockscript(self.redeemer_lockscript())
+            .liquidation_trigger_lockscript(self.liquidation_trigger_lockscript())
     }
 }
 #[derive(Clone, Copy)]
@@ -205,33 +190,22 @@ impl<'r> ::core::fmt::Display for ToCKBCellDataReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "status", self.status())?;
-        write!(f, ", {}: {}", "kind", self.kind())?;
         write!(f, ", {}: {}", "lot_size", self.lot_size())?;
-        write!(
-            f,
-            ", {}: {}",
-            "user_lockscript_hash",
-            self.user_lockscript_hash()
-        )?;
+        write!(f, ", {}: {}", "user_lockscript", self.user_lockscript())?;
         write!(f, ", {}: {}", "x_lock_address", self.x_lock_address())?;
-        write!(
-            f,
-            ", {}: {}",
-            "signer_lockscript_hash",
-            self.signer_lockscript_hash()
-        )?;
+        write!(f, ", {}: {}", "signer_lockscript", self.signer_lockscript())?;
         write!(f, ", {}: {}", "x_unlock_address", self.x_unlock_address())?;
         write!(
             f,
             ", {}: {}",
-            "redeemer_lockscript_hash",
-            self.redeemer_lockscript_hash()
+            "redeemer_lockscript",
+            self.redeemer_lockscript()
         )?;
         write!(
             f,
             ", {}: {}",
-            "liquidation_trigger_lockscript_hash",
-            self.liquidation_trigger_lockscript_hash()
+            "liquidation_trigger_lockscript",
+            self.liquidation_trigger_lockscript()
         )?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -241,7 +215,7 @@ impl<'r> ::core::fmt::Display for ToCKBCellDataReader<'r> {
     }
 }
 impl<'r> ToCKBCellDataReader<'r> {
-    pub const FIELD_COUNT: usize = 9;
+    pub const FIELD_COUNT: usize = 8;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -264,56 +238,50 @@ impl<'r> ToCKBCellDataReader<'r> {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         ByteReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn kind(&self) -> ByteReader<'r> {
+    pub fn lot_size(&self) -> ByteReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
         ByteReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn lot_size(&self) -> ByteReader<'r> {
+    pub fn user_lockscript(&self) -> ScriptReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         let end = molecule::unpack_number(&slice[16..]) as usize;
-        ByteReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn user_lockscript_hash(&self) -> Byte32Reader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[16..]) as usize;
-        let end = molecule::unpack_number(&slice[20..]) as usize;
-        Byte32Reader::new_unchecked(&self.as_slice()[start..end])
+        ScriptReader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn x_lock_address(&self) -> BytesReader<'r> {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[20..]) as usize;
-        let end = molecule::unpack_number(&slice[24..]) as usize;
+        let start = molecule::unpack_number(&slice[16..]) as usize;
+        let end = molecule::unpack_number(&slice[20..]) as usize;
         BytesReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn signer_lockscript_hash(&self) -> Byte32Reader<'r> {
+    pub fn signer_lockscript(&self) -> ScriptReader<'r> {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[24..]) as usize;
-        let end = molecule::unpack_number(&slice[28..]) as usize;
-        Byte32Reader::new_unchecked(&self.as_slice()[start..end])
+        let start = molecule::unpack_number(&slice[20..]) as usize;
+        let end = molecule::unpack_number(&slice[24..]) as usize;
+        ScriptReader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn x_unlock_address(&self) -> BytesReader<'r> {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[28..]) as usize;
-        let end = molecule::unpack_number(&slice[32..]) as usize;
+        let start = molecule::unpack_number(&slice[24..]) as usize;
+        let end = molecule::unpack_number(&slice[28..]) as usize;
         BytesReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn redeemer_lockscript_hash(&self) -> Byte32Reader<'r> {
+    pub fn redeemer_lockscript(&self) -> ScriptReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[28..]) as usize;
+        let end = molecule::unpack_number(&slice[32..]) as usize;
+        ScriptReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn liquidation_trigger_lockscript(&self) -> ScriptReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[32..]) as usize;
-        let end = molecule::unpack_number(&slice[36..]) as usize;
-        Byte32Reader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn liquidation_trigger_lockscript_hash(&self) -> Byte32Reader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[36..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[40..]) as usize;
-            Byte32Reader::new_unchecked(&self.as_slice()[start..end])
+            let end = molecule::unpack_number(&slice[36..]) as usize;
+            ScriptReader::new_unchecked(&self.as_slice()[start..end])
         } else {
-            Byte32Reader::new_unchecked(&self.as_slice()[start..])
+            ScriptReader::new_unchecked(&self.as_slice()[start..])
         }
     }
 }
@@ -370,64 +338,58 @@ impl<'r> molecule::prelude::Reader<'r> for ToCKBCellDataReader<'r> {
         }
         ByteReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         ByteReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
-        ByteReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
-        Byte32Reader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
-        BytesReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
-        Byte32Reader::verify(&slice[offsets[5]..offsets[6]], compatible)?;
-        BytesReader::verify(&slice[offsets[6]..offsets[7]], compatible)?;
-        Byte32Reader::verify(&slice[offsets[7]..offsets[8]], compatible)?;
-        Byte32Reader::verify(&slice[offsets[8]..offsets[9]], compatible)?;
+        ScriptReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
+        BytesReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
+        ScriptReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
+        BytesReader::verify(&slice[offsets[5]..offsets[6]], compatible)?;
+        ScriptReader::verify(&slice[offsets[6]..offsets[7]], compatible)?;
+        ScriptReader::verify(&slice[offsets[7]..offsets[8]], compatible)?;
         Ok(())
     }
 }
 #[derive(Debug, Default)]
 pub struct ToCKBCellDataBuilder {
     pub(crate) status: Byte,
-    pub(crate) kind: Byte,
     pub(crate) lot_size: Byte,
-    pub(crate) user_lockscript_hash: Byte32,
+    pub(crate) user_lockscript: Script,
     pub(crate) x_lock_address: Bytes,
-    pub(crate) signer_lockscript_hash: Byte32,
+    pub(crate) signer_lockscript: Script,
     pub(crate) x_unlock_address: Bytes,
-    pub(crate) redeemer_lockscript_hash: Byte32,
-    pub(crate) liquidation_trigger_lockscript_hash: Byte32,
+    pub(crate) redeemer_lockscript: Script,
+    pub(crate) liquidation_trigger_lockscript: Script,
 }
 impl ToCKBCellDataBuilder {
-    pub const FIELD_COUNT: usize = 9;
+    pub const FIELD_COUNT: usize = 8;
     pub fn status(mut self, v: Byte) -> Self {
         self.status = v;
-        self
-    }
-    pub fn kind(mut self, v: Byte) -> Self {
-        self.kind = v;
         self
     }
     pub fn lot_size(mut self, v: Byte) -> Self {
         self.lot_size = v;
         self
     }
-    pub fn user_lockscript_hash(mut self, v: Byte32) -> Self {
-        self.user_lockscript_hash = v;
+    pub fn user_lockscript(mut self, v: Script) -> Self {
+        self.user_lockscript = v;
         self
     }
     pub fn x_lock_address(mut self, v: Bytes) -> Self {
         self.x_lock_address = v;
         self
     }
-    pub fn signer_lockscript_hash(mut self, v: Byte32) -> Self {
-        self.signer_lockscript_hash = v;
+    pub fn signer_lockscript(mut self, v: Script) -> Self {
+        self.signer_lockscript = v;
         self
     }
     pub fn x_unlock_address(mut self, v: Bytes) -> Self {
         self.x_unlock_address = v;
         self
     }
-    pub fn redeemer_lockscript_hash(mut self, v: Byte32) -> Self {
-        self.redeemer_lockscript_hash = v;
+    pub fn redeemer_lockscript(mut self, v: Script) -> Self {
+        self.redeemer_lockscript = v;
         self
     }
-    pub fn liquidation_trigger_lockscript_hash(mut self, v: Byte32) -> Self {
-        self.liquidation_trigger_lockscript_hash = v;
+    pub fn liquidation_trigger_lockscript(mut self, v: Script) -> Self {
+        self.liquidation_trigger_lockscript = v;
         self
     }
 }
@@ -437,14 +399,13 @@ impl molecule::prelude::Builder for ToCKBCellDataBuilder {
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
             + self.status.as_slice().len()
-            + self.kind.as_slice().len()
             + self.lot_size.as_slice().len()
-            + self.user_lockscript_hash.as_slice().len()
+            + self.user_lockscript.as_slice().len()
             + self.x_lock_address.as_slice().len()
-            + self.signer_lockscript_hash.as_slice().len()
+            + self.signer_lockscript.as_slice().len()
             + self.x_unlock_address.as_slice().len()
-            + self.redeemer_lockscript_hash.as_slice().len()
-            + self.liquidation_trigger_lockscript_hash.as_slice().len()
+            + self.redeemer_lockscript.as_slice().len()
+            + self.liquidation_trigger_lockscript.as_slice().len()
     }
     fn write<W: ::molecule::io::Write>(&self, writer: &mut W) -> ::molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -452,34 +413,31 @@ impl molecule::prelude::Builder for ToCKBCellDataBuilder {
         offsets.push(total_size);
         total_size += self.status.as_slice().len();
         offsets.push(total_size);
-        total_size += self.kind.as_slice().len();
-        offsets.push(total_size);
         total_size += self.lot_size.as_slice().len();
         offsets.push(total_size);
-        total_size += self.user_lockscript_hash.as_slice().len();
+        total_size += self.user_lockscript.as_slice().len();
         offsets.push(total_size);
         total_size += self.x_lock_address.as_slice().len();
         offsets.push(total_size);
-        total_size += self.signer_lockscript_hash.as_slice().len();
+        total_size += self.signer_lockscript.as_slice().len();
         offsets.push(total_size);
         total_size += self.x_unlock_address.as_slice().len();
         offsets.push(total_size);
-        total_size += self.redeemer_lockscript_hash.as_slice().len();
+        total_size += self.redeemer_lockscript.as_slice().len();
         offsets.push(total_size);
-        total_size += self.liquidation_trigger_lockscript_hash.as_slice().len();
+        total_size += self.liquidation_trigger_lockscript.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
         writer.write_all(self.status.as_slice())?;
-        writer.write_all(self.kind.as_slice())?;
         writer.write_all(self.lot_size.as_slice())?;
-        writer.write_all(self.user_lockscript_hash.as_slice())?;
+        writer.write_all(self.user_lockscript.as_slice())?;
         writer.write_all(self.x_lock_address.as_slice())?;
-        writer.write_all(self.signer_lockscript_hash.as_slice())?;
+        writer.write_all(self.signer_lockscript.as_slice())?;
         writer.write_all(self.x_unlock_address.as_slice())?;
-        writer.write_all(self.redeemer_lockscript_hash.as_slice())?;
-        writer.write_all(self.liquidation_trigger_lockscript_hash.as_slice())?;
+        writer.write_all(self.redeemer_lockscript.as_slice())?;
+        writer.write_all(self.liquidation_trigger_lockscript.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {
