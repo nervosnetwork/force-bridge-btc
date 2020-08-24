@@ -10,7 +10,7 @@ use ckb_std::{
 
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     let input_data = toCKB_data_tuple.0.as_ref().expect("inputs should contain toCKB cell");
-    let output_data = toCKB_data_tuple.0.as_ref().expect("outputs should contain toCKB cell");
+    let output_data = toCKB_data_tuple.1.as_ref().expect("outputs should contain toCKB cell");
 
     // `get_toCKB_data_tuple` has checked cell nums == 1 in both inputs and outputs
     // Todo: check since n4
