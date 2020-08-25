@@ -1,4 +1,4 @@
-use super::{Script, ToCKBCellData};
+use super::{Error, Script, ToCKBCellData};
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -11,10 +11,6 @@ use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
 
 const MAX_CYCLES: u64 = 10_000_000;
-const PLEDGE_INVALID: i8 = 8;
-const LOT_SIZE_INVALID: i8 = 7;
-const TX_INVALID: i8 = 6;
-const ENCODING: i8 = 4;
 
 #[test]
 fn test_correct_tx() {
@@ -41,7 +37,10 @@ fn test_wrong_pledge() {
     let (context, tx) = build_test_context(1, 9999, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(PLEDGE_INVALID));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::PledgeInvalid as i8)
+    );
 }
 
 #[test]
@@ -54,7 +53,7 @@ fn test_wrong_status() {
     let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(TX_INVALID));
+    assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
 }
 
 #[test]
@@ -67,7 +66,7 @@ fn test_wrong_xchain() {
     let (context, tx) = build_test_context(3, 10000, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(ENCODING));
+    assert_error_eq!(err, ScriptError::ValidationFailure(Error::Encoding as i8));
 }
 
 #[test]
@@ -80,7 +79,10 @@ fn test_wrong_lot_size() {
     let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(LOT_SIZE_INVALID));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::LotSizeInvalid as i8)
+    );
 }
 
 fn build_test_context(kind: u8, pledge: u64, toCKB_data: Bytes) -> (Context, TransactionView) {
