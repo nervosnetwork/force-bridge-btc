@@ -1,6 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::COLLATERAL_PERCENT;
 use crate::utils::types::{Error, ToCKBCellDataView, XChainKind};
+use bech32::{self, ToBase32};
 use ckb_std::ckb_constants::Source;
 use ckb_std::ckb_types::{bytes::Bytes, prelude::*};
 use ckb_std::high_level::{load_cell_capacity, load_witness_args};
@@ -19,9 +20,12 @@ pub fn verify_data(
             if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
                 return Err(Error::InvariantDataMutated);
             }
-
-            //todo: check btc address valid
-            if out_toCKB_data.x_lock_address.len() != 25 {
+            if core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).is_err() {
+                return Err(Error::XChainAddressInvalid);
+            }
+            if bech32::decode(core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap())
+                .is_err()
+            {
                 return Err(Error::XChainAddressInvalid);
             }
         }
@@ -29,7 +33,7 @@ pub fn verify_data(
             if out_toCKB_data.get_eth_lot_size()? != input_toCKB_data.get_eth_lot_size()? {
                 return Err(Error::InvariantDataMutated);
             }
-            if out_toCKB_data.x_lock_address.len() != 20 {
+            if out_toCKB_data.x_lock_address.as_ref().len() != 20 {
                 return Err(Error::XChainAddressInvalid);
             }
         }
