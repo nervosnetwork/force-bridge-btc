@@ -2,6 +2,7 @@ use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     types::{Error, ToCKBCellDataView},
     tools::{XChainKind, get_xchain_kind},
+    config::{LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK, VALUE_MASK, REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, N4}
 };
 use core::result::Result;
 use ckb_std::{
@@ -20,8 +21,18 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
 }
 
 fn verify_since() -> Result<(), Error> {
-    // Todo: check since n4
-    let _since = load_input_since(0, Source::GroupInput).expect("since should exist");
+    let since = load_input_since(0, Source::GroupInput).expect("since should exist");
+    if since & REMAIN_FLAGS_BITS != 0 // check flags is valid
+        || since & METRIC_TYPE_FLAG_MASK == METRIC_TYPE_FLAG_MASK // check flags is valid
+        || since & LOCK_TYPE_FLAG == 0 // check if it is relative_flag
+        || since & METRIC_TYPE_FLAG_MASK != SINCE_TYPE_TIMESTAMP {   // check if it is timestamp value
+        return Err(Error::InputSinceInvalid)
+    }
+
+    let time = since & VALUE_MASK;
+    if time != N4 {
+        return Err(Error::InputSinceInvalid)
+    }
 
     Ok(())
 }

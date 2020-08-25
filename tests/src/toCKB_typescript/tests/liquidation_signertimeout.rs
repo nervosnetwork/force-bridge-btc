@@ -9,28 +9,14 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
-use int_enum::IntEnum;
-
+use crate::toCKB_typescript::utils::{
+    types::{ToCKBStatus, Error},
+    config::*
+};
 
 const MAX_CYCLES: u64 = 10_000_000;
-const PLEDGE_INVALID: i8 = 8;
-const LOT_SIZE_INVALID: i8 = 7;
-const TX_INVALID: i8 = 6;
-const ENCODING: i8 = 4;
-const INVARIANT_DATA_MUTATED: i8 = 10;
+const SINCE_LIQUIDATION_SIGNERTIMEOUT: u64 = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | N4;
 
-#[repr(u8)]
-#[derive(Clone, Copy, IntEnum, PartialEq)]
-pub enum ToCKBStatus {
-    Initial = 1,
-    Bonded = 2,
-    Warranty = 3,
-    Redeeming = 4,
-    SignerTimeout = 5,
-    Undercollateral = 6,
-    FaultyWhenWarranty = 7,
-    FaultyWhenRedeeming = 8,
-}
 
 #[test]
 fn test_correct_tx() {
@@ -71,7 +57,7 @@ fn test_wrong_lot_size() {
 
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(INVARIANT_DATA_MUTATED));
+    assert_error_eq!(err, ScriptError::ValidationFailure(Error::InvariantDataMutated as i8));
 }
 
 
@@ -91,7 +77,7 @@ fn test_wrong_status() {
         build_test_context(2, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(TX_INVALID));
+    assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
 }
 
 
@@ -121,7 +107,7 @@ fn test_wrong_redeemer() {
         build_test_context(1, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(INVARIANT_DATA_MUTATED));
+    assert_error_eq!(err, ScriptError::ValidationFailure(Error::InvariantDataMutated as i8));
 }
 
 fn build_test_context(kind:u8, input_toCKB_data: Bytes, output_toCKB_data: Bytes) -> (Context, TransactionView) {
@@ -158,6 +144,7 @@ fn build_test_context(kind:u8, input_toCKB_data: Bytes, output_toCKB_data: Bytes
     );
     let input = CellInput::new_builder()
         .previous_output(input_out_point)
+        .since(SINCE_LIQUIDATION_SIGNERTIMEOUT.pack())
         .build();
 
     // prepare outputs
