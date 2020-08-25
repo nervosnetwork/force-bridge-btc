@@ -5,7 +5,7 @@ use crate::utils::{
     types::{
         btc_difficulty::BTCDifficultyReader,
         mint_xt_witness::{BTCSPVProofReader, MintXTWitnessReader},
-        BtcLotSize, Error, ToCKBCellDataView,
+        Error, ToCKBCellDataView,
     },
 };
 use bech32::{self, ToBase32};
@@ -93,20 +93,11 @@ fn verify_btc_witness(
     } else {
         return Err(Error::UnsupportedFundingType);
     }
-    let lot_size = data.get_btc_lot_size()?;
     let value = tx_out.value();
-    if btc_lot_size_to_u128(lot_size) != value as u128 {
+    if value as u128 != data.get_btc_lot_size()?.get_sudt_amount() {
         return Err(Error::FundingNotEnough);
     }
     Ok(())
-}
-
-fn btc_lot_size_to_u128(lot_size: BtcLotSize) -> u128 {
-    match lot_size {
-        BtcLotSize::Single => 100_000_000,
-        BtcLotSize::Half => 50_000_000,
-        BtcLotSize::Quarter => 25_000_000,
-    }
 }
 
 fn verify_btc_spv(proof: BTCSPVProofReader, difficulty: BTCDifficultyReader) -> Result<(), Error> {
@@ -186,7 +177,7 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     let mut output_index = 0;
     let mut user_checked = false;
     let mut signer_checked = false;
-    let xt_amount = btc_lot_size_to_u128(data.get_btc_lot_size()?);
+    let xt_amount = data.get_btc_lot_size()?.get_sudt_amount();
     loop {
         let type_hash_res = load_cell_type_hash(output_index, Source::Output);
         match type_hash_res {
