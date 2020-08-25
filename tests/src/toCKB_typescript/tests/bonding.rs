@@ -1,5 +1,6 @@
 use super::{Byte32, ToCKBCellData};
 use crate::*;
+use bech32::{self, ToBase32};
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
     bytes::Bytes,
@@ -34,6 +35,33 @@ fn test_correct_tx_eth() {
         )
         .build();
     let (context, tx) = build_test_context(2, toCKB_data.as_bytes());
+    let cycles = context
+        .verify_tx(&tx, MAX_CYCLES)
+        .expect("pass verification");
+    println!("consume cycles: {}", cycles);
+}
+
+#[test]
+fn test_correct_tx_btc() {
+    let mole_address = molecule::bytes::Bytes::from("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+    let mole_iter = mole_address.into_iter();
+    let mut v = Vec::new();
+    for mole in mole_iter {
+        v.push(Byte::new(mole));
+    }
+
+    let toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(2u8))
+        .kind(Byte::new(1u8))
+        .lot_size(Byte::new(1u8))
+        .user_lockscript_hash(Byte32::new_builder().build())
+        .x_lock_address(
+            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
+                .set(v)
+                .build(),
+        )
+        .build();
+    let (context, tx) = build_test_context(1, toCKB_data.as_bytes());
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
