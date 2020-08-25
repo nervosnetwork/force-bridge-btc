@@ -1,6 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::types::{
-    Error, XChainKind,
+use crate::utils::{
+    types::{ Error, ToCKBCellDataView},
+    tools::{ XChainKind, get_xchain_kind }
 };
 use core::result::Result;
 use ckb_std::{
@@ -24,32 +25,28 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         return Err(Error::CapacityInvalid);
     }
 
-    if input_data.kind != output_data.kind
-        || input_data.user_lockscript_hash.as_ref() != output_data.user_lockscript_hash.as_ref()
+    if input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
         || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
-        || input_data.signer_lockscript_hash.as_ref() != output_data.signer_lockscript_hash.as_ref()
+        || input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
         || input_data.x_unlock_address.as_ref() != output_data.x_unlock_address.as_ref()
-        || input_data.redeemer_lockscript_hash.as_ref() != output_data.redeemer_lockscript_hash.as_ref()
+        || input_data.redeemer_lockscript.as_ref() != output_data.redeemer_lockscript.as_ref()
     {
         return Err(Error::InvariantDataMutated);
     }
 
-    match input_data.kind {
-        XChainKind::Btc => {
-            if input_data.get_btc_lot_size()? != output_data.get_btc_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-        }
-        XChainKind::Eth => {
-            if input_data.get_eth_lot_size()? != output_data.get_eth_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-        }
-    };
-
+    verify_lot_size(input_data)?;
     Ok(())
 }
 
 fn verify_since(_since: u64) -> Result<(), Error> {
     Ok(())
+}
+
+fn verify_lot_size(toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
+    let xchain_kind = get_xchain_kind()?;
+    match xchain_kind {
+        XChainKind::Btc if toCKB_data.get_btc_lot_size().is_ok() => Ok(()),
+        XChainKind::Eth if toCKB_data.get_eth_lot_size().is_ok() => Ok(()),
+        _ => Err(Error::LotSizeInvalid),
+    }
 }
