@@ -47,7 +47,8 @@ fn verify_capacity() -> Result<(), Error> {
 }
 
 fn verify_data(input_data: &ToCKBCellDataView, output_data: &ToCKBCellDataView) -> Result<(), Error> {
-    if input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
+    if input_data.get_raw_lot_size() != output_data.get_raw_lot_size()
+        ||input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
         || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
         || input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
         || input_data.x_unlock_address.as_ref() != output_data.x_unlock_address.as_ref()
@@ -55,20 +56,6 @@ fn verify_data(input_data: &ToCKBCellDataView, output_data: &ToCKBCellDataView) 
     {
         return Err(Error::InvariantDataMutated);
     }
-
-    let xchain_kind = get_xchain_kind()?;
-    match xchain_kind {
-        XChainKind::Btc => {
-            if input_data.get_btc_lot_size()? != output_data.get_btc_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-        }
-        XChainKind::Eth => {
-            if input_data.get_eth_lot_size()? != output_data.get_eth_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-        }
-    };
 
     Ok(())
 }
