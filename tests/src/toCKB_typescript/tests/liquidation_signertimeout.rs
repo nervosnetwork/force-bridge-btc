@@ -55,6 +55,27 @@ fn test_correct_tx() {
 
 
 #[test]
+fn test_wrong_lot_size() {
+    let input_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::Redeeming as u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let output_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .lot_size(Byte::new(2u8))
+        .build();
+
+    let (context, tx) =
+        build_test_context(1,input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+
+
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(err, ScriptError::ValidationFailure(INVARIANT_DATA_MUTATED));
+}
+
+
+#[test]
 fn test_wrong_status() {
     let input_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
