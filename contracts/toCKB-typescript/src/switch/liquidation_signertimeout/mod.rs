@@ -1,7 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     types::{Error, ToCKBCellDataView},
-    tools::{XChainKind, get_xchain_kind},
     config::{LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK, VALUE_MASK, REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, N4}
 };
 use core::result::Result;
