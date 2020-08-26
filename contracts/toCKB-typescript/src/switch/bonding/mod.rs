@@ -36,11 +36,9 @@ pub fn verify_data(
             eth_lot_size.get_sudt_amount()
         }
     };
-
     if input_toCKB_data.user_lockscript.as_ref() != out_toCKB_data.user_lockscript.as_ref() {
         return Err(Error::InvariantDataMutated);
     }
-
     Ok(amount)
 }
 
@@ -50,19 +48,17 @@ pub fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
         return Err(Error::InvalidWitness);
     }
     let witness_bytes: Bytes = witness_args.to_opt().unwrap().unpack();
-
-    if witness_bytes.len() != 8 {
-        return Err(Error::Encoding);
-    }
-
-    let mut buf = [0u8; 8];
-    buf.copy_from_slice(witness_bytes.as_ref());
-    let price = u64::from_le_bytes(buf);
+    let price:u8 = witness_bytes[0];
 
     let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
     let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
+    if input_capacity > output_capacity {
+        return Err(Error::CollateralInvalid);
+    }
     let diff_capacity = output_capacity - input_capacity;
-    if lot_amount * COLLATERAL_PERCENT as u128 * price as u128 != (diff_capacity * 100) as u128 {
+    let collateral:u128 = lot_amount * (COLLATERAL_PERCENT as u128) * (price as u128);
+    
+    if collateral != diff_capacity as u128 * 100 as u128{
         return Err(Error::CollateralInvalid);
     }
     Ok(())

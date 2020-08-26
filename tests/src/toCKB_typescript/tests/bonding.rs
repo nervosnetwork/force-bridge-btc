@@ -1,6 +1,5 @@
-use super::{Byte32, ToCKBCellData};
+use super::{Script, ToCKBCellData};
 use crate::*;
-use bech32::{self, ToBase32};
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
     bytes::Bytes,
@@ -21,20 +20,22 @@ const LOT_SIZE_INVALID: i8 = 7;
 const TX_INVALID: i8 = 6;
 const ENCODING: i8 = 4;
 
+const ETH_COLLATERAL: u64 = 15 * 250_000_000_000_000_000 + 11000;
+const BTC_COLLATERAL: u64 = 15 * 25_000_000 + 11000;
+
 #[test]
 fn test_correct_tx_eth() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
-        .kind(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
         .build();
-    let (context, tx) = build_test_context(2, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
@@ -52,16 +53,15 @@ fn test_correct_tx_btc() {
 
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
-        .kind(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
                 .set(v)
                 .build(),
         )
         .build();
-    let (context, tx) = build_test_context(1, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, BTC_COLLATERAL, toCKB_data.as_bytes());
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
@@ -72,17 +72,16 @@ fn test_correct_tx_btc() {
 fn test_wrong_tx_btc_address_invalid() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
-        .kind(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec().into())
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
         .build();
 
-    let (context, tx) = build_test_context(1, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, BTC_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(ADDRESS_INVALID));
@@ -92,17 +91,16 @@ fn test_wrong_tx_btc_address_invalid() {
 fn test_wrong_tx_eth_address_invalid() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
-        .kind(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
-                .set([Byte::new(1u8); 21].to_vec().into())
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 21].to_vec())
                 .build(),
         )
         .build();
 
-    let (context, tx) = build_test_context(2, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(ADDRESS_INVALID));
@@ -112,17 +110,16 @@ fn test_wrong_tx_eth_address_invalid() {
 fn test_wrong_tx_status_mismatch() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
-        .kind(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec().into())
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
         .build();
 
-    let (context, tx) = build_test_context(2, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(TX_INVALID));
@@ -132,43 +129,57 @@ fn test_wrong_tx_status_mismatch() {
 fn test_wrong_tx_kind_mismatch() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
-        .kind(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec().into())
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
         .build();
 
-    let (context, tx) = build_test_context(2, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(3, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(DATA_MUTATED));
+    assert_error_eq!(err, ScriptError::ValidationFailure(ENCODING));
 }
 
 #[test]
 fn test_wrong_tx_lot_size_mismatch() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
-        .kind(Byte::new(2u8))
         .lot_size(Byte::new(2u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::toCKB_cell_data::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec().into())
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
         .build();
 
-    let (context, tx) = build_test_context(2, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(DATA_MUTATED));
 }
 
-fn build_test_context(coin_type: u8, output_toCKB_data: Bytes) -> (Context, TransactionView) {
+fn test_wrong_tx_collateral_wrong() {
+    let toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(2u8))
+        .lot_size(Byte::new(1u8))
+        .user_lockscript(Script::new_builder().build())
+        .x_lock_address(
+            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 20].to_vec())
+                .build(),
+        )
+        .build();
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL + 1, toCKB_data.as_bytes());
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(err, ScriptError::ValidationFailure(INVALID_COLLATERAL));
+}
+
+fn build_test_context(kind: u8, value: u64, output_toCKB_data: Bytes) -> (Context, TransactionView) {
     // deploy contract
     let mut context = Context::default();
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
@@ -177,7 +188,7 @@ fn build_test_context(coin_type: u8, output_toCKB_data: Bytes) -> (Context, Tran
 
     // prepare scripts
     let toCKB_typescript = context
-        .build_script(&toCKB_typescript_out_point, Default::default())
+        .build_script(&toCKB_typescript_out_point, [kind; 1].to_vec().into())
         .expect("script");
     let toCKB_typescript_dep = CellDep::new_builder()
         .out_point(toCKB_typescript_out_point)
@@ -203,9 +214,8 @@ fn build_test_context(coin_type: u8, output_toCKB_data: Bytes) -> (Context, Tran
 
     let input_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
-        .kind(Byte::new(coin_type))
         .lot_size(Byte::new(1u8))
-        .user_lockscript_hash(Byte32::new_builder().build())
+        .user_lockscript(Script::new_builder().build())
         .build();
 
     let input_ckb_cell_out_point = context.create_cell(
@@ -221,17 +231,25 @@ fn build_test_context(coin_type: u8, output_toCKB_data: Bytes) -> (Context, Tran
         .build();
 
     let inputs = vec![input_ckb_cell, input];
+
+
+
     let outputs = vec![CellOutput::new_builder()
-        .capacity(11000u64.pack())
+        .capacity(value.pack())
         .type_(Some(toCKB_typescript.clone()).pack())
         .lock(always_success_lockscript)
         .build()];
     let outputs_data = vec![output_toCKB_data; 1];
 
-    // build transaction
+    let price = vec![10u8];
+    let witness = WitnessArgs::new_builder()
+        .input_type(Some(Bytes::from(price)).pack())
+        .build();// build transaction
+
     let tx = TransactionBuilder::default()
         .inputs(inputs)
         .outputs(outputs)
+        .witness(witness.as_bytes().pack())
         .outputs_data(outputs_data.pack())
         .cell_dep(toCKB_typescript_dep)
         .cell_dep(always_success_lockscript_dep)
