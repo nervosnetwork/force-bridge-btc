@@ -9,6 +9,7 @@ edition = "2018"
 ckb-std = "0.6.0"
 molecule = { version = "=0.6.0", default-features = false }
 int-enum = { version = "0.4", default-features = false }
+bech32 = { git = "https://github.com/reuvenpo/rust-bech32.git", branch = "support-no_std", default-features = false }
 
 [profile.release]
 overflow-checks = true
