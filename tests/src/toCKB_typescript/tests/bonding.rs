@@ -179,7 +179,11 @@ fn test_wrong_tx_collateral_wrong() {
     assert_error_eq!(err, ScriptError::ValidationFailure(INVALID_COLLATERAL));
 }
 
-fn build_test_context(kind: u8, value: u64, output_toCKB_data: Bytes) -> (Context, TransactionView) {
+fn build_test_context(
+    kind: u8,
+    value: u64,
+    output_toCKB_data: Bytes,
+) -> (Context, TransactionView) {
     // deploy contract
     let mut context = Context::default();
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
@@ -232,8 +236,6 @@ fn build_test_context(kind: u8, value: u64, output_toCKB_data: Bytes) -> (Contex
 
     let inputs = vec![input_ckb_cell, input];
 
-
-
     let outputs = vec![CellOutput::new_builder()
         .capacity(value.pack())
         .type_(Some(toCKB_typescript.clone()).pack())
@@ -244,7 +246,7 @@ fn build_test_context(kind: u8, value: u64, output_toCKB_data: Bytes) -> (Contex
     let price = vec![10u8];
     let witness = WitnessArgs::new_builder()
         .input_type(Some(Bytes::from(price)).pack())
-        .build();// build transaction
+        .build(); // build transaction
 
     let tx = TransactionBuilder::default()
         .inputs(inputs)
