@@ -15,12 +15,10 @@ use alloc::{vec, vec::Vec};
 // Import CKB syscalls and structures
 // https://nervosnetwork.github.io/ckb-std/riscv64imac-unknown-none-elf/doc/ckb_std/index.html
 use ckb_std::{
-    entry,
-    default_alloc,
-    debug,
-    high_level::{load_script, load_tx_hash},
-    error::SysError,
     ckb_types::{bytes::Bytes, prelude::*},
+    debug, default_alloc, entry,
+    error::SysError,
+    high_level::{load_script, load_tx_hash},
 };
 
 entry!(entry);
