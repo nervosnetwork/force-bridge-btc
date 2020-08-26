@@ -11,7 +11,7 @@ table BTCSPVProof {
     vout: Bytes,
     locktime: Byte4,
     tx_id: Byte32,
-    index: Uint32,
+    index: Uint64,
     headers: Bytes,
     intermediate_nodes: Bytes,
     funding_output_index: byte,
