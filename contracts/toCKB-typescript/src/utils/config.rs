@@ -1,2 +1,3 @@
 pub const PLEDGE: u64 = 10000;
-pub const SINCE_N1: u64 = 0;
+const SINCE_TYPE: u64 = 1 << 63;
+pub const SINCE_WITHDRAW_PLEDGE: u64 = SINCE_TYPE | 100;
