@@ -12,6 +12,8 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
+    InvariantDataMutated,
+    CapacityMismatch,
 }
 
 impl From<SysError> for Error {
