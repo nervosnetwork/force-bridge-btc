@@ -24,7 +24,7 @@ use ckb_std::{
 };
 use core::result::Result;
 use molecule::prelude::{Entity, Reader};
-use num::bigint::BigUint;
+use primitive_types::U256;
 
 fn verify_data(
     input_data: &ToCKBCellDataView,
@@ -125,8 +125,8 @@ fn verify_btc_spv(proof: BTCSPVProofReader, difficulty: BTCDifficultyReader) -> 
     let raw_headers = proof.headers();
     let headers = HeaderArray::new(raw_headers.raw_data())?;
     let observed_diff = validatespv::validate_header_chain(&headers, false)?;
-    let previous_diff = BigUint::from_bytes_be(difficulty.previous().raw_data());
-    let current_diff = BigUint::from_bytes_be(difficulty.current().raw_data());
+    let previous_diff = U256::from_little_endian(difficulty.previous().raw_data());
+    let current_diff = U256::from_little_endian(difficulty.current().raw_data());
     let first_header_diff = headers.index(0).difficulty();
 
     let req_diff = if first_header_diff == current_diff {
