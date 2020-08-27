@@ -48,7 +48,7 @@ pub fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
         return Err(Error::InvalidWitness);
     }
     let witness_bytes: Bytes = witness_args.to_opt().unwrap().unpack();
-    let price:u8 = witness_bytes[0];
+    let price: u8 = witness_bytes[0];
 
     let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
     let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
@@ -56,9 +56,9 @@ pub fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
         return Err(Error::CollateralInvalid);
     }
     let diff_capacity = output_capacity - input_capacity;
-    let collateral:u128 = lot_amount * (COLLATERAL_PERCENT as u128) * (price as u128);
-    
-    if collateral != diff_capacity as u128 * 100 as u128{
+    let collateral: u128 = lot_amount * (COLLATERAL_PERCENT as u128) * (price as u128);
+
+    if collateral != diff_capacity as u128 * 100 as u128 {
         return Err(Error::CollateralInvalid);
     }
     Ok(())
