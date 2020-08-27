@@ -1,7 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     types::{Error, ToCKBCellDataView},
-    config::{LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK, VALUE_MASK, REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, N4}
+    config::SINCE_SIGNER_TIMEOUT,
 };
 use core::result::Result;
 use ckb_std::{
@@ -20,19 +20,11 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
 }
 
 fn verify_since() -> Result<(), Error> {
-    let since = load_input_since(0, Source::GroupInput).expect("since should exist");
-    if since & REMAIN_FLAGS_BITS != 0 // check flags is valid
-        || since & METRIC_TYPE_FLAG_MASK == METRIC_TYPE_FLAG_MASK // check flags is valid
-        || since & LOCK_TYPE_FLAG == 0 // check if it is relative_flag
-        || since & METRIC_TYPE_FLAG_MASK != SINCE_TYPE_TIMESTAMP {   // check if it is timestamp value
-        return Err(Error::InputSinceInvalid)
+    let since = load_input_since(0, Source::GroupInput).
+        map_err(|_| Error::InputSinceInvalid)?;
+    if since != SINCE_SIGNER_TIMEOUT {   // check if it is timestamp value
+        return Err(Error::InputSinceInvalid);
     }
-
-    let time = since & VALUE_MASK;
-    if time != N4 {
-        return Err(Error::InputSinceInvalid)
-    }
-
     Ok(())
 }
 
@@ -47,7 +39,7 @@ fn verify_capacity() -> Result<(), Error> {
 
 fn verify_data(input_data: &ToCKBCellDataView, output_data: &ToCKBCellDataView) -> Result<(), Error> {
     if input_data.get_raw_lot_size() != output_data.get_raw_lot_size()
-        ||input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
+        || input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
         || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
         || input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
         || input_data.x_unlock_address.as_ref() != output_data.x_unlock_address.as_ref()

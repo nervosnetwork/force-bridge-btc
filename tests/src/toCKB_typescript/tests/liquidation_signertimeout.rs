@@ -15,7 +15,6 @@ use crate::toCKB_typescript::utils::{
 };
 
 const MAX_CYCLES: u64 = 10_000_000;
-const SINCE_LIQUIDATION_SIGNERTIMEOUT: u64 = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | N4;
 
 
 #[test]
@@ -144,7 +143,7 @@ fn build_test_context(kind:u8, input_toCKB_data: Bytes, output_toCKB_data: Bytes
     );
     let input = CellInput::new_builder()
         .previous_output(input_out_point)
-        .since(SINCE_LIQUIDATION_SIGNERTIMEOUT.pack())
+        .since(SINCE_SIGNER_TIMEOUT.pack())
         .build();
 
     // prepare outputs
