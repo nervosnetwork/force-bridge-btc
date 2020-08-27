@@ -1,4 +1,8 @@
 use super::{Byte32, Script, ToCKBCellData};
+use crate::toCKB_typescript::utils::{
+    config::*,
+    types::{Error, ToCKBStatus},
+};
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -9,13 +13,8 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
-use crate::toCKB_typescript::utils::{
-    types::{ToCKBStatus, Error},
-    config::*
-};
 
 const MAX_CYCLES: u64 = 10_000_000;
-
 
 #[test]
 fn test_correct_tx() {
@@ -30,14 +29,13 @@ fn test_correct_tx() {
         .build();
 
     let (context, tx) =
-        build_test_context(1,input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+        build_test_context(1, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
     println!("consume cycles: {}", cycles);
 }
-
 
 #[test]
 fn test_wrong_lot_size() {
@@ -52,13 +50,14 @@ fn test_wrong_lot_size() {
         .build();
 
     let (context, tx) =
-        build_test_context(1,input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
-
+        build_test_context(1, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(Error::InvariantDataMutated as i8));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
+    );
 }
-
 
 #[test]
 fn test_wrong_status() {
@@ -79,7 +78,6 @@ fn test_wrong_status() {
     assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
 }
 
-
 #[test]
 fn test_wrong_redeemer() {
     let input_toCKB_data = ToCKBCellData::new_builder()
@@ -90,10 +88,8 @@ fn test_wrong_redeemer() {
 
     let wrong_lock = {
         let data = [1u8; 32];
-        let wrong_hash= Byte32::from_slice(data.as_ref()).expect("should not happen");
-        Script::new_builder()
-            .code_hash(wrong_hash)
-            .build()
+        let wrong_hash = Byte32::from_slice(data.as_ref()).expect("should not happen");
+        Script::new_builder().code_hash(wrong_hash).build()
     };
 
     let output_toCKB_data = ToCKBCellData::new_builder()
@@ -106,10 +102,17 @@ fn test_wrong_redeemer() {
         build_test_context(1, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(Error::InvariantDataMutated as i8));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
+    );
 }
 
-fn build_test_context(kind:u8, input_toCKB_data: Bytes, output_toCKB_data: Bytes) -> (Context, TransactionView) {
+fn build_test_context(
+    kind: u8,
+    input_toCKB_data: Bytes,
+    output_toCKB_data: Bytes,
+) -> (Context, TransactionView) {
     // deploy contract
     let mut context = Context::default();
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");

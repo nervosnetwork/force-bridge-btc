@@ -15,7 +15,7 @@ pub enum Error {
 
     CapacityInvalid,
     InvariantDataMutated,
-    InputSinceInvalid
+    InputSinceInvalid,
 }
 
 impl From<SysError> for Error {

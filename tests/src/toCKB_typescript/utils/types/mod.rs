@@ -14,7 +14,7 @@ pub enum Error {
 
     CapacityInvalid,
     InvariantDataMutated,
-    InputSinceInvalid
+    InputSinceInvalid,
 }
 
 #[repr(u8)]
