@@ -28,7 +28,6 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
 fn verify_since() -> Result<(), Error> {
     let since = load_input_since(0, Source::GroupInput).map_err(|_| Error::InputSinceInvalid)?;
     if since != SINCE_SIGNER_TIMEOUT {
-        // check if it is timestamp value
         return Err(Error::InputSinceInvalid);
     }
     Ok(())
