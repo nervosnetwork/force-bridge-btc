@@ -9,7 +9,7 @@ use crate::utils::{
     },
 };
 use alloc::string::String;
-use bech32::{self, ToBase32};
+use bech32::ToBase32;
 use bitcoin_spv::{
     btcspv,
     types::{HeaderArray, MerkleArray, PayloadType, Vin, Vout},
@@ -18,10 +18,9 @@ use bitcoin_spv::{
 use ckb_std::{
     ckb_constants::Source,
     debug,
-    error::SysError,
     high_level::{
-        load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type, load_cell_type_hash,
-        load_witness_args, QueryIter,
+        load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type, load_witness_args,
+        QueryIter,
     },
 };
 use core::result::Result;
@@ -208,11 +207,6 @@ fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
 }
 
 fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
-    // let sudt_script = load_cell_type(1, Source::Output)?.unwrap();
-    // debug!("sudt_script: {:?}", sudt_script);
-    // debug!("sudt_script code_hash: {:?}", sudt_script.code_hash());
-    // debug!("sudt_script args: {:?}", sudt_script.args());
-    // debug!("sudt_script hash_type: {:?}", sudt_script.hash_type());
     let lock_hash = load_cell_lock_hash(0, Source::Input)?;
     debug!("lockscript hash: {:?}", hex::encode(lock_hash));
     let input_xt_num = QueryIter::new(load_cell_type, Source::Input)
@@ -226,15 +220,6 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     if input_xt_num != 0 {
         return Err(Error::InvalidXTInInput);
     }
-    // let output_xt_num = QueryIter::new(load_cell_type, Source::Output)
-    //     .filter(|type_opt| type_opt.is_some())
-    //     .map(|type_opt| type_opt.unwrap())
-    //     .filter(|script| {
-    //         script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
-    //             && script.args().raw_data().as_ref() == lock_hash.as_ref()
-    //     })
-    //     .count();
-    // debug!("output_xt_num: {}", output_xt_num);
     let xt_amount = data.get_btc_lot_size()?.get_sudt_amount();
     debug!("xt_amount: {}", xt_amount);
     let expect = [

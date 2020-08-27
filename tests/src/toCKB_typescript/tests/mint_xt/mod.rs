@@ -1,45 +1,21 @@
-use super::{Script, ToCKBCellData};
-use crate::toCKB_typescript::utils::types::{basic, btc_difficulty, mint_xt_witness};
+use super::ToCKBCellData;
+use crate::toCKB_typescript::utils::types::{
+    generated::{basic, btc_difficulty, mint_xt_witness},
+    ToCKBStatus,
+};
 use crate::*;
 use anyhow::Result;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
-use ckb_tool::ckb_types::{
-    bytes::Bytes,
-    core::{TransactionBuilder, TransactionView},
-    packed::*,
-    prelude::*,
-};
-use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
-use int_enum::IntEnum;
+use ckb_tool::ckb_types::{bytes::Bytes, core::TransactionBuilder, packed::*, prelude::*};
 use molecule::prelude::*;
-use primitive_types::U256;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
 const MAX_CYCLES: u64 = 100_000_000;
-// const PLEDGE_INVALID: i8 = 8;
-// const LOT_SIZE_INVALID: i8 = 7;
-// const TX_INVALID: i8 = 6;
-// const ENCODING: i8 = 4;
-
-#[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
-pub enum ToCKBStatus {
-    Initial = 1,
-    Bonded = 2,
-    Warranty = 3,
-    Redeeming = 4,
-    SignerTimeout = 5,
-    Undercollateral = 6,
-    FaultyWhenWarranty = 7,
-    FaultyWhenRedeeming = 8,
-}
 
 #[test]
 fn test_correct_tx() {
     let kind = 1;
-    let pledge = 10000;
-    let coin_type = 1;
 
     let mut context = Context::default();
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
@@ -87,14 +63,10 @@ fn test_correct_tx() {
         .previous_output(input_out_point)
         .build();
 
-    let user_lockscript = toCKB_typescript::utils::types::basic::Script::from_slice(
-        always_success_lockscript.as_slice(),
-    )
-    .unwrap();
+    let user_lockscript = basic::Script::from_slice(always_success_lockscript.as_slice()).unwrap();
     let signer_lockscript = user_lockscript.clone();
     let x_lock_address_str = b"bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t";
-    let x_lock_address = toCKB_typescript::utils::types::basic::Bytes::new_builder()
-        // .set([Byte::new(1u8); 20].to_vec().into())
+    let x_lock_address = basic::Bytes::new_builder()
         .set(
             x_lock_address_str
                 .iter()
@@ -104,14 +76,14 @@ fn test_correct_tx() {
         )
         .build();
     let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Bonded.int_value()))
+        .status(Byte::new(ToCKBStatus::Bonded as u8))
         .lot_size(Byte::new(1u8))
         .signer_lockscript(signer_lockscript.clone())
         .user_lockscript(user_lockscript.clone())
         .x_lock_address(x_lock_address.clone())
         .build();
     let output_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Warranty.int_value()))
+        .status(Byte::new(ToCKBStatus::Warranty as u8))
         .lot_size(Byte::new(1u8))
         .signer_lockscript(signer_lockscript.clone())
         .user_lockscript(user_lockscript.clone())

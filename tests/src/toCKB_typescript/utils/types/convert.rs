@@ -1,4 +1,4 @@
-use super::basic::{Byte32, Byte4, Bytes, Uint32, Uint64};
+use super::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint64};
 use molecule::prelude::{Builder, Byte, Entity};
 
 impl From<Vec<u8>> for Bytes {
