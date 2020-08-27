@@ -23,6 +23,7 @@ pub enum Error {
     WrongTxId,
     FundingNotEnough,
     UnsupportedFundingType,
+    InvalidMintOutput,
     WrongFundingAddr,
     InvalidXTInInput,
     InvalidXTMint,

@@ -1,6 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
-    config::{SIGNER_FEE_RATE, TX_PROOF_DIFFICULTY_FACTOR},
+    config::{SIGNER_FEE_RATE, SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR},
     tools::{get_xchain_kind, XChainKind},
     types::{
         btc_difficulty::BTCDifficultyReader,
@@ -8,6 +8,7 @@ use crate::utils::{
         Error, ToCKBCellDataView,
     },
 };
+use alloc::string::String;
 use bech32::{self, ToBase32};
 use bitcoin_spv::{
     btcspv,
@@ -19,7 +20,8 @@ use ckb_std::{
     debug,
     error::SysError,
     high_level::{
-        load_cell_data, load_cell_lock, load_cell_type_hash, load_witness_args, QueryIter,
+        load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type, load_cell_type_hash,
+        load_witness_args, QueryIter,
     },
 };
 use core::result::Result;
@@ -96,20 +98,31 @@ fn verify_btc_witness(
     let tx_out = vout.index(funding_output_index.into())?;
     let script_pubkey = tx_out.script_pubkey();
     debug!("script_pubkey payload: {:?}", script_pubkey.payload()?);
-    // match script_pubkey.payload()? {
-    //     PayloadType::WPKH(_) => {
-    //         let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
-    //         if addr.as_bytes() != data.x_lock_address.as_ref() {
-    //             return Err(Error::WrongFundingAddr);
-    //         }
-    //     }
-    //     _ => return Err(Error::UnsupportedFundingType),
-    // }
-    let value = tx_out.value();
-    debug!("value: {}", value);
-    // if value as u128 != data.get_btc_lot_size()?.get_sudt_amount() {
-    //     return Err(Error::FundingNotEnough);
-    // }
+    match script_pubkey.payload()? {
+        PayloadType::WPKH(_) => {
+            let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
+            debug!(
+                "hex format: addr: {}, x_lock_address: {}",
+                hex::encode(addr.as_bytes().to_vec()),
+                hex::encode(data.x_lock_address.as_ref().to_vec())
+            );
+            debug!(
+                "addr: {}, x_lock_address: {}",
+                String::from_utf8(addr.as_bytes().to_vec()).unwrap(),
+                String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+            );
+            if addr.as_bytes() != data.x_lock_address.as_ref() {
+                return Err(Error::WrongFundingAddr);
+            }
+        }
+        _ => return Err(Error::UnsupportedFundingType),
+    }
+    let expect_value = data.get_btc_lot_size()?.get_sudt_amount();
+    let value = tx_out.value() as u128;
+    debug!("actual value: {}, expect: {}", value, expect_value);
+    if value < expect_value {
+        return Err(Error::FundingNotEnough);
+    }
     Ok(())
 }
 
@@ -167,6 +180,13 @@ fn verify_btc_spv(proof: BTCSPVProofReader, difficulty: BTCDifficultyReader) -> 
     let header = headers.index(headers.len() - 1);
     let mut idx = [0u8; 8];
     idx.copy_from_slice(proof.index().raw_data());
+    debug!("tx_id: {}", hex::encode(tx_id.as_ref()));
+    debug!("merkle_root: {}", hex::encode(header.tx_root().as_ref()));
+    debug!(
+        "proof: {}",
+        hex::encode(proof.intermediate_nodes().raw_data())
+    );
+    debug!("index: {}", u64::from_le_bytes(idx));
     if !validatespv::prove(
         tx_id,
         header.tx_root(),
@@ -188,62 +208,77 @@ fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
 }
 
 fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
-    // todo: change to btc_xt type hash
-    let btc_xt_type_hash = [0u8; 32];
-    let input_xt_num = QueryIter::new(load_cell_type_hash, Source::Input)
-        .map(|hash_opt| hash_opt.unwrap_or_default())
-        .filter(|hash| hash == &btc_xt_type_hash)
+    // let sudt_script = load_cell_type(1, Source::Output)?.unwrap();
+    // debug!("sudt_script: {:?}", sudt_script);
+    // debug!("sudt_script code_hash: {:?}", sudt_script.code_hash());
+    // debug!("sudt_script args: {:?}", sudt_script.args());
+    // debug!("sudt_script hash_type: {:?}", sudt_script.hash_type());
+    let lock_hash = load_cell_lock_hash(0, Source::Input)?;
+    debug!("lockscript hash: {:?}", hex::encode(lock_hash));
+    let input_xt_num = QueryIter::new(load_cell_type, Source::Input)
+        .filter(|type_opt| type_opt.is_some())
+        .map(|type_opt| type_opt.unwrap())
+        .filter(|script| {
+            script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
+                && script.args().raw_data().as_ref() == lock_hash.as_ref()
+        })
         .count();
     if input_xt_num != 0 {
         return Err(Error::InvalidXTInInput);
     }
-    let mut output_index = 0;
-    let mut user_checked = false;
-    let mut signer_checked = false;
+    // let output_xt_num = QueryIter::new(load_cell_type, Source::Output)
+    //     .filter(|type_opt| type_opt.is_some())
+    //     .map(|type_opt| type_opt.unwrap())
+    //     .filter(|script| {
+    //         script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
+    //             && script.args().raw_data().as_ref() == lock_hash.as_ref()
+    //     })
+    //     .count();
+    // debug!("output_xt_num: {}", output_xt_num);
     let xt_amount = data.get_btc_lot_size()?.get_sudt_amount();
-    loop {
-        let type_hash_res = load_cell_type_hash(output_index, Source::Output);
-        match type_hash_res {
-            Err(SysError::IndexOutOfBound) => break,
-            Err(err) => {
-                debug!("iter output error {:?}", err);
-                panic!("iter output return an error")
-            }
-            Ok(type_hash) => {
-                if !(type_hash.is_some() && type_hash.unwrap() == btc_xt_type_hash) {
-                    continue;
-                }
-                let lock = load_cell_lock(output_index, Source::Output)?;
-                let cell_data = load_cell_data(output_index, Source::Output)?;
-                let mut amount_vec = [0u8; 16];
-                amount_vec.copy_from_slice(&cell_data);
-                let token_amount = u128::from_le_bytes(amount_vec);
-                if lock.as_slice() == data.user_lockscript.as_ref() {
-                    if user_checked {
-                        return Err(Error::InvalidXTMint);
-                    }
-                    if token_amount != xt_amount - xt_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1
-                    {
-                        return Err(Error::InvalidXTMint);
-                    }
-                    user_checked = true;
-                } else if lock.as_slice() == data.signer_lockscript.as_ref() {
-                    if signer_checked {
-                        return Err(Error::InvalidXTMint);
-                    }
-                    if token_amount != xt_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1 {
-                        return Err(Error::InvalidXTMint);
-                    }
-                    signer_checked = true;
-                } else {
-                    return Err(Error::InvalidXTMint);
-                }
-                output_index += 1;
-            }
+    debug!("xt_amount: {}", xt_amount);
+    let expect = [
+        (
+            1,
+            data.user_lockscript.as_ref(),
+            xt_amount - xt_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1,
+        ),
+        (
+            2,
+            data.signer_lockscript.as_ref(),
+            xt_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1,
+        ),
+    ];
+    debug!("expect: {:?}", expect);
+
+    for (i, lockscript, amout) in expect.iter() {
+        let script = load_cell_type(*i, Source::Output)?;
+        if script.is_none() {
+            return Err(Error::InvalidMintOutput);
         }
-    }
-    if !(user_checked && signer_checked) {
-        return Err(Error::InvalidXTMint);
+        let script = script.unwrap();
+        if !(script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
+            && script.args().raw_data().as_ref() == lock_hash.as_ref())
+        {
+            return Err(Error::InvalidMintOutput);
+        }
+        let cell_data = load_cell_data(*i, Source::Output)?;
+        let mut amount_vec = [0u8; 16];
+        amount_vec.copy_from_slice(&cell_data);
+        let token_amount = u128::from_le_bytes(amount_vec);
+        debug!("token_amount: {}, amout: {}", token_amount, amout);
+        if token_amount != *amout {
+            return Err(Error::InvalidMintOutput);
+        }
+        let lock = load_cell_lock(*i, Source::Output)?;
+        debug!(
+            "lock: {:?}, expect lock: {:?}",
+            hex::encode(lock.as_slice()),
+            hex::encode(lockscript.as_ref())
+        );
+        if lock.as_slice() != lockscript.as_ref() {
+            return Err(Error::InvalidMintOutput);
+        }
     }
     Ok(())
 }
@@ -256,7 +291,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("verify data finish");
     verify_witness(input_data)?;
     debug!("verify witness finish");
-    // verify_xt_issue(input_data)?;
-    // debug!("verify xt issue finish");
+    verify_xt_issue(input_data)?;
+    debug!("verify xt issue finish");
     Ok(())
 }
