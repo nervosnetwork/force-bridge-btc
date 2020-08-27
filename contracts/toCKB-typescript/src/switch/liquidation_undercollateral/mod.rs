@@ -14,7 +14,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
 
     verify_capacity()?;
     verify_data(input_data, output_data)?;
-    check_undercollateral()?;
+    verify_undercollateral()?;
 
     Ok(())
 }
@@ -40,6 +40,15 @@ fn verify_data(input_data: &ToCKBCellDataView, output_data: &ToCKBCellDataView) 
     Ok(())
 }
 
-fn check_undercollateral() -> Result<(), Error> {
+fn verify_undercollateral() -> Result<(), Error> {
+    // get signer ckb
+
+
+    // get lot size
+
+
+    // get ckb / x
+
+
     Ok(())
 }
