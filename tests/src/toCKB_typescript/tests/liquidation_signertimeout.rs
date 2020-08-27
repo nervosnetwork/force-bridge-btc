@@ -28,13 +28,43 @@ fn test_correct_tx() {
         .lot_size(Byte::new(1u8))
         .build();
 
-    let (context, tx) =
-        build_test_context(1, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(
+        1,
+        SINCE_SIGNER_TIMEOUT,
+        input_toCKB_data.as_bytes(),
+        output_toCKB_data.as_bytes(),
+    );
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
     println!("consume cycles: {}", cycles);
+}
+
+#[test]
+fn test_wrong_since() {
+    let input_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::Redeeming as u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let output_toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(ToCKBStatus::SignerTimeout as u8))
+        .lot_size(Byte::new(1u8))
+        .build();
+
+    let (context, tx) = build_test_context(
+        1,
+        0,
+        input_toCKB_data.as_bytes(),
+        output_toCKB_data.as_bytes(),
+    );
+
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InputSinceInvalid as i8)
+    );
 }
 
 #[test]
@@ -49,8 +79,12 @@ fn test_wrong_lot_size() {
         .lot_size(Byte::new(2u8))
         .build();
 
-    let (context, tx) =
-        build_test_context(1, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(
+        1,
+        SINCE_SIGNER_TIMEOUT,
+        input_toCKB_data.as_bytes(),
+        output_toCKB_data.as_bytes(),
+    );
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -71,8 +105,12 @@ fn test_wrong_status() {
         .lot_size(Byte::new(1u8))
         .build();
 
-    let (context, tx) =
-        build_test_context(2, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(
+        2,
+        SINCE_SIGNER_TIMEOUT,
+        input_toCKB_data.as_bytes(),
+        output_toCKB_data.as_bytes(),
+    );
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
@@ -98,8 +136,12 @@ fn test_wrong_redeemer() {
         .redeemer_lockscript(wrong_lock)
         .build();
 
-    let (context, tx) =
-        build_test_context(1, input_toCKB_data.as_bytes(), output_toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(
+        1,
+        SINCE_SIGNER_TIMEOUT,
+        input_toCKB_data.as_bytes(),
+        output_toCKB_data.as_bytes(),
+    );
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -110,6 +152,7 @@ fn test_wrong_redeemer() {
 
 fn build_test_context(
     kind: u8,
+    since: u64,
     input_toCKB_data: Bytes,
     output_toCKB_data: Bytes,
 ) -> (Context, TransactionView) {
@@ -146,7 +189,7 @@ fn build_test_context(
     );
     let input = CellInput::new_builder()
         .previous_output(input_out_point)
-        .since(SINCE_SIGNER_TIMEOUT.pack())
+        .since(since.pack())
         .build();
 
     // prepare outputs
