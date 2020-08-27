@@ -75,7 +75,7 @@ pub enum ToCKBStatus {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum BtcLotSize {
     Quarter = 1,
     Half = 2,
@@ -94,7 +94,7 @@ impl BtcLotSize {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Eq)]
 pub enum EthLotSize {
     Quarter = 1,
     Half = 2,

@@ -12,6 +12,10 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
+    InvariantDataMutated,
+    XChainAddressInvalid,
+    XTBurnInvalid,
+    InputSinceInvalid,
 }
 
 impl From<SysError> for Error {
