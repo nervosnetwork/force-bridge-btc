@@ -14,6 +14,7 @@ pub enum Error {
     PledgeInvalid,
     InvariantDataMutated,
     XChainAddressInvalid,
+    XTBurnInvalid,
 }
 
 impl From<SysError> for Error {
