@@ -12,10 +12,13 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
-    InvariantDataMutated,
+    CollateralInvalid,
     XChainAddressInvalid,
-    XTBurnInvalid,
+    InvalidWitness,
+    CapacityInvalid,
+    InvariantDataMutated,
     InputSinceInvalid,
+    XTBurnInvalid,
 }
 
 impl From<SysError> for Error {
