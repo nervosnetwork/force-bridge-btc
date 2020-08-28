@@ -62,7 +62,7 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum ToCKBStatus {
     Initial = 1,
     Bonded = 2,
@@ -75,7 +75,7 @@ pub enum ToCKBStatus {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum BtcLotSize {
     Quarter = 1,
     Half = 2,
@@ -94,7 +94,7 @@ impl BtcLotSize {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum EthLotSize {
     Quarter = 1,
     Half = 2,
