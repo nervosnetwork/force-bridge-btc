@@ -207,7 +207,7 @@ fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
 }
 
 fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
-    let lock_hash = load_cell_lock_hash(0, Source::Input)?;
+    let lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
     debug!("lockscript hash: {:?}", hex::encode(lock_hash));
     let input_xt_num = QueryIter::new(load_cell_type, Source::Input)
         .filter(|type_opt| type_opt.is_some())
