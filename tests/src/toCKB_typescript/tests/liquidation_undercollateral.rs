@@ -40,7 +40,7 @@ fn test_correct_tx() {
 }
 
 #[test]
-fn test_wrong_price() {
+fn test_wrong_undercollateral() {
     let input_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(ToCKBStatus::Warranty as u8))
         .lot_size(Byte::new(1u8))
@@ -120,7 +120,7 @@ fn test_wrong_status() {
 fn build_test_context(
     kind: u8,
     since: u64,
-    price: u8,
+    price: u128,
     input_toCKB_data: Bytes,
     output_toCKB_data: Bytes,
 ) -> (Context, TransactionView) {
@@ -169,8 +169,9 @@ fn build_test_context(
     let outputs_data = vec![output_toCKB_data; 1];
 
     // witness
+    let data: [u8; 16] = price.to_le_bytes();
     let witness = WitnessArgs::new_builder()
-        .input_type(Some(Bytes::from(vec![price])).pack())
+        .input_type(Some(Bytes::copy_from_slice(data.as_ref())).pack())
         .build(); // build transaction
 
     // build transaction
