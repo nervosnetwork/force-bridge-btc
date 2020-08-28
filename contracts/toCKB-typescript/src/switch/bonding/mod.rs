@@ -2,10 +2,12 @@ use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::COLLATERAL_PERCENT;
 use crate::utils::tools::{get_xchain_kind, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
+use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
 use ckb_std::ckb_types::{bytes::Bytes, prelude::*};
 use ckb_std::high_level::{load_cell_capacity, load_witness_args};
 use core::result::Result;
+use molecule::prelude::Vec;
 
 pub fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
@@ -20,6 +22,20 @@ pub fn verify_data(
             if bech32::decode(core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap())
                 .is_err()
             {
+                return Err(Error::XChainAddressInvalid);
+            }
+            let (hrp, data) = bech32::decode(
+                core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap(),
+            )
+            .unwrap();
+            if hrp != "bc" {
+                return Err(Error::XChainAddressInvalid);
+            }
+            let raw_data = Vec::<u8>::from_base32(&data).unwrap();
+            if &raw_data[..2] != &[0x00, 0x14] {
+                return Err(Error::XChainAddressInvalid);
+            }
+            if raw_data.len() != 22 {
                 return Err(Error::XChainAddressInvalid);
             }
             let btc_lot_size = out_toCKB_data.get_btc_lot_size()?;
@@ -43,7 +59,7 @@ pub fn verify_data(
 }
 
 pub fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
-    let witness_args = load_witness_args(0, Source::Input)?.input_type();
+    let witness_args = load_witness_args(0, Source::GroupInput)?.input_type();
     if witness_args.is_none() {
         return Err(Error::InvalidWitness);
     }
