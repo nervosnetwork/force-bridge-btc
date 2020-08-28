@@ -1,4 +1,4 @@
-use super::{Script, ToCKBCellData};
+use super::{Error, Script, ToCKBCellData};
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -11,14 +11,6 @@ use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
 
 const MAX_CYCLES: u64 = 10_000_000;
-const INVALID_COLLATERAL: i8 = 9;
-const DATA_MUTATED: i8 = 10;
-const ADDRESS_INVALID: i8 = 11;
-const WITNESS_INVALID: i8 = 12;
-const PLEDGE_INVALID: i8 = 8;
-const LOT_SIZE_INVALID: i8 = 7;
-const TX_INVALID: i8 = 6;
-const ENCODING: i8 = 4;
 
 const ETH_COLLATERAL: u64 = 15 * 250_000_000_000_000_000 + 11000;
 const BTC_COLLATERAL: u64 = 15 * 25_000_000 + 11000;
@@ -44,7 +36,8 @@ fn test_correct_tx_eth() {
 
 #[test]
 fn test_correct_tx_btc() {
-    let mole_address = molecule::bytes::Bytes::from("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+    let mole_address =
+        molecule::bytes::Bytes::from("bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t");
     let mole_iter = mole_address.into_iter();
     let mut v = Vec::new();
     for mole in mole_iter {
@@ -84,7 +77,10 @@ fn test_wrong_tx_btc_address_invalid() {
     let (context, tx) = build_test_context(1, BTC_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(ADDRESS_INVALID));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::XChainAddressInvalid as i8)
+    );
 }
 
 #[test]
@@ -103,7 +99,10 @@ fn test_wrong_tx_eth_address_invalid() {
     let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(ADDRESS_INVALID));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::XChainAddressInvalid as i8)
+    );
 }
 
 #[test]
@@ -122,7 +121,7 @@ fn test_wrong_tx_status_mismatch() {
     let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(TX_INVALID));
+    assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
 }
 
 #[test]
@@ -141,7 +140,7 @@ fn test_wrong_tx_kind_mismatch() {
     let (context, tx) = build_test_context(3, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(ENCODING));
+    assert_error_eq!(err, ScriptError::ValidationFailure(Error::Encoding as i8));
 }
 
 #[test]
@@ -160,7 +159,10 @@ fn test_wrong_tx_lot_size_mismatch() {
     let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(DATA_MUTATED));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
+    );
 }
 
 fn test_wrong_tx_collateral_wrong() {
@@ -176,7 +178,10 @@ fn test_wrong_tx_collateral_wrong() {
         .build();
     let (context, tx) = build_test_context(2, ETH_COLLATERAL + 1, toCKB_data.as_bytes());
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(INVALID_COLLATERAL));
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
+    );
 }
 
 fn build_test_context(
