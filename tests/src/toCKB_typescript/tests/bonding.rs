@@ -12,8 +12,8 @@ use molecule::prelude::*;
 
 const MAX_CYCLES: u64 = 10_000_000;
 
-const ETH_COLLATERAL: u64 = 15 * 250_000_000_000_000_000 + 11000;
-const BTC_COLLATERAL: u64 = 15 * 25_000_000 + 11000;
+const ETH_COLLATERAL: u64 = 15 * 250_000_000_000_000_0 + 11000;
+const BTC_COLLATERAL: u64 = 15 * 25_000_0 + 11000;
 
 #[test]
 fn test_correct_tx_eth() {

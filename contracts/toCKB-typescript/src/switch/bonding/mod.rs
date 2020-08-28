@@ -72,9 +72,9 @@ pub fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
         return Err(Error::CollateralInvalid);
     }
     let diff_capacity = output_capacity - input_capacity;
-    let collateral: u128 = lot_amount * (COLLATERAL_PERCENT as u128) * (price as u128);
+    let collateral: u128 = lot_amount * (COLLATERAL_PERCENT as u128);
 
-    if collateral != diff_capacity as u128 * 100 as u128 {
+    if collateral != (price as u128) * diff_capacity as u128 * 100 as u128 {
         return Err(Error::CollateralInvalid);
     }
     Ok(())
