@@ -29,7 +29,7 @@ impl ToCKBCellDataView {
         let user_lockscript = data_reader.user_lockscript().to_entity().as_bytes();
         let x_lock_address = data_reader.x_lock_address().to_entity().raw_data();
         let signer_lockscript = data_reader.signer_lockscript().to_entity().as_bytes();
-        let x_unlock_address = data_reader.x_lock_address().to_entity().raw_data();
+        let x_unlock_address = data_reader.x_unlock_address().to_entity().raw_data();
         let redeemer_lockscript = data_reader.redeemer_lockscript().to_entity().as_bytes();
         let liquidation_trigger_lockscript = data_reader
             .liquidation_trigger_lockscript()
@@ -63,7 +63,7 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum, Debug)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Debug)]
 pub enum ToCKBStatus {
     Initial = 1,
     Bonded = 2,
@@ -76,7 +76,7 @@ pub enum ToCKBStatus {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum BtcLotSize {
     Quarter = 1,
     Half = 2,
@@ -95,7 +95,7 @@ impl BtcLotSize {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum EthLotSize {
     Quarter = 1,
     Half = 2,

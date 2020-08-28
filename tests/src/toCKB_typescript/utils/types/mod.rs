@@ -27,6 +27,10 @@ pub enum Error {
     WrongFundingAddr,
     InvalidXTInInputOrOutput,
     InvalidXTMint,
+
+    CapacityInvalid,
+    InvariantDataMutated,
+    InputSinceInvalid,
 }
 
 #[repr(u8)]

@@ -27,6 +27,10 @@ pub enum Error {
     WrongFundingAddr,
     InvalidXTInInputOrOutput,
     InvalidXTMint,
+
+    CapacityInvalid,
+    InvariantDataMutated,
+    InputSinceInvalid,
 }
 
 impl From<SysError> for Error {
