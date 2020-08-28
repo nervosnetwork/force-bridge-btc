@@ -235,6 +235,9 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     }
     let xt_amount = data.get_btc_lot_size()?.get_sudt_amount();
     debug!("xt_amount: {}", xt_amount);
+    // fixed order of output cells is required
+    // user-sudt-cell should be outputs[1]
+    // signer-sudt-cell should be outputs[2]
     let expect = [
         (
             1,
