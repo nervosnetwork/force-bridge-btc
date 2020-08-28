@@ -15,4 +15,5 @@ pub const SINCE_TYPE_TIMESTAMP: u64 = 0x4000_0000_0000_0000;
 // 24 * 3600 means 1 day, the unit is second
 pub const SINCE_SIGNER_TIMEOUT: u64 = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | 24 * 3600;
 
+// LIQUIDATION_COLLATERAL_PERCENT means min liquidation threshold of collateral/lot_amount
 pub const LIQUIDATION_COLLATERAL_PERCENT: u8 = 115;

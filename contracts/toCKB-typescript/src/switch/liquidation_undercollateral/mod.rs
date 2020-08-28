@@ -7,7 +7,6 @@ use crate::utils::{
 use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
-    debug,
     high_level::{load_cell_capacity, load_witness_args},
 };
 use core::result::Result;
@@ -77,10 +76,6 @@ fn verify_undercollateral(
     let mut data = [0u8; 16];
     data.copy_from_slice(witness_bytes.as_ref());
     let price: u128 = u128::from_le_bytes(data);
-
-    debug!("price: {}", price);
-
-    // LIQUIDATION_COLLATERAL_PERCENT means min liquidation threshold of collateral/lot_amount
     if singer_collateral * price * 100 >= lot_amount * (LIQUIDATION_COLLATERAL_PERCENT as u128) {
         return Err(Error::UndercollateralInvalid);
     }

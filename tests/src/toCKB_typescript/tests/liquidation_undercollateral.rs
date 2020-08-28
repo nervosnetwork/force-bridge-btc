@@ -144,7 +144,7 @@ fn build_test_context(
         .out_point(always_success_out_point)
         .build();
 
-    let capacity = 3_7500_0000u64;
+    let capacity = 375_0000u64;
 
     // prepare inputs
     let input_out_point = context.create_cell(
@@ -172,7 +172,7 @@ fn build_test_context(
     let data: [u8; 16] = price.to_le_bytes();
     let witness = WitnessArgs::new_builder()
         .input_type(Some(Bytes::copy_from_slice(data.as_ref())).pack())
-        .build(); // build transaction
+        .build();
 
     // build transaction
     let tx = TransactionBuilder::default()
