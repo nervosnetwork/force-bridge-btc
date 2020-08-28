@@ -12,9 +12,11 @@ pub enum Error {
     LotSizeInvalid,
     PledgeInvalid,
     CollateralInvalid,
-    InvariantDataMutated,
     XChainAddressInvalid,
     InvalidWitness,
+    CapacityInvalid,
+    InvariantDataMutated,
+    InputSinceInvalid,
 }
 
 #[repr(u8)]

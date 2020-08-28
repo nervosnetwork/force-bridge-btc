@@ -13,9 +13,11 @@ pub enum Error {
     LotSizeInvalid,
     PledgeInvalid,
     CollateralInvalid,
-    InvariantDataMutated,
     XChainAddressInvalid,
     InvalidWitness,
+    CapacityInvalid,
+    InvariantDataMutated,
+    InputSinceInvalid,
 }
 
 impl From<SysError> for Error {

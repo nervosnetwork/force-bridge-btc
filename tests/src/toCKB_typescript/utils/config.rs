@@ -1,5 +1,4 @@
 pub const PLEDGE: u64 = 10000;
-pub const COLLATERAL_PERCENT: u8 = 150;
 
 // since
 pub const LOCK_TYPE_FLAG: u64 = 1 << 63;
