@@ -248,7 +248,8 @@ fn build_test_context(
         .build()];
     let outputs_data = vec![output_toCKB_data; 1];
 
-    let price = vec![10u8];
+    let mut price = vec![0u8; 15];
+    price.push(10u8);
     let witness = WitnessArgs::new_builder()
         .input_type(Some(Bytes::from(price)).pack())
         .build(); // build transaction
