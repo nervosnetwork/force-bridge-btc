@@ -28,7 +28,7 @@ impl ToCKBCellDataView {
         let user_lockscript = data_reader.user_lockscript().to_entity().as_bytes();
         let x_lock_address = data_reader.x_lock_address().to_entity().raw_data();
         let signer_lockscript = data_reader.signer_lockscript().to_entity().as_bytes();
-        let x_unlock_address = data_reader.x_lock_address().to_entity().as_bytes();
+        let x_unlock_address = data_reader.x_lock_address().to_entity().raw_data();
         let redeemer_lockscript = data_reader.redeemer_lockscript().to_entity().as_bytes();
         let liquidation_trigger_lockscript = data_reader
             .liquidation_trigger_lockscript()
