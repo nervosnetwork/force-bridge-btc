@@ -1,6 +1,3 @@
-watch:
-	watchexec -w contracts/toCKB-typescript/src -- 'make fmt && capsule build'
-
 schema:
 	moleculec --language rust --schema-file contracts/toCKB-typescript/src/utils/types/schemas/basic.mol > contracts/toCKB-typescript/src/utils/types/generated/basic.rs
 	moleculec --language rust --schema-file contracts/toCKB-typescript/src/utils/types/schemas/toCKB_cell_data.mol > contracts/toCKB-typescript/src/utils/types/generated/toCKB_cell_data.rs
@@ -21,5 +18,4 @@ test:
 
 ci: fmt build test
 
-.PHONY: fmt build test ci
-.PHONY: schema watch
+.PHONY: fmt build test ci schema

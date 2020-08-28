@@ -25,7 +25,7 @@ pub enum Error {
     UnsupportedFundingType,
     InvalidMintOutput,
     WrongFundingAddr,
-    InvalidXTInInput,
+    InvalidXTInInputOrOutput,
     InvalidXTMint,
 }
 

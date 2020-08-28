@@ -218,7 +218,19 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
         })
         .count();
     if input_xt_num != 0 {
-        return Err(Error::InvalidXTInInput);
+        return Err(Error::InvalidXTInInputOrOutput);
+    }
+    let output_xt_num = QueryIter::new(load_cell_type, Source::Output)
+        .filter(|type_opt| type_opt.is_some())
+        .map(|type_opt| type_opt.unwrap())
+        .filter(|script| {
+            script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
+                && script.args().raw_data().as_ref() == lock_hash.as_ref()
+        })
+        .count();
+    debug!("output_xt_num: {}", output_xt_num);
+    if output_xt_num != 2 {
+        return Err(Error::InvalidXTInInputOrOutput);
     }
     let xt_amount = data.get_btc_lot_size()?.get_sudt_amount();
     debug!("xt_amount: {}", xt_amount);
