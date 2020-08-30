@@ -18,15 +18,10 @@ pub fn verify_data(
             if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
                 return Err(Error::InvariantDataMutated);
             }
-            if bech32::decode(core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap())
-                .is_err()
-            {
-                return Err(Error::XChainAddressInvalid);
-            }
             let (hrp, data) = bech32::decode(
                 core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap(),
             )
-            .unwrap();
+            .map_err(Error::XChainAddressInvalid)?;
             if hrp != "bc" {
                 return Err(Error::XChainAddressInvalid);
             }
