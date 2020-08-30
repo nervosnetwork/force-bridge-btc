@@ -40,6 +40,13 @@ pub enum Error {
 
     // Faulty witness
     FaultyBtcWitnessInvalid,
+
+    // Auction
+    InvalidInputs,
+    InvalidAuctionBidderCell,
+    InvalidTriggerOrSignerCell,
+    InvalidAuctionXTCell,
+    InvalidOutputsNum,
 }
 
 impl From<SysError> for Error {
