@@ -110,7 +110,7 @@ fn verify_outputs(
     );
 
     let mut output_index = 0;
-    // 1. check bidder lock
+    // - 1. check bidder lock
     if load_cell_lock_hash(output_index, Source::Output)? != load_cell_lock_hash(1, Source::Input)?
     {
         return Err(Error::InvalidAuctionBidderCell);
@@ -131,7 +131,7 @@ fn verify_outputs(
     let to_trigger = (collateral - to_bidder) / 2;
     let to_signer = collateral - to_bidder - to_trigger;
 
-    // 2. check the repayment to bidder
+    // - 2. check the repayment to bidder
     if to_bidder != load_cell_capacity(output_index, Source::Output)? {
         return Err(Error::InvalidAuctionBidderCell);
     }
@@ -142,6 +142,7 @@ fn verify_outputs(
         "to_bidder: {}, to_trigger: {}, to_signer:{}",
         to_bidder, to_trigger, to_signer
     );
+
     // check trigger cell
     if to_trigger > 0 {
         debug!("begin check trigger cell, output_index={}", output_index);
@@ -173,21 +174,21 @@ fn verify_outputs(
     // check XT cell
     output_index += 1;
     debug!("begin check XT cell, output_index={}", output_index);
-    // 1. check if lock is redeemer's lockscript
+    // - 1. check if lock is redeemer's lockscript
     let script = load_cell_lock(output_index, Source::Output)?;
     if script.as_bytes().as_ref() != input_data.redeemer_lockscript.as_ref() {
         return Err(Error::InvalidAuctionXTCell);
     }
     debug!("1. check XT lock is redeemer's lock success!");
 
-    // 2. check if typescript is sudt typescript
+    // - 2. check if typescript is sudt typescript
     let script = load_cell_type(output_index, Source::Output)?.expect("sudt typescript must exist");
     if !is_XT_typescript(script, toCKB_lock_hash) {
         return Err(Error::InvalidAuctionXTCell);
     }
     debug!("2. check XT type is sudt typescript success!");
 
-    // 3. check XT amount
+    // - 3. check XT amount
     let cell_data = load_cell_data(output_index, Source::Output)?;
     let mut data = [0u8; UDT_LEN];
     data.copy_from_slice(&cell_data);
@@ -202,7 +203,7 @@ fn verify_outputs(
     }
     debug!("3. check XT amount is lot_amount success!");
 
-    // 4. check no other output cell
+    // check no other output cell
     output_index += 1;
     if load_cell_capacity(output_index, Source::Output).is_ok() {
         return Err(Error::InvalidOutputsNum);
