@@ -12,8 +12,12 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
-    InvariantDataMutated,
+    CollateralInvalid,
     XChainAddressInvalid,
+    InvalidWitness,
+    CapacityInvalid,
+    InvariantDataMutated,
+    InputSinceInvalid,
     XTBurnInvalid,
 }
 
