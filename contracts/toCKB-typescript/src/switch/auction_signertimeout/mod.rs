@@ -9,6 +9,7 @@ use crate::utils::{
 };
 use ckb_std::{
     ckb_constants::Source,
+    debug,
     high_level::{
         load_cell_capacity, load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type,
         load_input_since,
@@ -18,14 +19,18 @@ use core::result::Result;
 use molecule::prelude::Entity;
 
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
+    debug!("begin verify Auction: SignerTimeout");
     let input_data = toCKB_data_tuple
         .0
         .as_ref()
         .expect("inputs should contain toCKB cell");
     let toCKB_lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
 
+    debug!("begin verify since");
     let auction_time = verify_since()?;
+    debug!("begin verify input");
     verify_input(toCKB_lock_hash.as_ref())?;
+    debug!("begin verify output");
     verify_output(input_data, auction_time, toCKB_lock_hash.as_ref())?;
 
     Ok(())
@@ -42,7 +47,7 @@ fn verify_since() -> Result<u64, Error> {
         return Err(Error::InputSinceInvalid);
     }
 
-    let auction_time = since | VALUE_MASK;
+    let auction_time = since & VALUE_MASK;
     Ok(auction_time)
 }
 
@@ -61,12 +66,19 @@ fn verify_output(
     toCKB_lock_hash: &[u8],
 ) -> Result<(), Error> {
     // check bidder cell
+    debug!("begin check bidder cell");
+    debug!(
+        "auction_time: {}, AUCTION_MAX_TIME: {}",
+        auction_time, AUCTION_MAX_TIME
+    );
+
     let mut output_index = 0;
     // 1. check bidder lock
     if load_cell_lock_hash(1, Source::Input)? != load_cell_lock_hash(output_index, Source::Output)?
     {
         return Err(Error::InvalidAuctionBidderCell);
     }
+    debug!("1. check bidder lock success! ");
 
     // expect paying ckb to bidder,trigger and signer
     let collateral = load_cell_capacity(0, Source::GroupInput)?;
@@ -86,9 +98,16 @@ fn verify_output(
     if to_bidder != load_cell_capacity(output_index, Source::Output)? {
         return Err(Error::InvalidAuctionBidderCell);
     }
+    debug!("2. check bidder repayment success! ");
 
+    debug!("collateral: {}, ", collateral);
+    debug!(
+        "to_bidder: {}, to_trigger: {}, to_signer:{}",
+        to_bidder, to_trigger, to_signer
+    );
     // check trigger cell
     if to_trigger > 0 {
+        debug!("begin check trigger cell, output_index={}", output_index);
         output_index += 1;
         if to_trigger != load_cell_capacity(output_index, Source::Output)?
             || input_data.liquidation_trigger_lockscript.as_ref()
@@ -102,6 +121,7 @@ fn verify_output(
 
     // check signer cell
     if to_signer > 0 {
+        debug!("begin check signer cell, output_index={}", output_index);
         output_index += 1;
         if to_signer != load_cell_capacity(output_index, Source::Output)?
             || input_data.signer_lockscript.as_ref()
@@ -115,17 +135,20 @@ fn verify_output(
 
     // check XT cell
     output_index += 1;
+    debug!("begin check XT cell, output_index={}", output_index);
     // 1. check if lock is redeemer's lockscript
     let script = load_cell_lock(output_index, Source::Output)?;
     if script.as_bytes().as_ref() != input_data.redeemer_lockscript.as_ref() {
         return Err(Error::InvalidAuctionXTCell);
     }
+    debug!("1. check XT lock is redeemer's lock success!");
 
     // 2. check if typescript is sudt typescript
     let script = load_cell_type(output_index, Source::Output)?.expect("sudt typescript must exist");
     if !is_XT_typescript(script, toCKB_lock_hash) {
         return Err(Error::InvalidAuctionXTCell);
     }
+    debug!("2. check XT type is sudt typescript success!");
 
     // 3. check XT amount
     let cell_data = load_cell_data(output_index, Source::Output)?;
@@ -144,9 +167,14 @@ fn verify_output(
         }
     };
 
+    debug!(
+        "to_redeemer_amount: {}, lot_amount: {}",
+        to_redeemer_amount, lot_amount
+    );
     if to_redeemer_amount != lot_amount {
         return Err(Error::InvalidAuctionXTCell);
     }
+    debug!("3. check XT amount is lot_amount success!");
 
     Ok(())
 }
