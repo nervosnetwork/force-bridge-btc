@@ -19,15 +19,10 @@ pub fn verify_data(
             if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
                 return Err(Error::InvariantDataMutated);
             }
-            if bech32::decode(core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap())
-                .is_err()
-            {
-                return Err(Error::XChainAddressInvalid);
-            }
             let (hrp, data) = bech32::decode(
                 core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap(),
             )
-            .unwrap();
+            .map_err(|_| Error::XChainAddressInvalid)?;
             if hrp != "bc" {
                 return Err(Error::XChainAddressInvalid);
             }
@@ -69,7 +64,7 @@ pub fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
     }
     let mut buf = [0u8; 16];
     buf.copy_from_slice(&witness_bytes);
-    let price: u128 = u128::from_be_bytes(buf);
+    let price: u128 = u128::from_le_bytes(buf);
     let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
     let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
     if input_capacity > output_capacity {
