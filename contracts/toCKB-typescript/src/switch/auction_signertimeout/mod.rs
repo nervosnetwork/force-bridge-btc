@@ -26,12 +26,28 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .expect("inputs should contain toCKB cell");
     let toCKB_lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
 
+    let lot_amount: u128 = match get_xchain_kind()? {
+        XChainKind::Btc => {
+            let btc_lot_size = input_data.get_btc_lot_size()?;
+            btc_lot_size.get_sudt_amount()
+        }
+        XChainKind::Eth => {
+            let eth_lot_size = input_data.get_eth_lot_size()?;
+            eth_lot_size.get_sudt_amount()
+        }
+    };
+
     debug!("begin verify since");
     let auction_time = verify_since()?;
     debug!("begin verify input");
-    verify_input(toCKB_lock_hash.as_ref())?;
+    verify_inputs(toCKB_lock_hash.as_ref(), lot_amount)?;
     debug!("begin verify output");
-    verify_output(input_data, auction_time, toCKB_lock_hash.as_ref())?;
+    verify_outputs(
+        input_data,
+        auction_time,
+        toCKB_lock_hash.as_ref(),
+        lot_amount,
+    )?;
 
     Ok(())
 }
@@ -51,19 +67,40 @@ fn verify_since() -> Result<u64, Error> {
     Ok(auction_time)
 }
 
-fn verify_input(toCKB_lock_hash: &[u8]) -> Result<(), Error> {
+fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<(), Error> {
     // check XT cell on inputs
-    let script = load_cell_type(1, Source::Input)?.unwrap();
-    if !is_XT_typescript(script, toCKB_lock_hash) {
-        return Err(Error::InvalidAuctionXTCell);
+    let mut input_index = 1;
+    let mut sum_amount = 0;
+    loop {
+        let res = load_cell_type(input_index, Source::Input);
+        if res.is_err() {
+            break;
+        }
+        let script = res.unwrap();
+        if script.is_none() || !is_XT_typescript(script.unwrap(), toCKB_lock_hash) {
+            return Err(Error::InvalidInputs);
+        }
+
+        let cell_data = load_cell_data(input_index, Source::Input)?;
+        let mut data = [0u8; UDT_LEN];
+        data.copy_from_slice(&cell_data);
+        let amount = u128::from_le_bytes(data);
+        sum_amount += amount;
+
+        input_index += 1;
+    }
+
+    if sum_amount < lot_amount {
+        return Err(Error::FundingNotEnough);
     }
     Ok(())
 }
 
-fn verify_output(
+fn verify_outputs(
     input_data: &ToCKBCellDataView,
     auction_time: u64,
     toCKB_lock_hash: &[u8],
+    lot_amount: u128,
 ) -> Result<(), Error> {
     // check bidder cell
     debug!("begin check bidder cell");
@@ -74,7 +111,7 @@ fn verify_output(
 
     let mut output_index = 0;
     // 1. check bidder lock
-    if load_cell_lock_hash(1, Source::Input)? != load_cell_lock_hash(output_index, Source::Output)?
+    if load_cell_lock_hash(output_index, Source::Output)? != load_cell_lock_hash(1, Source::Input)?
     {
         return Err(Error::InvalidAuctionBidderCell);
     }
@@ -156,17 +193,6 @@ fn verify_output(
     data.copy_from_slice(&cell_data);
     let to_redeemer_amount = u128::from_le_bytes(data);
 
-    let lot_amount: u128 = match get_xchain_kind()? {
-        XChainKind::Btc => {
-            let btc_lot_size = input_data.get_btc_lot_size()?;
-            btc_lot_size.get_sudt_amount()
-        }
-        XChainKind::Eth => {
-            let eth_lot_size = input_data.get_eth_lot_size()?;
-            eth_lot_size.get_sudt_amount()
-        }
-    };
-
     debug!(
         "to_redeemer_amount: {}, lot_amount: {}",
         to_redeemer_amount, lot_amount
@@ -175,6 +201,13 @@ fn verify_output(
         return Err(Error::InvalidAuctionXTCell);
     }
     debug!("3. check XT amount is lot_amount success!");
+
+    // 4. check no other output cell
+    output_index += 1;
+    if load_cell_capacity(output_index, Source::Output).is_ok() {
+        return Err(Error::InvalidOutputsNum);
+    }
+    debug!("4. check no other output cell success!");
 
     Ok(())
 }

@@ -69,7 +69,7 @@ fn test_wrong_XT() {
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
-        ScriptError::ValidationFailure(Error::InvalidAuctionXTCell as i8)
+        ScriptError::ValidationFailure(Error::FundingNotEnough as i8)
     );
 }
 

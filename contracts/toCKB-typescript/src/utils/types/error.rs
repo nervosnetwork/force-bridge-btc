@@ -42,9 +42,12 @@ pub enum Error {
     FaultyBtcWitnessInvalid,
 
     // Auction
+    InvalidInputs,
     InvalidAuctionBidderCell,
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
+    InvalidOutputsNum,
+    FundingNotEnough,
 }
 
 impl From<SysError> for Error {
