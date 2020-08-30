@@ -72,7 +72,7 @@ fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<(), Error> 
             break;
         }
         let script = res.unwrap();
-        if script.is_none() || !is_XT_typescript(script.unwrap(), toCKB_lock_hash) {
+        if script.is_none() || !is_XT_typescript(&script.unwrap(), toCKB_lock_hash) {
             return Err(Error::InvalidInputs);
         }
 
