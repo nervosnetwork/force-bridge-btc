@@ -149,9 +149,7 @@ fn verify_outputs(
         output_index += 1;
         if to_trigger != load_cell_capacity(output_index, Source::Output)?
             || input_data.liquidation_trigger_lockscript.as_ref()
-                != load_cell_lock(output_index, Source::Output)?
-                    .as_bytes()
-                    .as_ref()
+                != load_cell_lock(output_index, Source::Output)?.as_slice()
         {
             return Err(Error::InvalidTriggerOrSignerCell);
         }
@@ -163,9 +161,7 @@ fn verify_outputs(
         output_index += 1;
         if to_signer != load_cell_capacity(output_index, Source::Output)?
             || input_data.signer_lockscript.as_ref()
-                != load_cell_lock(output_index, Source::Output)?
-                    .as_bytes()
-                    .as_ref()
+                != load_cell_lock(output_index, Source::Output)?.as_slice()
         {
             return Err(Error::InvalidTriggerOrSignerCell);
         }
@@ -176,7 +172,7 @@ fn verify_outputs(
     debug!("begin check XT cell, output_index={}", output_index);
     // - 1. check if lock is redeemer's lockscript
     let script = load_cell_lock(output_index, Source::Output)?;
-    if script.as_bytes().as_ref() != input_data.redeemer_lockscript.as_ref() {
+    if script.as_slice() != input_data.redeemer_lockscript.as_ref() {
         return Err(Error::InvalidAuctionXTCell);
     }
     debug!("1. check XT lock is redeemer's lock success!");
