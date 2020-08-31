@@ -134,9 +134,7 @@ fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(
         output_index += 1;
         if to_trigger != load_cell_capacity(output_index, Source::Output)?
             || input_data.liquidation_trigger_lockscript.as_ref()
-                != load_cell_lock(output_index, Source::Output)?
-                    .as_bytes()
-                    .as_ref()
+                != load_cell_lock(output_index, Source::Output)?.as_slice()
         {
             return Err(Error::InvalidTriggerOrSignerCell);
         }
