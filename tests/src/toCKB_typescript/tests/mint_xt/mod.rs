@@ -1,6 +1,6 @@
 mod helper;
 mod types;
-use helper::{deploy, run_test_case, DeployResult};
+use helper::{deploy, run_test_case, DeployResult, PLEDGE, XT_CELL_CAPACITY};
 use types::*;
 
 use super::ToCKBCellData;
@@ -20,6 +20,7 @@ fn generate_btc_corrent_case() -> TestCase {
     let signer_lockscript = always_success_lockscript.clone();
     let case = TestCase {
         kind,
+        capacity: 10000,
         tockb_cell_data: ToCKBCellDataTest {
             lot_size: 1,
             x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
@@ -31,11 +32,13 @@ fn generate_btc_corrent_case() -> TestCase {
                 typescript: sudt_typescript.clone(),
                 lockscript: always_success_lockscript.clone(),
                 amount: 24950000,
+                capacity: PLEDGE,
             },
             Output {
                 typescript: sudt_typescript.clone(),
                 lockscript: always_success_lockscript.clone(),
                 amount: 50000,
+                capacity: XT_CELL_CAPACITY,
             },
         ],
         witness: Witness {
@@ -117,5 +120,29 @@ fn test_wrong_btc_difficulty() {
         current: 1,
     });
     case.expect_return_code = NotAtCurrentOrPreviousDifficulty as i8;
+    run_test_case(case);
+}
+
+// #[test]
+// fn test_wrong_toCKB_capacity() {
+//     let mut case = generate_btc_corrent_case();
+//     case.capacity = 1;
+//     case.expect_return_code = CapacityInvalid as i8;
+//     run_test_case(case);
+// }
+
+#[test]
+fn test_wrong_pledge_refund() {
+    let mut case = generate_btc_corrent_case();
+    case.outputs[0].capacity = 1;
+    case.expect_return_code = CapacityInvalid as i8;
+    run_test_case(case);
+}
+
+#[test]
+fn test_wrong_signer_xt_cell_capacity() {
+    let mut case = generate_btc_corrent_case();
+    case.outputs[1].capacity = 1;
+    case.expect_return_code = CapacityInvalid as i8;
     run_test_case(case);
 }

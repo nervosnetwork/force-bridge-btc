@@ -16,6 +16,7 @@ pub struct Output {
     pub typescript: Script,
     pub lockscript: Script,
     pub amount: u128,
+    pub capacity: u64,
 }
 
 pub enum SpvProof {
@@ -38,6 +39,7 @@ pub enum CellDepsData {
 
 pub struct TestCase {
     pub kind: u8,
+    pub capacity: u64,
     pub tockb_cell_data: ToCKBCellDataTest,
     pub outputs: Vec<Output>,
     pub witness: Witness,

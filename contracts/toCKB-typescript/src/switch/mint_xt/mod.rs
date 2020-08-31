@@ -1,6 +1,8 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
-    config::{SIGNER_FEE_RATE, SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR},
+    config::{
+        PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, XT_CELL_CAPACITY,
+    },
     tools::{get_xchain_kind, XChainKind},
     types::{
         btc_difficulty::BTCDifficultyReader,
@@ -19,8 +21,8 @@ use ckb_std::{
     ckb_constants::Source,
     debug,
     high_level::{
-        load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type, load_witness_args,
-        QueryIter,
+        load_cell_capacity, load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type,
+        load_witness_args, QueryIter,
     },
 };
 use core::result::Result;
@@ -286,10 +288,25 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn verify_capacity() -> Result<(), Error> {
+    let _toCKB_output_cap = load_cell_capacity(0, Source::GroupOutput)?;
+    // TODO: check capacity of output-toCKB-cell is collateral + 1 * xt_cell_capacity
+    let user_xt_cell_cap = load_cell_capacity(1, Source::Output)?;
+    if user_xt_cell_cap != PLEDGE {
+        return Err(Error::CapacityInvalid);
+    }
+    let signer_xt_cell_cap = load_cell_capacity(2, Source::Output)?;
+    if signer_xt_cell_cap != XT_CELL_CAPACITY {
+        return Err(Error::CapacityInvalid);
+    }
+    Ok(())
+}
+
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("start mint_xt");
     let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
     let output_data = toCKB_data_tuple.1.as_ref().expect("should not happen");
+    verify_capacity()?;
     verify_data(input_data, output_data)?;
     debug!("verify data finish");
     verify_witness(input_data)?;

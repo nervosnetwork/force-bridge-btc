@@ -8,7 +8,9 @@ use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{bytes::Bytes, core::TransactionBuilder, packed::*, prelude::*};
 use molecule::prelude::*;
 
-const MAX_CYCLES: u64 = 100_000_000;
+pub const MAX_CYCLES: u64 = 100_000_000;
+pub const PLEDGE: u64 = 10000;
+pub const XT_CELL_CAPACITY: u64 = 100;
 
 pub fn run_test_case(case: TestCase) {
     let kind = case.kind;
@@ -88,14 +90,14 @@ pub fn run_test_case(case: TestCase) {
         .build();
     let inputs = vec![input_ckb_cell];
     let mut outputs = vec![CellOutput::new_builder()
-        .capacity(11000u64.pack())
+        .capacity(case.capacity.pack())
         .type_(Some(toCKB_typescript.clone()).pack())
         .lock(always_success_lockscript.clone())
         .build()];
     let mut outputs_data = vec![output_toCKB_data.as_bytes()];
     for output in case.outputs.into_iter() {
         let cell_output = CellOutput::new_builder()
-            .capacity(11000u64.pack())
+            .capacity(output.capacity.pack())
             .type_(Some(output.typescript).pack())
             .lock(output.lockscript)
             .build();
