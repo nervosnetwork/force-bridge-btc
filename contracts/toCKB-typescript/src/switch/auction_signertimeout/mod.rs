@@ -77,7 +77,7 @@ fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<(), Error> 
             break;
         }
         let script = res.unwrap();
-        if script.is_none() || !is_XT_typescript(script.unwrap(), toCKB_lock_hash) {
+        if script.is_none() || !is_XT_typescript(&script.unwrap(), toCKB_lock_hash) {
             return Err(Error::InvalidInputs);
         }
 
@@ -183,7 +183,7 @@ fn verify_outputs(
 
     // - 2. check if typescript is sudt typescript
     let script = load_cell_type(output_index, Source::Output)?.expect("sudt typescript must exist");
-    if !is_XT_typescript(script, toCKB_lock_hash) {
+    if !is_XT_typescript(&script, toCKB_lock_hash) {
         return Err(Error::InvalidAuctionXTCell);
     }
     debug!("2. check XT type is sudt typescript success!");
