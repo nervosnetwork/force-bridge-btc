@@ -289,8 +289,11 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
 }
 
 pub fn verify_capacity() -> Result<(), Error> {
-    let _toCKB_output_cap = load_cell_capacity(0, Source::GroupOutput)?;
-    // TODO: check capacity of output-toCKB-cell is collateral + 1 * xt_cell_capacity
+    let toCKB_output_cap = load_cell_capacity(0, Source::GroupOutput)?;
+    let toCKB_input_cap = load_cell_capacity(0, Source::GroupInput)?;
+    if toCKB_input_cap - toCKB_output_cap > XT_CELL_CAPACITY {
+        return Err(Error::CapacityInvalid);
+    }
     let user_xt_cell_cap = load_cell_capacity(1, Source::Output)?;
     if user_xt_cell_cap != PLEDGE {
         return Err(Error::CapacityInvalid);

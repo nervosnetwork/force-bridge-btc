@@ -79,7 +79,7 @@ pub fn run_test_case(case: TestCase) {
 
     let input_ckb_cell_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(11000u64.pack())
+            .capacity(case.input_capacity.pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
@@ -90,7 +90,7 @@ pub fn run_test_case(case: TestCase) {
         .build();
     let inputs = vec![input_ckb_cell];
     let mut outputs = vec![CellOutput::new_builder()
-        .capacity(case.capacity.pack())
+        .capacity(case.output_capacity.pack())
         .type_(Some(toCKB_typescript.clone()).pack())
         .lock(always_success_lockscript.clone())
         .build()];

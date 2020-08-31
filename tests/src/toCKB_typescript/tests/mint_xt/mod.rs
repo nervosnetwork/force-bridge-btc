@@ -20,7 +20,8 @@ fn generate_btc_corrent_case() -> TestCase {
     let signer_lockscript = always_success_lockscript.clone();
     let case = TestCase {
         kind,
-        capacity: 10000,
+        input_capacity: 100000,
+        output_capacity: 100000 - XT_CELL_CAPACITY,
         tockb_cell_data: ToCKBCellDataTest {
             lot_size: 1,
             x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
@@ -123,13 +124,13 @@ fn test_wrong_btc_difficulty() {
     run_test_case(case);
 }
 
-// #[test]
-// fn test_wrong_toCKB_capacity() {
-//     let mut case = generate_btc_corrent_case();
-//     case.capacity = 1;
-//     case.expect_return_code = CapacityInvalid as i8;
-//     run_test_case(case);
-// }
+#[test]
+fn test_wrong_toCKB_capacity() {
+    let mut case = generate_btc_corrent_case();
+    case.output_capacity = 10000;
+    case.expect_return_code = CapacityInvalid as i8;
+    run_test_case(case);
+}
 
 #[test]
 fn test_wrong_pledge_refund() {

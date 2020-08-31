@@ -39,7 +39,8 @@ pub enum CellDepsData {
 
 pub struct TestCase {
     pub kind: u8,
-    pub capacity: u64,
+    pub input_capacity: u64,
+    pub output_capacity: u64,
     pub tockb_cell_data: ToCKBCellDataTest,
     pub outputs: Vec<Output>,
     pub witness: Witness,
