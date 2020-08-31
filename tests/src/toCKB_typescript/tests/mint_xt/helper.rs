@@ -19,7 +19,7 @@ pub fn run_test_case(case: TestCase) {
     // let toCKB_lockscript_bin: Bytes = Loader::default().load_binary("toCKB-lockscript");
     // let toCKB_lockscript_out_point = context.deploy_cell(toCKB_lockscript_bin);
     let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-    let sudt_bin = include_bytes!("../simple_udt");
+    let sudt_bin = include_bytes!("../../../../deps/simple_udt");
     let sudt_out_point = context.deploy_cell(Bytes::from(sudt_bin.as_ref()));
 
     // prepare scripts
@@ -163,7 +163,7 @@ pub fn deploy(kind: u8) -> DeployResult {
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
     let toCKB_typescript_out_point = context.deploy_cell(toCKB_typescript_bin);
     let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-    let sudt_bin = include_bytes!("../simple_udt");
+    let sudt_bin = include_bytes!("../../../../deps/simple_udt");
     let sudt_out_point = context.deploy_cell(Bytes::from(sudt_bin.as_ref()));
 
     // prepare scripts
