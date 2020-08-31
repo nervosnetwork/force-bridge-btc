@@ -252,7 +252,7 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     ];
     debug!("expect: {:?}", expect);
 
-    for (i, lockscript, amout) in expect.iter() {
+    for (i, lockscript, amount) in expect.iter() {
         let script = load_cell_type(*i, Source::Output)?;
         if script.is_none() {
             return Err(Error::InvalidMintOutput);
@@ -268,8 +268,8 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
         let mut amount_vec = [0u8; 16];
         amount_vec.copy_from_slice(&cell_data);
         let token_amount = u128::from_le_bytes(amount_vec);
-        debug!("token_amount: {}, amout: {}", token_amount, amout);
-        if token_amount != *amout {
+        debug!("token_amount: {}, amout: {}", token_amount, amount);
+        if token_amount != *amount {
             return Err(Error::InvalidMintOutput);
         }
         let lock = load_cell_lock(*i, Source::Output)?;
