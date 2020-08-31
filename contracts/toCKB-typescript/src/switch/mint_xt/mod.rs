@@ -227,6 +227,7 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
         .filter(|script| {
             script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
                 && script.args().raw_data().as_ref() == lock_hash.as_ref()
+                && script.hash_type() == 0u8.into()
         })
         .count();
     debug!("output_xt_num: {}", output_xt_num);
