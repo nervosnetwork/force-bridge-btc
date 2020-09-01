@@ -8,6 +8,7 @@ use molecule::prelude::*;
 const BTC_UNIT: u128 = 100_000_000;
 const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
 
+#[derive(Debug)]
 pub struct ToCKBCellDataView {
     pub status: ToCKBStatus,
     lot_size: u8,
@@ -62,7 +63,7 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum, PartialEq)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Debug)]
 pub enum ToCKBStatus {
     Initial = 1,
     Bonded = 2,

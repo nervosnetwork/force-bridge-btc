@@ -19,9 +19,11 @@ use crate::utils::types::{Error, ToCKBCellDataView, ToCKBStatus};
 use alloc::vec::Vec;
 use ckb_std::{
     ckb_constants::Source,
+    debug,
     high_level::{load_cell_data, load_input_since, QueryIter},
 };
 
+#[derive(Debug)]
 enum TxType {
     DepositRequest,
     Bonding,
@@ -41,11 +43,14 @@ enum TxType {
     AuctionFaultyWhenRedeeming,
 }
 
+#[derive(Debug)]
 pub struct ToCKBCellDataTuple(Option<ToCKBCellDataView>, Option<ToCKBCellDataView>);
 
 pub fn verify() -> Result<(), Error> {
     let toCKB_data_tuple = get_toCKB_data_tuple()?;
+    debug!("toCKB_data_tuple: {:?}", toCKB_data_tuple);
     let tx_type = get_tx_type(&toCKB_data_tuple)?;
+    debug!("tx_type: {:?}", tx_type);
     switch(&tx_type, &toCKB_data_tuple)?;
     Ok(())
 }
