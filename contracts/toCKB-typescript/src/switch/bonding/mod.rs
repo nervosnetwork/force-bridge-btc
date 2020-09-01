@@ -27,10 +27,10 @@ pub fn verify_data(
                 return Err(Error::XChainAddressInvalid);
             }
             let raw_data = Vec::<u8>::from_base32(&data).unwrap();
-            if &raw_data[..2] != &[0x00, 0x14] {
+            if raw_data.len() != 22 {
                 return Err(Error::XChainAddressInvalid);
             }
-            if raw_data.len() != 22 {
+            if &raw_data[..2] != &[0x00, 0x14] {
                 return Err(Error::XChainAddressInvalid);
             }
             let btc_lot_size = out_toCKB_data.get_btc_lot_size()?;
