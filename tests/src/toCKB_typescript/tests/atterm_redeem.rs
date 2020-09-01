@@ -64,13 +64,6 @@ fn test_correct_tx_btc() {
         correct_btc_address,
         Script::new_builder().build(),
     );
-    // let mole_address =
-    //     molecule::bytes::Bytes::from("bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t");
-    // let mole_iter = mole_address.into_iter();
-    // let mut v = Vec::new();
-    // for mole in mole_iter {
-    //     v.push(Byte::new(mole));
-    // }
 
     let (context, tx) = build_test_context(
         1,
@@ -146,13 +139,6 @@ fn test_wrong_tx_btc_address_invalid() {
         wrong_btc_address,
         Script::new_builder().build(),
     );
-    // let mole_address =
-    //     molecule::bytes::Bytes::from("bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t");
-    // let mole_iter = mole_address.into_iter();
-    // let mut v = Vec::new();
-    // for mole in mole_iter {
-    //     v.push(Byte::new(mole));
-    // }
 
     let (context, tx) = build_test_context(
         1,
@@ -422,18 +408,16 @@ fn build_test_context(
     let sudt_typescript_dep = CellDep::new_builder().out_point(sudt_out_point).build();
 
     let lock_address = match kind {
-        1 => {
-            let mole_address =
-                molecule::bytes::Bytes::from("bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t");
-            let mole_iter = mole_address.into_iter();
-            let mut v = Vec::new();
-            for mole in mole_iter {
-                v.push(Byte::new(mole));
-            }
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
-                .set(v)
-                .build()
-        }
+        1 => basic::Bytes::new_builder()
+            .set(
+                "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t"
+                    .as_bytes()
+                    .iter()
+                    .map(|c| Byte::new(*c))
+                    .collect::<Vec<_>>()
+                    .into(),
+            )
+            .build(),
         2 => toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
             .set([Byte::new(1u8); 20].to_vec())
             .build(),
