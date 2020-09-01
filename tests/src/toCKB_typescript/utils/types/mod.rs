@@ -48,7 +48,6 @@ pub enum Error {
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
     InvalidOutputsNum,
-    FundingNotEnough,
 }
 
 #[repr(u8)]

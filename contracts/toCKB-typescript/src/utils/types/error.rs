@@ -47,7 +47,6 @@ pub enum Error {
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
     InvalidOutputsNum,
-    FundingNotEnough,
 }
 
 impl From<SysError> for Error {
