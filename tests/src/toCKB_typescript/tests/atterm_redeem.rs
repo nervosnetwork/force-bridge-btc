@@ -1,4 +1,5 @@
 use super::{Error, Script, ToCKBCellData};
+use crate::toCKB_typescript::utils::config::*;
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -15,9 +16,6 @@ const MAX_CYCLES: u64 = 10_000_000;
 
 const ETH_BURN: u128 = 250_000_000_000_000_000;
 const BTC_BURN: u128 = 25_000_000;
-
-pub const LOCK_TYPE_FLAG: u64 = 1 << 63;
-pub const SINCE_AT_TERM_REDEEM: u64 = LOCK_TYPE_FLAG | 100;
 
 #[test]
 fn test_correct_tx_eth() {

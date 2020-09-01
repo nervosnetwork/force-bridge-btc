@@ -1,5 +1,4 @@
 pub const PLEDGE: u64 = 10000;
-pub const COLLATERAL_PERCENT: u8 = 150;
 pub const XT_CELL_CAPACITY: u64 = 200;
 pub const TX_PROOF_DIFFICULTY_FACTOR: u8 = 1;
 // default value is 2/1000
