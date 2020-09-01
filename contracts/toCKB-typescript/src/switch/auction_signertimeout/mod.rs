@@ -2,7 +2,7 @@ use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{
         AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
-        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK,
+        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK, XT_CELL_CAPACITY,
     },
     tools::{get_xchain_kind, is_XT_typescript, XChainKind},
     types::{Error, ToCKBCellDataView},
@@ -118,7 +118,8 @@ fn verify_outputs(
     debug!("1. check bidder lock success! ");
 
     // expect paying ckb to bidder,trigger and signer
-    let collateral = load_cell_capacity(0, Source::GroupInput)?;
+    // cap of toCKB_cell ==  XT_CELL_CAPACITY + to_bidder + to_trigger + to_signer
+    let collateral = load_cell_capacity(0, Source::GroupInput)? - XT_CELL_CAPACITY;
     let mut to_bidder = collateral;
     let init_collateral = collateral * AUCTION_INIT_PERCENT as u64 / 100;
     if auction_time == 0 {
@@ -127,15 +128,15 @@ fn verify_outputs(
         to_bidder =
             init_collateral + (collateral - init_collateral) * auction_time / AUCTION_MAX_TIME
     }
-
     let to_trigger = (collateral - to_bidder) / 2;
     let to_signer = collateral - to_bidder - to_trigger;
 
     // - 2. check the repayment to bidder
-    if to_bidder != load_cell_capacity(output_index, Source::Output)? {
+    // expect bidder_cell_cap == repayment_to_bidder + (cap_sum of inputs_xt_cell)
+    if load_cell_capacity(output_index, Source::Output)? <= to_bidder {
         return Err(Error::InvalidAuctionBidderCell);
     }
-    debug!("2. check bidder repayment success! ");
+    debug!("2. check bidder cell capacity success! ");
 
     debug!("collateral: {}, ", collateral);
     debug!(
@@ -198,6 +199,13 @@ fn verify_outputs(
         return Err(Error::InvalidAuctionXTCell);
     }
     debug!("3. check XT amount is lot_amount success!");
+
+    // - 4. check XT cell capacity
+    let redeemer_XT_cell_cap = load_cell_capacity(output_index, Source::Output)?;
+    if redeemer_XT_cell_cap != XT_CELL_CAPACITY {
+        return Err(Error::InvalidAuctionXTCell);
+    }
+    debug!("4. check XT cell capacity success!");
 
     // check no other output cell
     output_index += 1;
