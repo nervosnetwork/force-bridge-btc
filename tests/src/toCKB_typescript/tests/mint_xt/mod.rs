@@ -21,7 +21,7 @@ fn generate_btc_corrent_case() -> TestCase {
     let case = TestCase {
         kind,
         input_capacity: 100000,
-        output_capacity: 100000 - XT_CELL_CAPACITY,
+        output_capacity: 100000 - PLEDGE - XT_CELL_CAPACITY,
         tockb_cell_data: ToCKBCellDataTest {
             lot_size: 1,
             x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
