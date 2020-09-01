@@ -1,3 +1,4 @@
+pub mod convert;
 pub mod generated;
 
 #[repr(i8)]
@@ -11,13 +12,21 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
-    CollateralInvalid,
-    XChainAddressInvalid,
+    // MintXT Error
+    InvalidDataChange,
     InvalidWitness,
-    CapacityInvalid,
-    InvariantDataMutated,
-    InputSinceInvalid,
-    XTBurnInvalid,
+    DifficultyDataInvalid,
+    SpvProofInvalid,
+    InsufficientDifficulty,
+    BadMerkleProof,
+    NotAtCurrentOrPreviousDifficulty,
+    WrongTxId,
+    FundingNotEnough,
+    UnsupportedFundingType,
+    InvalidMintOutput,
+    WrongFundingAddr,
+    InvalidXTInInputOrOutput,
+    InvalidXTMint,
 }
 
 #[repr(u8)]

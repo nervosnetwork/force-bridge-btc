@@ -10,3 +10,4 @@ table ToCKBCellData {
     redeemer_lockscript: Script,
     liquidation_trigger_lockscript: Script,
 }
+

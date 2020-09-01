@@ -1,0 +1,6 @@
+import basic;
+
+table BTCDifficulty {
+    current: Bytes,
+    previous: Bytes,
+}
