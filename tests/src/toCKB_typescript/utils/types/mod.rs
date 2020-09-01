@@ -17,6 +17,7 @@ pub enum Error {
     CapacityInvalid,
     InvariantDataMutated,
     InputSinceInvalid,
+    XTBurnInvalid,
 }
 
 #[repr(u8)]
