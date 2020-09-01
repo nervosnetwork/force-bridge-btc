@@ -32,6 +32,7 @@ pub enum Error {
     InvariantDataMutated,
     InputSinceInvalid,
     XTBurnInvalid,
+    XChainAddressInvalid,
 }
 
 #[repr(u8)]
