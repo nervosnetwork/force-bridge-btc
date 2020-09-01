@@ -2,7 +2,7 @@ use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{
         AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
-        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK,
+        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK, XT_CELL_CAPACITY,
     },
     tools::{get_xchain_kind, is_XT_typescript, XChainKind},
     types::{Error, ToCKBCellDataView},
@@ -108,7 +108,8 @@ fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(
     debug!("1. check bidder lock success! ");
 
     // expect paying ckb to bidder,trigger and signer
-    let collateral = load_cell_capacity(0, Source::GroupInput)?;
+    // cap of toCKB_cell ==  XT_CELL_CAPACITY + to_bidder + to_trigger + to_signer
+    let collateral = load_cell_capacity(0, Source::GroupInput)? - XT_CELL_CAPACITY;
     let mut to_bidder = collateral;
     let init_collateral = collateral * AUCTION_INIT_PERCENT as u64 / 100;
     if auction_time == 0 {
@@ -119,13 +120,14 @@ fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(
     }
 
     let to_trigger = (collateral - to_bidder) / 2;
-    let to_signer = collateral - to_bidder - to_trigger;
+    let to_signer = collateral - to_bidder - to_trigger + XT_CELL_CAPACITY;
 
     // - 2. check the repayment to bidder
-    if to_bidder != load_cell_capacity(output_index, Source::Output)? {
+    // expect bidder_cell_cap == repayment_to_bidder + (cap_sum of inputs_xt_cell)
+    if load_cell_capacity(output_index, Source::Output)? <= to_bidder {
         return Err(Error::InvalidAuctionBidderCell);
     }
-    debug!("2. check bidder repayment success! ");
+    debug!("2. check bidder cell capacity success! ");
 
     debug!("collateral: {}, ", collateral);
     debug!(
