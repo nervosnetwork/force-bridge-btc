@@ -27,6 +27,12 @@ pub enum Error {
     WrongFundingAddr,
     InvalidXTInInputOrOutput,
     InvalidXTMint,
+
+    CapacityInvalid,
+    InvariantDataMutated,
+    InputSinceInvalid,
+    XTBurnInvalid,
+    XChainAddressInvalid,
 }
 
 #[repr(u8)]

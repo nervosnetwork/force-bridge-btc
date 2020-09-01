@@ -32,6 +32,7 @@ pub enum Error {
     InvariantDataMutated,
     InputSinceInvalid,
     XTBurnInvalid,
+    XChainAddressInvalid,
 }
 
 impl From<SysError> for Error {
