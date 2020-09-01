@@ -19,7 +19,7 @@ use core::result::Result;
 use molecule::prelude::Entity;
 
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
-    debug!("begin verify Auction: SignerTimeout");
+    debug!("begin verify Auction: FaultyWhenWarranty");
     let input_data = toCKB_data_tuple
         .0
         .as_ref()
@@ -131,15 +131,13 @@ fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(
     debug!("to_bidder: {}, to_trigger: {}", to_bidder, to_trigger);
 
     // check trigger cell
-    if to_trigger > 0 {
-        debug!("begin check trigger cell, output_index={}", output_index);
-        output_index += 1;
-        if to_trigger != load_cell_capacity(output_index, Source::Output)?
-            || input_data.liquidation_trigger_lockscript.as_ref()
-                != load_cell_lock(output_index, Source::Output)?.as_slice()
-        {
-            return Err(Error::InvalidTriggerOrSignerCell);
-        }
+    debug!("begin check trigger cell, output_index={}", output_index);
+    output_index += 1;
+    if to_trigger != load_cell_capacity(output_index, Source::Output)?
+        || input_data.liquidation_trigger_lockscript.as_ref()
+            != load_cell_lock(output_index, Source::Output)?.as_slice()
+    {
+        return Err(Error::InvalidTriggerOrSignerCell);
     }
 
     // check no other output cell

@@ -32,15 +32,15 @@ fn test_correct_tx_max_time() {
 fn test_correct_tx_trigger() {
     let auction_time = 2 * 24 * 3600;
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | auction_time;
-    let toCKB_cap = 375_0000u64;
+    let collateral = 375_0000u64;
     let bidder_cap = {
-        let init_repayment = toCKB_cap * AUCTION_INIT_PERCENT as u64 / 100;
-        init_repayment + (toCKB_cap - init_repayment) * auction_time / AUCTION_MAX_TIME
+        let init_repayment = collateral * AUCTION_INIT_PERCENT as u64 / 100;
+        init_repayment + (collateral - init_repayment) * auction_time / AUCTION_MAX_TIME
     };
 
-    let trigger_cap = toCKB_cap - bidder_cap;
+    let trigger_cap = collateral - bidder_cap;
 
-    let (context, tx) = build_test_context(toCKB_cap, bidder_cap, trigger_cap, since, 2500_0000);
+    let (context, tx) = build_test_context(collateral, bidder_cap, trigger_cap, since, 2500_0000);
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -76,9 +76,9 @@ fn test_wrong_XT() {
 #[test]
 fn test_wrong_bidder_cell() {
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | (2 * 24 * 3600);
-    let toCKB_cap = 375_0000;
-    let wrong_bidder_capacity = 375_0000;
-    let (context, tx) = build_test_context(toCKB_cap, wrong_bidder_capacity, 0, since, 2500_0000);
+    let collateral = 375_0000;
+    let wrong_bidder_capacity = 0;
+    let (context, tx) = build_test_context(collateral, wrong_bidder_capacity, 0, since, 2500_0000);
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -91,14 +91,14 @@ fn test_wrong_bidder_cell() {
 fn test_wrong_trigger() {
     let time = 2 * 24 * 3600;
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | time;
-    let toCKB_cap = 375_0000u64;
+    let collateral = 375_0000u64;
     let bidder_cap = {
-        let init_repayment = toCKB_cap * AUCTION_INIT_PERCENT as u64 / 100;
-        init_repayment + (toCKB_cap - init_repayment) * time / AUCTION_MAX_TIME
+        let init_repayment = collateral * AUCTION_INIT_PERCENT as u64 / 100;
+        init_repayment + (collateral - init_repayment) * time / AUCTION_MAX_TIME
     };
 
     let wrong_trigger = 10;
-    let (context, tx) = build_test_context(toCKB_cap, bidder_cap, wrong_trigger, since, 2500_0000);
+    let (context, tx) = build_test_context(collateral, bidder_cap, wrong_trigger, since, 2500_0000);
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -108,7 +108,7 @@ fn test_wrong_trigger() {
 }
 
 fn build_test_context(
-    toCKB_capacity: u64,
+    collateral: u64,
     bidder_capacity: u64,
     trigger_capacity: u64,
     since: u64,
@@ -161,7 +161,7 @@ fn build_test_context(
     let mut inputs = vec![];
     let input_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(toCKB_capacity.pack())
+            .capacity((collateral + XT_CELL_CAPACITY).pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
@@ -178,7 +178,7 @@ fn build_test_context(
     let data = &lot_amount.to_le_bytes()[..];
     let input_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(1000u64.pack())
+            .capacity(XT_CELL_CAPACITY.pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(sudt_typescript.clone()).pack())
             .build(),
@@ -193,21 +193,19 @@ fn build_test_context(
     // prepare outputs
     // 1.bidder cell
     let mut outputs = vec![CellOutput::new_builder()
-        .capacity(bidder_capacity.pack())
+        .capacity((bidder_capacity + XT_CELL_CAPACITY).pack())
         .lock(always_success_lockscript.clone())
         .build()];
     let mut outputs_data = vec![Bytes::new(); 1];
 
     // 2. trigger and signer
-    if trigger_capacity > 0 {
-        outputs.push(
-            CellOutput::new_builder()
-                .capacity(trigger_capacity.pack())
-                .lock(always_success_lockscript.clone())
-                .build(),
-        );
-        outputs_data.push(Bytes::new());
-    }
+    outputs.push(
+        CellOutput::new_builder()
+            .capacity((trigger_capacity + XT_CELL_CAPACITY).pack())
+            .lock(always_success_lockscript.clone())
+            .build(),
+    );
+    outputs_data.push(Bytes::new());
 
     // build transaction
     let tx = TransactionBuilder::default()
