@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  check-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: format-typescript
+        run: |
+          cd contracts/toCKB-typescript
+          cargo fmt --all -- --check
+      - name: format-lockscript
+        run: |
+          cd contracts/toCKB-lockscript
+          cargo fmt --all -- --check
+      - name: format-tests
+        run: |
+          cd tests
+          cargo fmt --all -- --check
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: install-capsule
+        run: |
+          cargo install capsule --git https://github.com/nervosnetwork/capsule.git --tag v0.2.0
+      - name: build
+        run: capsule build
+      - name: test
+        run: capsule test

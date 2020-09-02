@@ -12,8 +12,25 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
+    // MintXT Error
+    InvalidDataChange,
+    InvalidWitness,
+    DifficultyDataInvalid,
+    SpvProofInvalid,
+    InsufficientDifficulty,
+    BadMerkleProof,
+    NotAtCurrentOrPreviousDifficulty,
+    WrongTxId,
+    FundingNotEnough,
+    UnsupportedFundingType,
+    InvalidMintOutput,
+    WrongFundingAddr,
+    InvalidXTInInputOrOutput,
+    InvalidXTMint,
+
+    CapacityInvalid,
     InvariantDataMutated,
-    CapacityMismatch,
+    InputSinceInvalid,
 }
 
 impl From<SysError> for Error {
@@ -32,5 +49,11 @@ impl From<SysError> for Error {
 impl<T: IntEnum> From<IntEnumError<T>> for Error {
     fn from(_err: IntEnumError<T>) -> Self {
         Error::Encoding
+    }
+}
+
+impl From<bitcoin_spv::types::SPVError> for Error {
+    fn from(_err: bitcoin_spv::types::SPVError) -> Self {
+        Error::SpvProofInvalid
     }
 }

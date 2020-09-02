@@ -8,6 +8,7 @@ use molecule::prelude::*;
 const BTC_UNIT: u128 = 100_000_000;
 const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
 
+#[derive(Debug)]
 pub struct ToCKBCellDataView {
     pub status: ToCKBStatus,
     lot_size: u8,
@@ -26,9 +27,9 @@ impl ToCKBCellDataView {
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];
         let user_lockscript = data_reader.user_lockscript().to_entity().as_bytes();
-        let x_lock_address = data_reader.x_lock_address().to_entity().as_bytes();
+        let x_lock_address = data_reader.x_lock_address().to_entity().raw_data();
         let signer_lockscript = data_reader.signer_lockscript().to_entity().as_bytes();
-        let x_unlock_address = data_reader.x_lock_address().to_entity().as_bytes();
+        let x_unlock_address = data_reader.x_unlock_address().to_entity().raw_data();
         let redeemer_lockscript = data_reader.redeemer_lockscript().to_entity().as_bytes();
         let liquidation_trigger_lockscript = data_reader
             .liquidation_trigger_lockscript()
@@ -62,7 +63,7 @@ impl ToCKBCellDataView {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq, Debug)]
 pub enum ToCKBStatus {
     Initial = 1,
     Bonded = 2,
@@ -75,7 +76,7 @@ pub enum ToCKBStatus {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum BtcLotSize {
     Quarter = 1,
     Half = 2,
@@ -94,7 +95,7 @@ impl BtcLotSize {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Clone, Copy, IntEnum, PartialEq)]
 pub enum EthLotSize {
     Quarter = 1,
     Half = 2,
