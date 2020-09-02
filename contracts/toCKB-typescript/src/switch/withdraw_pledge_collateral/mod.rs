@@ -9,7 +9,7 @@ use core::result::Result;
 pub fn verify_since() -> Result<(), Error> {
     let since = load_input_since(0, Source::GroupInput)?;
     if since != SINCE_WITHDRAW_PLEDGE_COLLATERAL {
-        return Err(Error::InvariantDataMutated);
+        return Err(Error::InputSinceInvalid);
     }
     Ok(())
 }
@@ -25,7 +25,7 @@ pub fn verify_capacity(input_toCKB_data: &ToCKBCellDataView) -> Result<(), Error
     }
 
     if sum != pledge_collateral {
-        return Err(Error::CapacityMismatch);
+        return Err(Error::CapacityInvalid);
     }
     Ok(())
 }
