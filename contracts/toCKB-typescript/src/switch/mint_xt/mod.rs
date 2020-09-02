@@ -6,11 +6,12 @@ use crate::utils::{
     tools::{get_xchain_kind, XChainKind},
     types::{
         btc_difficulty::BTCDifficultyReader,
-        mint_xt_witness::{BTCSPVProofReader, MintXTWitnessReader},
+        mint_xt_witness::{BTCSPVProofReader, ETHSPVProofReader, MintXTWitnessReader},
         Error, ToCKBCellDataView,
     },
 };
 use alloc::string::String;
+use alloc::vec;
 use bech32::ToBase32;
 use bitcoin_spv::{
     btcspv,
@@ -26,8 +27,10 @@ use ckb_std::{
     },
 };
 use core::result::Result;
+use eth_spv_lib::{eth_types::*, ethspv};
 use molecule::prelude::{Entity, Reader};
 use primitive_types::U256;
+use rlp;
 
 fn verify_data(
     input_data: &ToCKBCellDataView,
@@ -61,8 +64,71 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     let cell_dep_index_list = witness.cell_dep_index_list().raw_data();
     match get_xchain_kind()? {
         XChainKind::Btc => verify_btc_witness(data, proof, cell_dep_index_list),
-        XChainKind::Eth => todo!(),
+        XChainKind::Eth => verify_eth_witness(data, proof, cell_dep_index_list),
     }
+}
+
+fn verify_eth_witness(
+    data: &ToCKBCellDataView,
+    proof: &[u8],
+    cell_dep_index_list: &[u8],
+) -> Result<(), Error> {
+    debug!(
+        "proof: {:?}, cell_dep_index_list: {:?}",
+        proof, cell_dep_index_list
+    );
+    if ETHSPVProofReader::verify(proof, false).is_err() {
+        return Err(Error::InvalidWitness);
+    }
+    let proof_reader = ETHSPVProofReader::new_unchecked(proof);
+    debug!("proof_reader: {:?}", proof_reader);
+    //TODO: verify header with client
+    // hash = calc(header_data)
+    // hash.compare(client.getHashByNumber(header.number))
+    // verify eth spv
+    let mut log_index = [0u8; 8];
+    log_index.copy_from_slice(proof_reader.log_index().raw_data());
+    debug!("log_index is {:?}", &log_index);
+    let log_entry_data = proof_reader.log_entry_data().raw_data().to_vec();
+    debug!("log_entry_data is {:?}", &log_entry_data);
+    let mut receipt_index = [0u8; 8];
+    receipt_index.copy_from_slice(proof_reader.receipt_index().raw_data());
+    debug!("receipt_index is {:?}", &receipt_index);
+    let mut receipts_root = [0u8; 32];
+    receipts_root.copy_from_slice(proof_reader.receipts_root().raw_data());
+    debug!("receipts_root is {:?}", &receipts_root);
+    let mut proof = vec![];
+    for i in 0..proof_reader.proof().len() {
+        proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
+    }
+    debug!("proof is {:?}", &proof);
+    //FIXME: check x_lock_address
+    let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).unwrap();
+    let locker_address = (log_entry.address.clone().0).0;
+    debug!(
+        "hex format: addr: {}, x_lock_address: {}",
+        hex::encode(locker_address.to_vec()),
+        hex::encode(data.x_lock_address.as_ref().to_vec())
+    );
+    debug!(
+        "addr: {}, x_lock_address: {}",
+        String::from_utf8(locker_address.to_vec()).unwrap(),
+        String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+    );
+    if locker_address != data.x_lock_address.as_ref() {
+        return Err(Error::WrongFundingAddr);
+    }
+    if !ethspv::verify_log_entry(
+        u64::from_le_bytes(log_index),
+        log_entry_data,
+        u64::from_le_bytes(receipt_index),
+        proof_reader.receipt_data().raw_data().to_vec(),
+        H256(receipts_root.into()),
+        proof,
+    ) {
+        return Err(Error::BadMerkleProof);
+    }
+    Ok(())
 }
 
 fn verify_btc_witness(

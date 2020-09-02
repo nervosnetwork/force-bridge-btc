@@ -16,3 +16,13 @@ table BTCSPVProof {
     intermediate_nodes: Bytes,
     funding_output_index: byte,
 }
+
+table ETHSPVProof {
+    log_index: Uint64,
+    log_entry_data: Bytes,
+    receipt_index: Uint64,
+    receipt_data: Bytes,
+    receipts_root: Bytes,
+    header_data: Bytes,
+    proof: Bytes2,
+}
