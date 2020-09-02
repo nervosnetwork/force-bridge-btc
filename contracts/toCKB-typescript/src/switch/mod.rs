@@ -139,16 +139,14 @@ fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
 fn verify_xt(tx_type: &TxType) -> Result<(), Error> {
     use TxType::*;
     match tx_type {
-        DepositRequest
-        | Bonding
-        | WithdrawPledge
-        | WithdrawCollateral
-        | WithdrawPledgeAndCollateral
-        | LiquidationSignerTimeout
-        | LiquidationUndercollateral
-        | LiquidationFaultyWhenWarranty
-        | LiquidationFaultyWhenRedeeming => forbid_mint_xt(),
-        _ => Ok(()),
+        MintXT
+        | PretermRedeem
+        | AttermRedeem
+        | AuctionSignerTimeout
+        | AuctionUnderCollateral
+        | AuctionFaultyWhenWarranty
+        | AuctionFaultyWhenRedeeming => Ok(()),
+        _ => forbid_mint_xt(),
     }
 }
 
