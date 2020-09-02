@@ -31,6 +31,8 @@ pub enum Error {
     CapacityInvalid,
     InvariantDataMutated,
     InputSinceInvalid,
+    XChainAddressInvalid,
+    CollateralInvalid,
 }
 
 #[repr(u8)]

@@ -31,6 +31,8 @@ pub enum Error {
     CapacityInvalid,
     InvariantDataMutated,
     InputSinceInvalid,
+    XChainAddressInvalid,
+    CollateralInvalid,
 }
 
 impl From<SysError> for Error {

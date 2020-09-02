@@ -180,7 +180,7 @@ fn test_wrong_tx_collateral_wrong() {
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
-        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
+        ScriptError::ValidationFailure(Error::CollateralInvalid as i8)
     );
 }
 
