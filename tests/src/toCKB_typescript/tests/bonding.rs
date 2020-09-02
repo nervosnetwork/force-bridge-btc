@@ -12,8 +12,8 @@ use molecule::prelude::*;
 
 const MAX_CYCLES: u64 = 10_000_000;
 
-const ETH_COLLATERAL: u64 = 15 * 250_000_000_000_000_0 + 11000;
-const BTC_COLLATERAL: u64 = 15 * 25_000_0 + 11000;
+const ETH_COLLATERAL: u64 = 15 * 250_000_000_000_000_0 + 11000 + 2 * 200;
+const BTC_COLLATERAL: u64 = 15 * 25_000_0 + 11000 + 2 * 200;
 
 #[test]
 fn test_correct_tx_eth() {
@@ -165,6 +165,7 @@ fn test_wrong_tx_lot_size_mismatch() {
     );
 }
 
+#[test]
 fn test_wrong_tx_collateral_wrong() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
@@ -212,7 +213,7 @@ fn build_test_context(
     // prepare cells
     let input_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(11000u64.pack())
+            .capacity(value.pack())
             .lock(always_success_lockscript.clone())
             .build(),
         Bytes::new(),
@@ -248,18 +249,22 @@ fn build_test_context(
         .build()];
     let outputs_data = vec![output_toCKB_data; 1];
 
+    let witness = WitnessArgs::new_builder()
+        .input_type(Some(Bytes::copy_from_slice(&vec![0u8; 1])).pack())
+        .build(); // build transaction
+
     let price: u128 = 10;
     let price_data: [u8; 16] = price.to_le_bytes();
-
-    let witness = WitnessArgs::new_builder()
-        .input_type(Some(Bytes::copy_from_slice(&price_data)).pack())
-        .build(); // build transaction
+    let dep_data = Bytes::copy_from_slice(&price_data);
+    let data_out_point = context.deploy_cell(dep_data);
+    let data_dep = CellDep::new_builder().out_point(data_out_point).build();
 
     let tx = TransactionBuilder::default()
         .inputs(inputs)
         .outputs(outputs)
         .witness(witness.as_bytes().pack())
         .outputs_data(outputs_data.pack())
+        .cell_dep(data_dep)
         .cell_dep(toCKB_typescript_dep)
         .cell_dep(always_success_lockscript_dep)
         .build();
