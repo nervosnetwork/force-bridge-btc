@@ -11,6 +11,7 @@ mod liquidation_signertimeout;
 mod liquidation_undercollateral;
 mod mint_xt;
 mod preterm_redeem;
+mod pre_undercollateral_redeem;
 mod withdraw_collateral;
 mod withdraw_pledge;
 mod withdraw_pledge_collateral;
@@ -35,6 +36,7 @@ enum TxType {
     MintXT,
     PretermRedeem,
     AttermRedeem,
+    PreUndercollateralRedeem,
     WithdrawCollateral,
     LiquidationSignerTimeout,
     LiquidationUndercollateral,
@@ -127,6 +129,7 @@ fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
     match data.status {
         Initial => Ok(WithdrawPledge),
         Bonded => Ok(WithdrawPledgeAndCollateral),
+        Warranty => Ok(PreUndercollateralRedeem),
         Redeeming => Ok(WithdrawCollateral),
         SignerTimeout => Ok(AuctionSignerTimeout),
         Undercollateral => Ok(AuctionUnderCollateral),
@@ -142,6 +145,7 @@ fn verify_xt(tx_type: &TxType) -> Result<(), Error> {
         MintXT
         | PretermRedeem
         | AttermRedeem
+        | PreUndercollateralRedeem
         | AuctionSignerTimeout
         | AuctionUnderCollateral
         | AuctionFaultyWhenWarranty
@@ -185,6 +189,9 @@ fn switch(tx_type: &TxType, toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(),
         }
         AttermRedeem => {
             atterm_redeem::verify(toCKB_data_tuple)?;
+        }
+        PreUndercollateralRedeem => {
+            pre_undercollateral_redeem::verify(toCKB_data_tuple)?;
         }
         WithdrawCollateral => {
             withdraw_collateral::verify(toCKB_data_tuple)?;
