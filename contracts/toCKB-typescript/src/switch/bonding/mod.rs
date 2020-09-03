@@ -6,11 +6,11 @@ use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
 use ckb_std::ckb_types::{bytes::Bytes, prelude::*};
 use ckb_std::debug;
-use ckb_std::high_level::{load_cell_capacity, load_cell_data, load_witness_args, QueryIter};
+use ckb_std::high_level::{load_cell_capacity, load_cell_data, load_witness_args};
 use core::result::Result;
 use molecule::prelude::Vec;
 
-pub fn verify_data(
+fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
     out_toCKB_data: &ToCKBCellDataView,
 ) -> Result<u128, Error> {
@@ -50,7 +50,7 @@ pub fn verify_data(
     Ok(amount)
 }
 
-pub fn verify_witness() -> Result<u8, Error> {
+fn verify_witness() -> Result<u8, Error> {
     let witness_args = load_witness_args(0, Source::GroupInput)?.input_type();
     if witness_args.is_none() {
         return Err(Error::InvalidWitness);
@@ -59,7 +59,7 @@ pub fn verify_witness() -> Result<u8, Error> {
     Ok(witness_bytes[0])
 }
 
-pub fn verify_collateral(price_cell_index: u8, lot_amount: u128) -> Result<(), Error> {
+fn verify_collateral(price_cell_index: u8, lot_amount: u128) -> Result<(), Error> {
     debug!("start verify_collateral ");
     let price_cell_data = load_cell_data(price_cell_index.into(), Source::CellDep)?;
     debug!("price_cell_data {:?}", price_cell_data);
@@ -74,13 +74,13 @@ pub fn verify_collateral(price_cell_index: u8, lot_amount: u128) -> Result<(), E
 
     let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
     let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
-    if input_capacity > output_capacity {
-        return Err(Error::CollateralInvalid);
-    }
     debug!(
         "output_capacity {:?}, input_capacity {:?}, lot_amount {:?}",
         output_capacity, input_capacity, lot_amount
     );
+    if input_capacity > output_capacity {
+        return Err(Error::CollateralInvalid);
+    }
 
     let diff_capacity = output_capacity - input_capacity;
     let collateral: u128 =
