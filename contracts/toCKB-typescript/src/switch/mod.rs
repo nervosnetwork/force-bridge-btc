@@ -10,8 +10,8 @@ mod liquidation_faulty_warranty;
 mod liquidation_signertimeout;
 mod liquidation_undercollateral;
 mod mint_xt;
-mod preterm_redeem;
 mod pre_undercollateral_redeem;
+mod preterm_redeem;
 mod withdraw_collateral;
 mod withdraw_pledge;
 mod withdraw_pledge_collateral;
@@ -135,7 +135,6 @@ fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
         Undercollateral => Ok(AuctionUnderCollateral),
         FaultyWhenWarranty => Ok(AuctionFaultyWhenWarranty),
         FaultyWhenRedeeming => Ok(AuctionFaultyWhenRedeeming),
-        _ => Err(Error::TxInvalid),
     }
 }
 
