@@ -68,6 +68,8 @@ fn verify_since() -> Result<u64, Error> {
 }
 
 fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<(), Error> {
+    // inputs[0]: toCKB cell
+    // inputs[1:]: XT cell the bidder provides
     // check XT cell on inputs
     let mut input_index = 1;
     let mut sum_amount = 0;
@@ -102,6 +104,14 @@ fn verify_outputs(
     toCKB_lock_hash: &[u8],
     lot_amount: u128,
 ) -> Result<(), Error> {
+    /*
+        outputs[0]: bidder cell, receive collateral and ckb change
+        outputs[1]: liquidation trigger cell
+        outputs[2]: signer cell
+        outputs[3]: XT cell which redeemer receive
+        outputs[4:]: XT change
+    */
+
     // check bidder cell
     debug!("begin check bidder cell");
     debug!(
