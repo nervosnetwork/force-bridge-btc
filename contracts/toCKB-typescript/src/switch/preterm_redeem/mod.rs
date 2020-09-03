@@ -4,12 +4,13 @@ use crate::utils::tools::{get_xchain_kind, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
+use ckb_std::debug;
 use ckb_std::error::SysError;
-use ckb_std::high_level::{load_cell_data, load_cell_lock, load_cell_type};
+use ckb_std::high_level::{load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type};
 use core::result::Result;
 use molecule::prelude::*;
 
-pub fn verify_data(
+fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
     out_toCKB_data: &ToCKBCellDataView,
 ) -> Result<u128, Error> {
@@ -56,20 +57,28 @@ pub fn verify_data(
     Ok(lot_size)
 }
 
-pub fn verify_burn(lot_size: u128, out_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
+fn verify_burn(lot_size: u128, out_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
     let mut deposit_requestor = false;
     let mut input_sudt_sum: u128 = 0;
     let mut output_sudt_sum: u128 = 0;
+    let mut output_sudt_xt_receipt_sum: u128 = 0;
     let mut input_index = 0;
+
+    let lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
+
     loop {
         let cell_type = load_cell_type(input_index, Source::Input);
+        debug!("input cell type {:?}", cell_type);
         match cell_type {
             Err(SysError::IndexOutOfBound) => break,
             Err(_err) => panic!("iter input return an error"),
             Ok(cell_type) => {
                 if !(cell_type.is_some()
-                    && cell_type.unwrap().code_hash().raw_data().as_ref()
-                        == SUDT_CODE_HASH.as_ref())
+                    && cell_type.clone().unwrap().code_hash().raw_data().as_ref()
+                        == SUDT_CODE_HASH.as_ref()
+                    && cell_type.clone().unwrap().args().raw_data().as_ref()
+                        == lock_hash.clone().as_ref()
+                    && cell_type.clone().unwrap().hash_type() == 0u8.into())
                 {
                     input_index += 1;
                     continue;
@@ -77,7 +86,7 @@ pub fn verify_burn(lot_size: u128, out_toCKB_data: &ToCKBCellDataView) -> Result
 
                 let lock = load_cell_lock(input_index, Source::Input)?;
 
-                if lock.as_slice() == out_toCKB_data.redeemer_lockscript.as_ref() {
+                if lock.as_slice() == out_toCKB_data.user_lockscript.as_ref() {
                     deposit_requestor = true;
                 }
 
@@ -95,35 +104,48 @@ pub fn verify_burn(lot_size: u128, out_toCKB_data: &ToCKBCellDataView) -> Result
     let mut output_index = 0;
     loop {
         let cell_type = load_cell_type(output_index, Source::Output);
-
+        debug!("output cell type {:?}", cell_type);
         match cell_type {
             Err(SysError::IndexOutOfBound) => break,
             Err(_err) => panic!("iter output return an error"),
             Ok(cell_type) => {
                 if !(cell_type.is_some()
-                    && cell_type.unwrap().code_hash().raw_data().as_ref()
-                        == SUDT_CODE_HASH.as_ref())
+                    && cell_type.clone().unwrap().code_hash().raw_data().as_ref()
+                        == SUDT_CODE_HASH.as_ref()
+                    && cell_type.clone().unwrap().args().raw_data().as_ref()
+                        == lock_hash.clone().as_ref()
+                    && cell_type.clone().unwrap().hash_type() == 0u8.into())
                 {
                     output_index += 1;
                     continue;
                 }
+
+                let lock = load_cell_lock(output_index, Source::Output)?;
+
                 let data = load_cell_data(output_index, Source::Output)?;
                 let mut buf = [0u8; 16];
                 if data.len() == 16 {
                     buf.copy_from_slice(&data);
-                    output_sudt_sum += u128::from_le_bytes(buf)
+                    let output_sudt = u128::from_le_bytes(buf);
+                    if lock.as_slice() == out_toCKB_data.user_lockscript.as_ref() {
+                        output_sudt_xt_receipt_sum += output_sudt;
+                    }
+                    output_sudt_sum += output_sudt
                 }
                 output_index += 1;
             }
         }
     }
 
-    if deposit_requestor && output_sudt_sum != 0 {
+    if deposit_requestor && input_sudt_sum - output_sudt_sum != lot_size {
         return Err(Error::XTBurnInvalid);
     }
     if !deposit_requestor {
         let signer_fee: u128 = lot_size * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
-        if (input_sudt_sum != lot_size + signer_fee) || (output_sudt_sum != signer_fee) {
+        debug!("input_sudt_sum {:?}, output_sudt_sum {:?}, output_sudt_xt_receipt_sum {:?}, signer_fee {:?}, lot_size {:?}", input_sudt_sum, output_sudt_sum, output_sudt_xt_receipt_sum, signer_fee, lot_size);
+        if (input_sudt_sum - output_sudt_sum != lot_size)
+            || (output_sudt_xt_receipt_sum != signer_fee)
+        {
             return Err(Error::XTBurnInvalid);
         }
     }
