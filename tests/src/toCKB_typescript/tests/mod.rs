@@ -15,6 +15,7 @@ mod withdraw_collateral;
 mod withdraw_pledge;
 mod withdraw_pledge_collateral;
 
+pub use super::utils::config::*;
 pub use super::utils::types::{
     generated::{Byte32, Bytes, Script, ToCKBCellData},
     *,
