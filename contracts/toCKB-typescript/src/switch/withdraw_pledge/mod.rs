@@ -24,7 +24,7 @@ fn verify_capacity(input_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
     }
 
     if sum != PLEDGE {
-        return Err(Error::PledgeInvalid);
+        return Err(Error::CapacityInvalid);
     }
     Ok(())
 }

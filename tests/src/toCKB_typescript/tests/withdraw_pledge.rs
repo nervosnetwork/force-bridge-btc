@@ -42,7 +42,7 @@ fn test_wrong_tx_pledge_mismatch() {
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
-        ScriptError::ValidationFailure(Error::PledgeInvalid as i8)
+        ScriptError::ValidationFailure(Error::CapacityInvalid as i8)
     );
 }
 
@@ -99,8 +99,8 @@ fn build_test_context(since: u64, output_capacity: u64) -> (Context, Transaction
         .capacity(output_capacity.pack())
         .lock(always_success_lockscript.clone())
         .build();
-    let mut outputs = vec![output_cell];
-    let mut outputs_data = vec![Bytes::new(); 1];
+    let outputs = vec![output_cell];
+    let outputs_data = vec![Bytes::new(); 1];
 
     let tx = TransactionBuilder::default()
         .inputs(inputs)
