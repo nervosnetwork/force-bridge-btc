@@ -344,7 +344,7 @@ fn build_test_context(
 
     let input_ckb_cell_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(11000u64.pack())
+            .capacity((11000 * CKB_UNITS).pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
@@ -354,7 +354,7 @@ fn build_test_context(
         .previous_output(input_ckb_cell_out_point)
         .build();
 
-    let signer_fee = input_xt_value * SINGER_FEE.0 / SINGER_FEE.1;
+    let signer_fee = input_xt_value * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
 
     let input_xt_amount: u128;
     if is_deposit_requestor {
@@ -365,7 +365,7 @@ fn build_test_context(
 
     let input_xt_cell_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(210u64.pack())
+            .capacity((210 * CKB_UNITS).pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(sudt_typescript.clone()).pack())
             .build(),
@@ -377,7 +377,7 @@ fn build_test_context(
     let inputs = vec![input_ckb_cell, input_xt_cell];
 
     let output_ckb_cell = CellOutput::new_builder()
-        .capacity(100.pack())
+        .capacity((100 * CKB_UNITS).pack())
         .type_(Some(toCKB_typescript.clone()).pack())
         .lock(always_success_lockscript.clone())
         .build();
@@ -386,7 +386,7 @@ fn build_test_context(
 
     if !is_deposit_requestor {
         let output_xt_cell = CellOutput::new_builder()
-            .capacity(100.pack())
+            .capacity((100 * CKB_UNITS).pack())
             .type_(Some(sudt_typescript.clone()).pack())
             .lock(always_success_lockscript)
             .build();
