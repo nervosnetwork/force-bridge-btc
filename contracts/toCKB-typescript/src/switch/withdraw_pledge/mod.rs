@@ -3,6 +3,7 @@ use crate::utils::config::{PLEDGE, SINCE_WITHDRAW_PLEDGE};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use ckb_std::ckb_constants::Source;
 use ckb_std::ckb_types::prelude::*;
+use ckb_std::debug;
 use ckb_std::high_level::{load_cell, load_input_since, QueryIter};
 use core::result::Result;
 
@@ -22,8 +23,8 @@ fn verify_capacity(input_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
             sum += output.capacity().unpack()
         }
     }
-
-    if sum != PLEDGE {
+    debug!("sum {:?}", sum);
+    if sum < PLEDGE {
         return Err(Error::CapacityInvalid);
     }
     Ok(())

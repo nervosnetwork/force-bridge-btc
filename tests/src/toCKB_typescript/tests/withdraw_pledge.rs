@@ -27,6 +27,15 @@ fn test_correct_tx() {
 }
 
 #[test]
+fn test_correct_tx_when_ouput_capacity_bigger_than_pledge() {
+    let (context, tx) = build_test_context(SINCE_WITHDRAW_PLEDGE, PLEDGE + 1);
+    let cycles = context
+        .verify_tx(&tx, MAX_CYCLES)
+        .expect("pass verification");
+    println!("consume cycles: {}", cycles);
+}
+
+#[test]
 fn test_wrong_tx_since_mismatch() {
     let (context, tx) = build_test_context(SINCE_WITHDRAW_PLEDGE + 1, PLEDGE);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -37,8 +46,8 @@ fn test_wrong_tx_since_mismatch() {
 }
 
 #[test]
-fn test_wrong_tx_pledge_mismatch() {
-    let (context, tx) = build_test_context(SINCE_WITHDRAW_PLEDGE, PLEDGE + 1);
+fn test_wrong_tx_when_ouput_capacity_smaller_than_pledge() {
+    let (context, tx) = build_test_context(SINCE_WITHDRAW_PLEDGE, PLEDGE - 1);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -96,7 +105,7 @@ fn build_test_context(since: u64, output_capacity: u64) -> (Context, Transaction
     let inputs = vec![input_ckb_cell];
 
     let output_cell = CellOutput::new_builder()
-        .capacity((output_capacity * CKB_UNITS).pack())
+        .capacity(output_capacity.pack())
         .lock(always_success_lockscript.clone())
         .build();
     let outputs = vec![output_cell];
