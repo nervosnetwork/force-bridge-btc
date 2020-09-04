@@ -1,5 +1,8 @@
 use super::ToCKBCellData;
-use crate::toCKB_typescript::utils::types::{Error, ToCKBStatus};
+use crate::toCKB_typescript::utils::{
+    config::*,
+    types::{Error, ToCKBStatus},
+};
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -144,7 +147,7 @@ fn build_test_context(
         .out_point(always_success_out_point)
         .build();
 
-    let capacity = 375_0000u64;
+    let capacity = 375_0000u64 * CKB_DECIMAL + XT_CELL_CAPACITY;
 
     // prepare inputs
     let input_out_point = context.create_cell(

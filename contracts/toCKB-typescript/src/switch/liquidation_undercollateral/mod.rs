@@ -1,5 +1,5 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::config::LIQUIDATION_COLLATERAL_PERCENT;
+use crate::utils::config::{CKB_DECIMAL, LIQUIDATION_COLLATERAL_PERCENT, XT_CELL_CAPACITY};
 use crate::utils::{
     tools::{get_xchain_kind, XChainKind},
     types::{Error, ToCKBCellDataView},
@@ -21,7 +21,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .as_ref()
         .expect("outputs should contain toCKB cell");
 
-    let singer_collateral = verify_capacity()?;
+    let singer_collateral = verify_capacity()? - XT_CELL_CAPACITY;
     verify_data(input_data, output_data)?;
     verify_undercollateral(singer_collateral as u128, input_data)?;
 
@@ -76,7 +76,9 @@ fn verify_undercollateral(
     let mut data = [0u8; 16];
     data.copy_from_slice(witness_bytes.as_ref());
     let price: u128 = u128::from_le_bytes(data);
-    if singer_collateral * price * 100 >= lot_amount * (LIQUIDATION_COLLATERAL_PERCENT as u128) {
+    if singer_collateral * price * 100
+        >= lot_amount * (LIQUIDATION_COLLATERAL_PERCENT as u128) * CKB_DECIMAL
+    {
         return Err(Error::UndercollateralInvalid);
     }
 
