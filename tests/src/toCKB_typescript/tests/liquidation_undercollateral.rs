@@ -147,7 +147,7 @@ fn build_test_context(
         .out_point(always_success_out_point)
         .build();
 
-    let capacity = 3_750_000u64 * CKB_DECIMAL + XT_CELL_CAPACITY;
+    let capacity = 3_750_000u64 * CKB_UNITS + XT_CELL_CAPACITY;
 
     // prepare inputs
     let input_out_point = context.create_cell(

@@ -1,5 +1,7 @@
-pub const PLEDGE: u64 = 10000;
-pub const XT_CELL_CAPACITY: u64 = 200;
+pub const CKB_UNITS: u64 = 100_000_000;
+pub const PLEDGE: u64 = 10000 * CKB_UNITS;
+pub const XT_CELL_CAPACITY: u64 = 200 * CKB_UNITS;
+
 pub const TX_PROOF_DIFFICULTY_FACTOR: u8 = 1;
 // default value is 2/1000
 pub const SIGNER_FEE_RATE: (u128, u128) = (2, 1000);
@@ -17,4 +19,3 @@ pub const SINCE_SIGNER_TIMEOUT: u64 = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | 24
 
 // LIQUIDATION_COLLATERAL_PERCENT means min liquidation threshold of collateral/lot_amount
 pub const LIQUIDATION_COLLATERAL_PERCENT: u8 = 115;
-pub const CKB_DECIMAL: u64 = 100_000_000;
