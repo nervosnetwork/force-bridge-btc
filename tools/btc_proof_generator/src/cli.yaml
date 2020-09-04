@@ -1,0 +1,26 @@
+name: btc-proof-generator
+version: "0.1"
+author: Wenchao Hu <me@huwenchao.com>
+about: generate btc proof for toCKB
+subcommands:
+    - mint_xt:
+        about: generate proof for mint_xt
+        args:
+            - block_hash:
+                long: block_hash
+                short: b
+                help: block hash
+                required: true
+                takes_value: true
+            - tx_index:
+                long: tx_index
+                short: t
+                help: tx index
+                required: true
+                takes_value: true
+            - funding_output_index:
+                long: funding_output_index
+                short: f
+                help: funding output index
+                required: true
+                takes_value: true
