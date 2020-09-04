@@ -17,4 +17,4 @@ pub const SINCE_SIGNER_TIMEOUT: u64 = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | 24
 
 // LIQUIDATION_COLLATERAL_PERCENT means min liquidation threshold of collateral/lot_amount
 pub const LIQUIDATION_COLLATERAL_PERCENT: u8 = 115;
-pub const CKB_DECIMAL: u128 = 10000_0000;
+pub const CKB_DECIMAL: u128 = 100_000_000;
