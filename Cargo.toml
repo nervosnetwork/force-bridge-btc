@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "tests",
+    "tools/btc_proof_generator",
 ]
 exclude = [
     "contracts",

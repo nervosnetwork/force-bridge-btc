@@ -82,7 +82,7 @@ fn build_test_context(since: u64, output_capacity: u64) -> (Context, Transaction
 
     let input_ckb_cell_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(200u64.pack())
+            .capacity((200 * CKB_UNITS).pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
@@ -96,7 +96,7 @@ fn build_test_context(since: u64, output_capacity: u64) -> (Context, Transaction
     let inputs = vec![input_ckb_cell];
 
     let output_cell = CellOutput::new_builder()
-        .capacity(output_capacity.pack())
+        .capacity((output_capacity * CKB_UNITS).pack())
         .lock(always_success_lockscript.clone())
         .build();
     let outputs = vec![output_cell];
