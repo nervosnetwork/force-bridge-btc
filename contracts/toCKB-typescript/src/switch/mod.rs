@@ -15,13 +15,18 @@ mod withdraw_collateral;
 mod withdraw_pledge;
 mod withdraw_pledge_collateral;
 
-use crate::utils::types::{Error, ToCKBCellDataView, ToCKBStatus};
+use crate::utils::{
+    config::SUDT_CODE_HASH,
+    types::{Error, ToCKBCellDataView, ToCKBStatus},
+};
 use alloc::vec::Vec;
 use ckb_std::{
     ckb_constants::Source,
-    high_level::{load_cell_data, load_input_since, QueryIter},
+    debug,
+    high_level::{load_cell_data, load_cell_type, load_input_since, QueryIter},
 };
 
+#[derive(Debug)]
 enum TxType {
     DepositRequest,
     Bonding,
@@ -41,11 +46,15 @@ enum TxType {
     AuctionFaultyWhenRedeeming,
 }
 
+#[derive(Debug)]
 pub struct ToCKBCellDataTuple(Option<ToCKBCellDataView>, Option<ToCKBCellDataView>);
 
 pub fn verify() -> Result<(), Error> {
     let toCKB_data_tuple = get_toCKB_data_tuple()?;
+    debug!("toCKB_data_tuple: {:?}", toCKB_data_tuple);
     let tx_type = get_tx_type(&toCKB_data_tuple)?;
+    verify_xt(&tx_type)?;
+    debug!("tx_type: {:?}", tx_type);
     switch(&tx_type, &toCKB_data_tuple)?;
     Ok(())
 }
@@ -125,6 +134,32 @@ fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
         FaultyWhenRedeeming => Ok(AuctionFaultyWhenRedeeming),
         _ => Err(Error::TxInvalid),
     }
+}
+
+fn verify_xt(tx_type: &TxType) -> Result<(), Error> {
+    use TxType::*;
+    match tx_type {
+        MintXT
+        | PretermRedeem
+        | AttermRedeem
+        | AuctionSignerTimeout
+        | AuctionUnderCollateral
+        | AuctionFaultyWhenWarranty
+        | AuctionFaultyWhenRedeeming => Ok(()),
+        _ => forbid_mint_xt(),
+    }
+}
+
+fn forbid_mint_xt() -> Result<(), Error> {
+    let sudt_cell_count = QueryIter::new(load_cell_type, Source::Output)
+        .filter(|type_opt| type_opt.is_some())
+        .map(|type_opt| type_opt.unwrap())
+        .filter(|script| script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref())
+        .count();
+    if 0 != sudt_cell_count {
+        return Err(Error::TxInvalid);
+    }
+    Ok(())
 }
 
 fn switch(tx_type: &TxType, toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
