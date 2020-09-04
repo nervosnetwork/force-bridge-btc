@@ -1,12 +1,15 @@
 mod helper;
 mod types;
-use helper::{deploy, run_test_case, DeployResult, PLEDGE, XT_CELL_CAPACITY};
+
+use helper::{deploy, run_test_case, DeployResult};
 use types::*;
 
-use super::ToCKBCellData;
+use super::{ToCKBCellData, CKB_UNITS, PLEDGE, XT_CELL_CAPACITY};
 use crate::toCKB_typescript::utils::types::{generated::mint_xt_witness, Error::*};
 use molecule::prelude::*;
 use std::convert::TryInto;
+
+const COLLATERAL: u64 = 100_000 * CKB_UNITS;
 
 fn generate_btc_corrent_case() -> TestCase {
     let kind = 1;
@@ -20,8 +23,8 @@ fn generate_btc_corrent_case() -> TestCase {
     let signer_lockscript = always_success_lockscript.clone();
     let case = TestCase {
         kind,
-        input_capacity: 100000,
-        output_capacity: 100000 - PLEDGE - XT_CELL_CAPACITY,
+        input_capacity: COLLATERAL,
+        output_capacity: COLLATERAL - PLEDGE - XT_CELL_CAPACITY,
         tockb_cell_data: ToCKBCellDataTest {
             lot_size: 1,
             x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
