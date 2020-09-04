@@ -7,15 +7,15 @@ This is a tool to generate the btc proof in toCKB.
 ```bash
 $ cd /path/to/toCKB
 
-$ cargo build -p btc_proof_generator --release
+$ cargo build -p btc-proof-generator --release
 
-$ ./target/release/btc_proof_generator -h
+$ ./target/release/btc-proof-generator -h
 btc-proof-generator 0.1
 Wenchao Hu <me@huwenchao.com>
 generate btc proof for toCKB
 
 USAGE:
-    btc_proof_generator [SUBCOMMAND]
+    btc-proof-generator [SUBCOMMAND]
 
 FLAGS:
     -h, --help       Prints help information
@@ -25,12 +25,12 @@ SUBCOMMANDS:
     help       Prints this message or the help of the given subcommand(s)
     mint_xt    generate proof for mint_xt
 
-$ ./target/release/btc_proof_generator mint_xt -h
-btc_proof_generator-mint_xt
+$ ./target/release/btc-proof-generator mint_xt -h
+btc-proof-generator-mint_xt
 generate proof for mint_xt
 
 USAGE:
-    btc_proof_generator mint_xt --block_hash <block_hash> --funding_output_index <funding_output_index> --tx_index <tx_index>
+    btc-proof-generator mint_xt --block_hash <block_hash> --funding_output_index <funding_output_index> --tx_index <tx_index>
 
 FLAGS:
     -h, --help       Prints help information
@@ -44,7 +44,7 @@ OPTIONS:
 
 # The block: <https://blockchain.info/block/0000000000000000000d97f0ed2e8c1e2c1eeb92a1853c3a9107cfd2f11e1aa4>
 # The tx: <https://www.blockchain.com/btc/tx/c33b712400ac3c262272ea6f0ddbfeab56d7786c84b2419ec25cf1e66a84212b>
-$ ./target/release/btc_proof_generator mint_xt -b 0000000000000000000d97f0ed2e8c1e2c1eeb92a1853c3a9107cfd2f11e1aa4 -t 3 -f 0
+$ ./target/release/btc-proof-generator mint_xt -b 0000000000000000000d97f0ed2e8c1e2c1eeb92a1853c3a9107cfd2f11e1aa4 -t 3 -f 0
 btc mint xt proof:
 
 {
