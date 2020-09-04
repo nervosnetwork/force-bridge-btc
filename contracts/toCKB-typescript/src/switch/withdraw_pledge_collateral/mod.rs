@@ -6,7 +6,7 @@ use ckb_std::ckb_types::prelude::*;
 use ckb_std::high_level::{load_cell, load_cell_capacity, load_input_since, QueryIter};
 use core::result::Result;
 
-pub fn verify_since() -> Result<(), Error> {
+fn verify_since() -> Result<(), Error> {
     let since = load_input_since(0, Source::GroupInput)?;
     if since != SINCE_WITHDRAW_PLEDGE_COLLATERAL {
         return Err(Error::InputSinceInvalid);
@@ -14,7 +14,7 @@ pub fn verify_since() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn verify_capacity(input_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
+fn verify_capacity(input_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
     let pledge_collateral = load_cell_capacity(0, Source::GroupInput)?;
     let outputs = QueryIter::new(load_cell, Source::Output);
     let mut sum = 0;
