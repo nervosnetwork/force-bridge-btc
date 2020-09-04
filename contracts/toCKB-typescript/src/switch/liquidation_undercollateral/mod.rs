@@ -21,9 +21,9 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .as_ref()
         .expect("outputs should contain toCKB cell");
 
-    let singer_collateral = verify_capacity()? - XT_CELL_CAPACITY;
+    let asset_collateral = verify_capacity()? - XT_CELL_CAPACITY;
     verify_data(input_data, output_data)?;
-    verify_undercollateral(singer_collateral as u128, input_data)?;
+    verify_undercollateral(asset_collateral as u128, input_data)?;
 
     Ok(())
 }
@@ -52,7 +52,7 @@ fn verify_data(
 }
 
 fn verify_undercollateral(
-    singer_collateral: u128,
+    asset_collateral: u128,
     input_data: &ToCKBCellDataView,
 ) -> Result<(), Error> {
     // get lot amount
@@ -76,7 +76,7 @@ fn verify_undercollateral(
     let mut data = [0u8; 16];
     data.copy_from_slice(witness_bytes.as_ref());
     let price: u128 = u128::from_le_bytes(data);
-    if singer_collateral * price * 100
+    if asset_collateral * price * 100
         >= lot_amount * (LIQUIDATION_COLLATERAL_PERCENT as u128) * CKB_DECIMAL
     {
         return Err(Error::UndercollateralInvalid);
