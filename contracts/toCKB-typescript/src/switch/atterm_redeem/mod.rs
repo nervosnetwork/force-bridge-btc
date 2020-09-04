@@ -5,11 +5,11 @@ use crate::utils::types::{Error, ToCKBCellDataView};
 use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
 use ckb_std::error::SysError;
-use ckb_std::high_level::{load_cell_data, load_cell_type, load_input_since, QueryIter};
+use ckb_std::high_level::{load_cell_data, load_cell_lock_hash, load_cell_type, load_input_since};
 use core::result::Result;
 use molecule::prelude::*;
 
-pub fn verify_data(
+fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
     out_toCKB_data: &ToCKBCellDataView,
 ) -> Result<u128, Error> {
@@ -56,7 +56,7 @@ pub fn verify_data(
     Ok(lot_size)
 }
 
-pub fn verify_since() -> Result<(), Error> {
+fn verify_since() -> Result<(), Error> {
     let since = load_input_since(0, Source::GroupInput)?;
     if since != SINCE_AT_TERM_REDEEM {
         return Err(Error::InputSinceInvalid);
@@ -64,9 +64,10 @@ pub fn verify_since() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn verify_burn(lot_size: u128) -> Result<(), Error> {
-    let mut input_sudt_sum: u128 = 0;
+fn verify_burn(lot_size: u128) -> Result<(), Error> {
+    let lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
 
+    let mut input_sudt_sum: u128 = 0;
     let mut input_index = 0;
     loop {
         let cell_type = load_cell_type(input_index, Source::Input);
@@ -75,8 +76,11 @@ pub fn verify_burn(lot_size: u128) -> Result<(), Error> {
             Err(_err) => panic!("iter input return an error"),
             Ok(cell_type) => {
                 if !(cell_type.is_some()
-                    && cell_type.unwrap().code_hash().raw_data().as_ref()
-                        == SUDT_CODE_HASH.as_ref())
+                    && cell_type.clone().unwrap().code_hash().raw_data().as_ref()
+                        == SUDT_CODE_HASH.as_ref()
+                    && cell_type.clone().unwrap().args().raw_data().as_ref()
+                        == lock_hash.clone().as_ref()
+                    && cell_type.clone().unwrap().hash_type() == 0u8.into())
                 {
                     input_index += 1;
                     continue;
@@ -93,17 +97,37 @@ pub fn verify_burn(lot_size: u128) -> Result<(), Error> {
         }
     }
 
-    if input_sudt_sum != lot_size {
-        return Err(Error::XTBurnInvalid);
+    let mut output_sudt_num = 0;
+    let mut output_index = 0;
+    loop {
+        let cell_type = load_cell_type(output_index, Source::Output);
+        match cell_type {
+            Err(SysError::IndexOutOfBound) => break,
+            Err(_err) => panic!("iter output return an error"),
+            Ok(cell_type) => {
+                if !(cell_type.is_some()
+                    && cell_type.clone().unwrap().code_hash().raw_data().as_ref()
+                        == SUDT_CODE_HASH.as_ref()
+                    && cell_type.clone().unwrap().args().raw_data().as_ref()
+                        == lock_hash.clone().as_ref()
+                    && cell_type.clone().unwrap().hash_type() == 0u8.into())
+                {
+                    output_index += 1;
+                    continue;
+                }
+
+                let data = load_cell_data(output_index, Source::Output)?;
+                let mut buf = [0u8; 16];
+                if data.len() == 16 {
+                    buf.copy_from_slice(&data);
+                    output_sudt_num += u128::from_le_bytes(buf)
+                }
+                output_index += 1;
+            }
+        }
     }
 
-    let output_xt_num = QueryIter::new(load_cell_type, Source::Output)
-        .filter(|type_opt| type_opt.is_some())
-        .map(|type_opt| type_opt.unwrap())
-        .filter(|script| script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref())
-        .count();
-
-    if output_xt_num != 0 {
+    if input_sudt_sum - output_sudt_num != lot_size {
         return Err(Error::XTBurnInvalid);
     }
 
