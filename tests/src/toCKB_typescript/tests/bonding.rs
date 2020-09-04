@@ -9,6 +9,7 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
+use toCKB_typescript::utils::types::generated::*;
 
 const MAX_CYCLES: u64 = 10_000_000;
 
@@ -22,7 +23,7 @@ fn test_correct_tx_eth() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+            basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
@@ -36,21 +37,20 @@ fn test_correct_tx_eth() {
 
 #[test]
 fn test_correct_tx_btc() {
-    let mole_address =
-        molecule::bytes::Bytes::from("bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t");
-    let mole_iter = mole_address.into_iter();
-    let mut v = Vec::new();
-    for mole in mole_iter {
-        v.push(Byte::new(mole));
-    }
-
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
-                .set(v)
+            basic::Bytes::new_builder()
+                .set(
+                    "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t"
+                        .as_bytes()
+                        .iter()
+                        .map(|c| Byte::new(*c))
+                        .collect::<Vec<_>>()
+                        .into(),
+                )
                 .build(),
         )
         .build();
@@ -68,8 +68,15 @@ fn test_wrong_tx_btc_address_invalid() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
+            basic::Bytes::new_builder()
+                .set(
+                    "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00"
+                        .as_bytes()
+                        .iter()
+                        .map(|c| Byte::new(*c))
+                        .collect::<Vec<_>>()
+                        .into(),
+                )
                 .build(),
         )
         .build();
@@ -90,7 +97,7 @@ fn test_wrong_tx_eth_address_invalid() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+            basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 21].to_vec())
                 .build(),
         )
@@ -112,7 +119,7 @@ fn test_wrong_tx_status_mismatch() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+            basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
@@ -131,7 +138,7 @@ fn test_wrong_tx_kind_mismatch() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+            basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
@@ -150,7 +157,7 @@ fn test_wrong_tx_lot_size_mismatch() {
         .lot_size(Byte::new(2u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+            basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
@@ -172,7 +179,7 @@ fn test_wrong_tx_collateral_wrong() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(
-            toCKB_typescript::utils::types::generated::basic::Bytes::new_builder()
+            basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
