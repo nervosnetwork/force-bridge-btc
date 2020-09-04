@@ -24,6 +24,15 @@ fn test_correct_tx() {
 }
 
 #[test]
+fn test_correct_tx_when_output_capacity_bigger_than_pledge_collateral() {
+    let (context, tx) = build_test_context(SINCE_WITHDRAW_PLEDGE_COLLATERAL, 100, 101);
+    let cycles = context
+        .verify_tx(&tx, MAX_CYCLES)
+        .expect("pass verification");
+    println!("consume cycles: {}", cycles);
+}
+
+#[test]
 fn test_wrong_tx_since_mismatch() {
     let (context, tx) = build_test_context(SINCE_WITHDRAW_PLEDGE_COLLATERAL + 1, 100, 100);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -84,7 +93,7 @@ fn build_test_context(
 
     let input_ckb_cell_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(input_capacity.pack())
+            .capacity((input_capacity * CKB_UNITS).pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
@@ -98,7 +107,7 @@ fn build_test_context(
     let inputs = vec![input_ckb_cell];
 
     let output_cell = CellOutput::new_builder()
-        .capacity(output_capacity.pack())
+        .capacity((output_capacity * CKB_UNITS).pack())
         .lock(always_success_lockscript.clone())
         .build();
     let outputs = vec![output_cell];

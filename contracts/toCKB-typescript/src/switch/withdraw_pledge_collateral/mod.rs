@@ -24,7 +24,7 @@ fn verify_capacity(input_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
         }
     }
 
-    if sum != pledge_collateral {
+    if sum < pledge_collateral {
         return Err(Error::CapacityInvalid);
     }
     Ok(())
