@@ -1,5 +1,5 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::config::{CKB_DECIMAL, LIQUIDATION_COLLATERAL_PERCENT, XT_CELL_CAPACITY};
+use crate::utils::config::{CKB_UNITS, LIQUIDATION_COLLATERAL_PERCENT, XT_CELL_CAPACITY};
 use crate::utils::{
     tools::{get_xchain_kind, XChainKind},
     types::{Error, ToCKBCellDataView},
@@ -77,7 +77,7 @@ fn verify_undercollateral(
     data.copy_from_slice(witness_bytes.as_ref());
     let price: u128 = u128::from_le_bytes(data);
     if asset_collateral * price * 100
-        >= lot_amount * (LIQUIDATION_COLLATERAL_PERCENT as u128) * CKB_DECIMAL
+        >= lot_amount * (LIQUIDATION_COLLATERAL_PERCENT as u128) * (CKB_UNITS as u128)
     {
         return Err(Error::UndercollateralInvalid);
     }
