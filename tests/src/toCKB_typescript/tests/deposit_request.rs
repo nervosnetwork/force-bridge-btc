@@ -1,4 +1,4 @@
-use super::{Error, Script, ToCKBCellData};
+use super::{Error, Script, ToCKBCellData, PLEDGE};
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -19,7 +19,7 @@ fn test_correct_tx() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, PLEDGE, toCKB_data.as_bytes());
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -50,7 +50,7 @@ fn test_wrong_status() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, PLEDGE, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
@@ -63,7 +63,7 @@ fn test_wrong_xchain() {
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(3, 10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(3, PLEDGE, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(Error::Encoding as i8));
@@ -76,7 +76,7 @@ fn test_wrong_lot_size() {
         .lot_size(Byte::new(9u8))
         .user_lockscript(Script::new_builder().build())
         .build();
-    let (context, tx) = build_test_context(1, 10000, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, PLEDGE, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
