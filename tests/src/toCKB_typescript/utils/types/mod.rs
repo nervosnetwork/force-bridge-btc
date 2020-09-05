@@ -47,9 +47,8 @@ pub enum Error {
     InvalidAuctionBidderCell,
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
-    InvalidOutputsNum,
+    XTAmountInvalid,
 }
-
 #[repr(u8)]
 pub enum ToCKBStatus {
     Initial = 1,

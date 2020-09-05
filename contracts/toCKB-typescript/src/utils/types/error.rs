@@ -46,7 +46,7 @@ pub enum Error {
     InvalidAuctionBidderCell,
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
-    InvalidOutputsNum,
+    XTAmountInvalid,
 }
 
 impl From<SysError> for Error {
