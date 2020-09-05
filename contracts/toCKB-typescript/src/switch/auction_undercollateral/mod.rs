@@ -2,18 +2,15 @@ use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{
         AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
-        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK, XT_CELL_CAPACITY,
+        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, VALUE_MASK, XT_CELL_CAPACITY,
     },
-    tools::{get_xchain_kind, is_XT_typescript, XChainKind},
+    tools::{get_sum_sudt_amount, get_xchain_kind, XChainKind},
     types::{Error, ToCKBCellDataView},
 };
 use ckb_std::{
     ckb_constants::Source,
     debug,
-    high_level::{
-        load_cell_capacity, load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type,
-        load_input_since,
-    },
+    high_level::{load_cell_capacity, load_cell_lock, load_cell_lock_hash, load_input_since},
 };
 use core::result::Result;
 use molecule::prelude::Entity;
@@ -40,9 +37,15 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("begin verify since");
     let auction_time = verify_since()?;
     debug!("begin verify input");
-    verify_inputs(toCKB_lock_hash.as_ref(), lot_amount)?;
+    let inputs_xt_amount = verify_inputs(toCKB_lock_hash.as_ref(), lot_amount)?;
     debug!("begin verify output");
-    verify_outputs(input_data, auction_time)?;
+    verify_outputs(
+        input_data,
+        inputs_xt_amount,
+        auction_time,
+        toCKB_lock_hash.as_ref(),
+        lot_amount,
+    )?;
 
     Ok(())
 }
@@ -62,36 +65,24 @@ fn verify_since() -> Result<u64, Error> {
     Ok(auction_time)
 }
 
-fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<(), Error> {
+fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<u128, Error> {
+    // inputs[0]: toCKB cell
+    // inputs[1:]: XT cell the bidder provides
     // check XT cell on inputs
-    let mut input_index = 1;
-    let mut sum_amount = 0;
-    loop {
-        let res = load_cell_type(input_index, Source::Input);
-        if res.is_err() {
-            break;
-        }
-        let script = res.unwrap();
-        if script.is_none() || !is_XT_typescript(&script.unwrap(), toCKB_lock_hash) {
-            return Err(Error::InvalidInputs);
-        }
-
-        let cell_data = load_cell_data(input_index, Source::Input)?;
-        let mut data = [0u8; UDT_LEN];
-        data.copy_from_slice(&cell_data);
-        let amount = u128::from_le_bytes(data);
-        sum_amount += amount;
-
-        input_index += 1;
-    }
-
-    if sum_amount < lot_amount {
+    let inputs_amount = get_sum_sudt_amount(1, Source::Input, toCKB_lock_hash)?;
+    if inputs_amount < lot_amount {
         return Err(Error::FundingNotEnough);
     }
-    Ok(())
+    Ok(inputs_amount)
 }
 
-fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(), Error> {
+fn verify_outputs(
+    input_data: &ToCKBCellDataView,
+    inputs_xt_amount: u128,
+    auction_time: u64,
+    toCKB_lock_hash: &[u8],
+    lot_amount: u128,
+) -> Result<(), Error> {
     // check bidder cell
     debug!("begin check bidder cell");
     debug!(
@@ -109,18 +100,18 @@ fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(
 
     // expect paying ckb to bidder,trigger and signer
     // cap of toCKB_cell ==  XT_CELL_CAPACITY + to_bidder + to_trigger + to_signer
-    let collateral = load_cell_capacity(0, Source::GroupInput)? - XT_CELL_CAPACITY;
-    let mut to_bidder = collateral;
-    let init_collateral = collateral * AUCTION_INIT_PERCENT as u64 / 100;
-    if auction_time == 0 {
-        to_bidder = init_collateral
-    } else if auction_time < AUCTION_MAX_TIME {
+    let asset_collateral = load_cell_capacity(0, Source::GroupInput)? - XT_CELL_CAPACITY;
+    let mut to_bidder = asset_collateral;
+    let init_collateral = asset_collateral * AUCTION_INIT_PERCENT as u64 / 100;
+    if auction_time < AUCTION_MAX_TIME {
         to_bidder =
-            init_collateral + (collateral - init_collateral) * auction_time / AUCTION_MAX_TIME
+            init_collateral + (asset_collateral - init_collateral) / AUCTION_MAX_TIME * auction_time
     }
 
-    let to_trigger = (collateral - to_bidder) / 2;
-    let to_signer = collateral - to_bidder - to_trigger + XT_CELL_CAPACITY;
+    let to_trigger = (asset_collateral - to_bidder) / 2;
+
+    // the XT_CELL_CAPACITY is provided by signer when bonding
+    let to_signer = asset_collateral - to_bidder - to_trigger + XT_CELL_CAPACITY;
 
     // - 2. check the repayment to bidder
     // expect bidder_cell_cap == repayment_to_bidder + (cap_sum of inputs_xt_cell)
@@ -129,7 +120,7 @@ fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(
     }
     debug!("2. check bidder cell capacity success! ");
 
-    debug!("collateral: {}, ", collateral);
+    debug!("collateral: {}, ", asset_collateral);
     debug!(
         "to_bidder: {}, to_trigger: {}, to_signer:{}",
         to_bidder, to_trigger, to_signer
@@ -159,12 +150,12 @@ fn verify_outputs(input_data: &ToCKBCellDataView, auction_time: u64) -> Result<(
         }
     }
 
-    // check no other output cell
-    output_index += 1;
-    if load_cell_capacity(output_index, Source::Output).is_ok() {
-        return Err(Error::InvalidOutputsNum);
+    // - check XT change, make sure inputs_sudt_amount == outputs_sudt_amount
+    let outputs_xt_amount = get_sum_sudt_amount(output_index + 1, Source::Output, toCKB_lock_hash)?;
+    if inputs_xt_amount - outputs_xt_amount != lot_amount {
+        return Err(Error::XTAmountInvalid);
     }
-    debug!("4. check no other output cell success!");
+    debug!("make sure inputs_sudt_amount == outputs_sudt_amount success!");
 
     Ok(())
 }
