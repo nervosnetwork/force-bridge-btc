@@ -19,8 +19,13 @@ const MAX_CYCLES: u64 = 10_000_000;
 #[test]
 fn test_correct_tx_max_time() {
     let since_max_auction_time = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | AUCTION_MAX_TIME;
-    let (context, tx) =
-        build_test_context(375_0000, 375_0000, 0, since_max_auction_time, 2500_0000);
+    let (context, tx) = build_test_context(
+        3_750_000 * CKB_UNITS,
+        3_750_000 * CKB_UNITS,
+        0,
+        since_max_auction_time,
+        25_000_000,
+    );
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -32,15 +37,15 @@ fn test_correct_tx_max_time() {
 fn test_correct_tx_trigger() {
     let auction_time = 2 * 24 * 3600;
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | auction_time;
-    let toCKB_cap = 375_0000u64;
+    let toCKB_cap = 3_750_000 * CKB_UNITS;
     let bidder_cap = {
         let init_repayment = toCKB_cap * AUCTION_INIT_PERCENT as u64 / 100;
-        init_repayment + (toCKB_cap - init_repayment) * auction_time / AUCTION_MAX_TIME
+        init_repayment + (toCKB_cap - init_repayment) / AUCTION_MAX_TIME * auction_time
     };
 
     let trigger_cap = (toCKB_cap - bidder_cap) / 2;
 
-    let (context, tx) = build_test_context(toCKB_cap, bidder_cap, trigger_cap, since, 2500_0000);
+    let (context, tx) = build_test_context(toCKB_cap, bidder_cap, trigger_cap, since, 25_000_000);
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -51,7 +56,13 @@ fn test_correct_tx_trigger() {
 #[test]
 fn test_wrong_since() {
     let since = LOCK_TYPE_FLAG | AUCTION_MAX_TIME;
-    let (context, tx) = build_test_context(375_0000, 375_0000, 0, since, 2500_0000);
+    let (context, tx) = build_test_context(
+        3_750_000 * CKB_UNITS,
+        3_750_000 * CKB_UNITS,
+        0,
+        since,
+        25_000_000,
+    );
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -64,7 +75,13 @@ fn test_wrong_since() {
 fn test_wrong_XT() {
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | AUCTION_MAX_TIME;
     let wrong_lot_amount: u128 = 999;
-    let (context, tx) = build_test_context(375_0000, 375_0000, 0, since, wrong_lot_amount);
+    let (context, tx) = build_test_context(
+        3_750_000 * CKB_UNITS,
+        3_750_000 * CKB_UNITS,
+        0,
+        since,
+        wrong_lot_amount,
+    );
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -76,9 +93,9 @@ fn test_wrong_XT() {
 #[test]
 fn test_wrong_bidder_cell() {
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | (2 * 24 * 3600);
-    let toCKB_cap = 375_0000;
-    let wrong_bidder_capacity = 375_0000;
-    let (context, tx) = build_test_context(toCKB_cap, wrong_bidder_capacity, 0, since, 2500_0000);
+    let toCKB_cap = 3_750_000 * CKB_UNITS;
+    let wrong_bidder_capacity = 3_750_000 * CKB_UNITS;
+    let (context, tx) = build_test_context(toCKB_cap, wrong_bidder_capacity, 0, since, 25_000_000);
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -91,13 +108,13 @@ fn test_wrong_bidder_cell() {
 fn test_wrong_trigger() {
     let time = 2 * 24 * 3600;
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | time;
-    let toCKB_cap = 375_0000u64;
+    let toCKB_cap = 3_750_000 * CKB_UNITS;
     let bidder_cap = {
         let init_repayment = toCKB_cap * AUCTION_INIT_PERCENT as u64 / 100;
         init_repayment + (toCKB_cap - init_repayment) * time / AUCTION_MAX_TIME
     };
 
-    let (context, tx) = build_test_context(toCKB_cap, bidder_cap, 0, since, 2500_0000);
+    let (context, tx) = build_test_context(toCKB_cap, bidder_cap, 0, since, 25_000_000);
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
