@@ -47,7 +47,7 @@ pub enum Error {
     InvalidAuctionBidderCell,
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
-    InvalidOutputsNum,
+    XTAmountInvalid,
 }
 
 #[repr(u8)]
