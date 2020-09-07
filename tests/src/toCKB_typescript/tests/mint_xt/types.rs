@@ -1,4 +1,5 @@
 use crate::toCKB_typescript::utils::types::generated::mint_xt_witness;
+use crate::toCKB_typescript::utils::types::generated::{Bytes, Bytes2};
 use anyhow::Result;
 use ckb_tool::ckb_types::{packed::*, prelude::*};
 use molecule::prelude::*;
@@ -21,6 +22,7 @@ pub struct Output {
 
 pub enum SpvProof {
     BTC(mint_xt_witness::BTCSPVProof),
+    ETH(mint_xt_witness::ETHSPVProof),
 }
 
 pub struct BtcDifficultyTest {
@@ -59,6 +61,36 @@ pub struct BTCSPVProofJson {
     pub headers: String,
     pub intermediate_nodes: String,
     pub funding_output_index: u8,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct ETHSPVProofJson {
+    pub log_index: u64,
+    pub log_entry_data: String,
+    pub receipt_index: u64,
+    pub receipt_data: String,
+    pub receipts_root: String,
+    pub header_data: String,
+    pub proof: Vec<String>,
+}
+
+impl TryFrom<ETHSPVProofJson> for mint_xt_witness::ETHSPVProof {
+    type Error = anyhow::Error;
+    fn try_from(proof: ETHSPVProofJson) -> Result<Self> {
+        let mut proofVec: Vec<Bytes> = vec![];
+        for i in 0..proof.proof.len() {
+            proofVec.push(hex::decode(clear_0x(&proof.proof[i]))?.into())
+        }
+        Ok(mint_xt_witness::ETHSPVProof::new_builder()
+            .log_index(proof.log_index.into())
+            .log_entry_data(hex::decode(clear_0x(&proof.log_entry_data))?.into())
+            .receipt_index(proof.receipt_index.into())
+            .receipt_data(hex::decode(clear_0x(&proof.receipt_data))?.into())
+            .receipts_root(hex::decode(clear_0x(&proof.receipts_root))?.into())
+            .header_data(hex::decode(clear_0x(&proof.header_data))?.into())
+            .proof(Bytes2::new_builder().set(proofVec).build())
+            .build())
+    }
 }
 
 impl TryFrom<BTCSPVProofJson> for mint_xt_witness::BTCSPVProof {

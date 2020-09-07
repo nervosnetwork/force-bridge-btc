@@ -91,6 +91,8 @@ fn verify_eth_witness(
     debug!("log_index is {:?}", &log_index);
     let log_entry_data = proof_reader.log_entry_data().raw_data().to_vec();
     debug!("log_entry_data is {:?}", &log_entry_data);
+    let receipt_data = proof_reader.receipt_data().raw_data().to_vec();
+    debug!("receipt_data is {:?}", &receipt_data);
     let mut receipt_index = [0u8; 8];
     receipt_index.copy_from_slice(proof_reader.receipt_index().raw_data());
     debug!("receipt_index is {:?}", &receipt_index);
@@ -104,25 +106,25 @@ fn verify_eth_witness(
     debug!("proof is {:?}", &proof);
     //FIXME: check x_lock_address
     let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).unwrap();
+    debug!("log_entry is {:?}", &log_entry);
+    let receipt: Receipt = rlp::decode(receipt_data.as_slice()).unwrap();
+    debug!("receipt_data is {:?}", &receipt);
     let locker_address = (log_entry.address.clone().0).0;
     debug!(
-        "hex format: addr: {}, x_lock_address: {}",
+        "addr: {:?}, x_lock_address: {}",
         hex::encode(locker_address.to_vec()),
-        hex::encode(data.x_lock_address.as_ref().to_vec())
-    );
-    debug!(
-        "addr: {}, x_lock_address: {}",
-        String::from_utf8(locker_address.to_vec()).unwrap(),
         String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
     );
-    if locker_address != data.x_lock_address.as_ref() {
+    if hex::encode(locker_address.to_vec())
+        != String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+    {
         return Err(Error::WrongFundingAddr);
     }
     if !ethspv::verify_log_entry(
         u64::from_le_bytes(log_index),
         log_entry_data,
         u64::from_le_bytes(receipt_index),
-        proof_reader.receipt_data().raw_data().to_vec(),
+        receipt_data,
         H256(receipts_root.into()),
         proof,
     ) {
@@ -270,7 +272,7 @@ fn verify_btc_spv(proof: BTCSPVProofReader, difficulty: BTCDifficultyReader) -> 
 fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     match get_xchain_kind()? {
         XChainKind::Btc => verify_btc_xt_issue(data),
-        XChainKind::Eth => todo!(),
+        XChainKind::Eth => verify_btc_xt_issue(data),
     }
 }
 

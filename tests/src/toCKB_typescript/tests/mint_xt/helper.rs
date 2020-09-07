@@ -48,16 +48,19 @@ pub fn run_test_case(case: TestCase) {
 
     // prepare cells
     let x_lock_address_str = case.tockb_cell_data.x_lock_address;
-    let x_lock_address = basic::Bytes::new_builder()
-        .set(
-            x_lock_address_str
-                .as_bytes()
-                .iter()
-                .map(|c| Byte::new(*c))
-                .collect::<Vec<_>>()
-                .into(),
-        )
-        .build();
+    let x_lock_address: basic::Bytes = x_lock_address_str.as_bytes().to_vec().into();
+    // let x_lock_address = basic::Bytes::new_builder()
+    //     .set(
+    //         x_lock_address_str
+    //             .as_bytes()
+    //             .iter()
+    //             .map(|c| Byte::new(*c))
+    //             .collect::<Vec<_>>()
+    //             .into(),
+    //     )
+    //     .build();
+    dbg!(&x_lock_address_str);
+    dbg!(&x_lock_address);
     let signer_lockscript =
         basic::Script::from_slice(case.tockb_cell_data.signer_lockscript.as_slice()).unwrap();
     let user_lockscript =
@@ -106,6 +109,7 @@ pub fn run_test_case(case: TestCase) {
     }
     let spv_proof = match case.witness.spv_proof {
         SpvProof::BTC(btc_spv_proof) => btc_spv_proof.as_slice().to_vec(),
+        SpvProof::ETH(btc_spv_proof) => btc_spv_proof.as_slice().to_vec(),
     };
     let witness_data = mint_xt_witness::MintXTWitness::new_builder()
         .spv_proof(spv_proof.into())

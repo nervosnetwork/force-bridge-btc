@@ -103,9 +103,8 @@ dependencies = [
 
 [[package]]
 name = "ckb-std"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4919733c5e3591ccdf892f0e29c5f5a220de5aef7f90e1a2a21bf03f707662f6"
+version = "0.6.1"
+source = "git+https://github.com/LeonLi000/ckb-std.git#830a1260c800385f9bd8191ef7e71e6ff7cfd49b"
 dependencies = [
  "cc",
  "ckb-allocator",
