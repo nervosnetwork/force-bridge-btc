@@ -663,8 +663,8 @@ dependencies = [
 
 [[package]]
 name = "ckb-tool"
-version = "0.1.1"
-source = "git+https://github.com/jjyr/ckb-tool.git?tag=v0.1.1#1f9b008ec3ca241c953b320b4c1d5642c35ae1be"
+version = "0.1.3"
+source = "git+https://github.com/jjyr/ckb-tool.git?tag=v0.1.3#66893570ddb078d779784ecf1b6879a31cb12721"
 dependencies = [
  "ckb-chain-spec",
  "ckb-crypto",
