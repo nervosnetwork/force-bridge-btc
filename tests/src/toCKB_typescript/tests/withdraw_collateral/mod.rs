@@ -4,6 +4,7 @@ use helper::{deploy, run_test_case, DeployResult};
 use types::*;
 
 use super::ToCKBCellData;
+use crate::toCKB_typescript::utils::config::*;
 use crate::toCKB_typescript::utils::types::{generated::mint_xt_witness, Error::*};
 use molecule::prelude::*;
 use std::convert::TryInto;
@@ -19,8 +20,8 @@ fn generate_btc_corrent_case() -> TestCase {
     let signer_lockscript = always_success_lockscript.clone();
     let case = TestCase {
         kind,
-        input_capacity: 100000,
-        output_capacity: 100000,
+        input_capacity: 100000 * CKB_UNITS,
+        output_capacity: 100000 * CKB_UNITS,
         tockb_cell_data: ToCKBCellDataTest {
             lot_size: 1,
             x_unlock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
@@ -96,7 +97,7 @@ fn test_wrong_btc_difficulty() {
 #[test]
 fn test_wrong_toCKB_capacity() {
     let mut case = generate_btc_corrent_case();
-    case.output_capacity = 9999;
+    case.output_capacity = 9999 * CKB_UNITS;
     case.expect_return_code = CapacityInvalid as i8;
     run_test_case(case);
 }
