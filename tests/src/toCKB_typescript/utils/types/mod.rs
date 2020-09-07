@@ -31,6 +31,8 @@ pub enum Error {
     CapacityInvalid,
     InvariantDataMutated,
     InputSinceInvalid,
+    UndercollateralInvalid,
+    WitnessInvalid,
     XChainAddressInvalid,
     CollateralInvalid,
 }
