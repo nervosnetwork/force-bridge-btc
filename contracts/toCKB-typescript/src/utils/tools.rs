@@ -120,14 +120,14 @@ pub fn verify_btc_witness(
         PayloadType::WPKH(_) => {
             let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
             debug!(
-                "hex format: addr: {}, x_lock_address: {}",
+                "hex format: addr: {}, expect_address: {}",
                 hex::encode(addr.as_bytes().to_vec()),
-                hex::encode(data.x_lock_address.as_ref().to_vec())
+                hex::encode(expect_address.as_ref().to_vec())
             );
             debug!(
-                "addr: {}, x_lock_address: {}",
+                "addr: {}, expect_address: {}",
                 String::from_utf8(addr.as_bytes().to_vec()).unwrap(),
-                String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+                String::from_utf8(expect_address.as_ref().to_vec()).unwrap()
             );
             if addr.as_bytes() != expect_address {
                 return Err(Error::WrongFundingAddr);
