@@ -119,7 +119,7 @@ fn verify_outputs(
         to_bidder =
             init_collateral + (asset_collateral - init_collateral) / AUCTION_MAX_TIME * auction_time
     }
-    let to_trigger = asset_collateral - to_bidder + XT_CELL_CAPACITY;
+    let to_trigger = asset_collateral - to_bidder;
 
     // - 2. check the repayment to bidder
     // expect bidder_cell_cap == repayment_to_bidder + (cap_sum of inputs_xt_cell)
@@ -132,13 +132,15 @@ fn verify_outputs(
     debug!("to_bidder: {}, to_trigger: {}", to_bidder, to_trigger);
 
     // check trigger cell
-    debug!("begin check trigger cell, output_index={}", output_index);
-    output_index += 1;
-    if to_trigger != load_cell_capacity(output_index, Source::Output)?
-        || input_data.liquidation_trigger_lockscript.as_ref()
-            != load_cell_lock(output_index, Source::Output)?.as_slice()
-    {
-        return Err(Error::InvalidTriggerOrSignerCell);
+    if to_trigger > 0 {
+        debug!("begin check trigger cell, output_index={}", output_index);
+        output_index += 1;
+        if to_trigger != load_cell_capacity(output_index, Source::Output)?
+            || input_data.liquidation_trigger_lockscript.as_ref()
+                != load_cell_lock(output_index, Source::Output)?.as_slice()
+        {
+            return Err(Error::InvalidTriggerOrSignerCell);
+        }
     }
 
     // check XT cell

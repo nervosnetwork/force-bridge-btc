@@ -186,6 +186,7 @@ fn build_test_context(
         .redeemer_lockscript(always_lockscript.clone())
         .liquidation_trigger_lockscript(always_lockscript.clone())
         .signer_lockscript(always_lockscript.clone())
+        .user_lockscript(always_lockscript.clone())
         .build();
 
     let mut inputs = vec![];
@@ -205,7 +206,8 @@ fn build_test_context(
     );
 
     // 2. XT cell
-    let data = &lot_amount.to_le_bytes()[..];
+    let signer_fee = lot_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
+    let data = &(lot_amount + signer_fee).to_le_bytes()[..];
     let input_out_point = context.create_cell(
         CellOutput::new_builder()
             .capacity(XT_CELL_CAPACITY.pack())
@@ -229,13 +231,26 @@ fn build_test_context(
     let mut outputs_data = vec![Bytes::new(); 1];
 
     // 2. trigger and signer
+    if trigger_capacity > 0 {
+        outputs.push(
+            CellOutput::new_builder()
+                .capacity((trigger_capacity).pack())
+                .lock(always_success_lockscript.clone())
+                .build(),
+        );
+        outputs_data.push(Bytes::new());
+    }
+
+    // 3. XT cell with signer fee
     outputs.push(
         CellOutput::new_builder()
-            .capacity((trigger_capacity + XT_CELL_CAPACITY).pack())
+            .capacity(XT_CELL_CAPACITY.pack())
             .lock(always_success_lockscript.clone())
+            .type_(Some(sudt_typescript.clone()).pack())
             .build(),
     );
-    outputs_data.push(Bytes::new());
+    let data = &signer_fee.to_le_bytes()[..];
+    outputs_data.push(Bytes::copy_from_slice(data));
 
     // build transaction
     let tx = TransactionBuilder::default()
