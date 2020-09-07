@@ -2,7 +2,8 @@ use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{
         AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
-        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK, XT_CELL_CAPACITY,
+        REMAIN_FLAGS_BITS, SIGNER_FEE_RATE, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK,
+        XT_CELL_CAPACITY,
     },
     tools::{get_sum_sudt_amount, get_xchain_kind, is_XT_typescript, XChainKind},
     types::{Error, ToCKBCellDataView},
@@ -36,11 +37,12 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
             eth_lot_size.get_sudt_amount()
         }
     };
+    let signer_fee = lot_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
 
     debug!("begin verify since");
     let auction_time = verify_since()?;
     debug!("begin verify input");
-    let inputs_xt_amount = verify_inputs(toCKB_lock_hash.as_ref(), lot_amount)?;
+    let inputs_xt_amount = verify_inputs(toCKB_lock_hash.as_ref(), lot_amount, signer_fee)?;
     debug!("begin verify output");
     verify_outputs(
         input_data,
@@ -48,6 +50,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         auction_time,
         toCKB_lock_hash.as_ref(),
         lot_amount,
+        signer_fee,
     )?;
 
     Ok(())
@@ -68,13 +71,17 @@ fn verify_since() -> Result<u64, Error> {
     Ok(auction_time)
 }
 
-fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<u128, Error> {
+fn verify_inputs(
+    toCKB_lock_hash: &[u8],
+    lot_amount: u128,
+    signer_fee: u128,
+) -> Result<u128, Error> {
     // inputs[0]: toCKB cell
     // inputs[1:]: XT cell the bidder provides
     // check XT cell on inputs
     let inputs_amount = get_sum_sudt_amount(1, Source::Input, toCKB_lock_hash)?;
 
-    if inputs_amount < lot_amount {
+    if inputs_amount < lot_amount + signer_fee {
         return Err(Error::FundingNotEnough);
     }
     Ok(inputs_amount)
@@ -86,6 +93,7 @@ fn verify_outputs(
     auction_time: u64,
     toCKB_lock_hash: &[u8],
     lot_amount: u128,
+    signer_fee: u128,
 ) -> Result<(), Error> {
     // check bidder cell
     debug!("begin check bidder cell");
@@ -150,20 +158,19 @@ fn verify_outputs(
     }
     debug!("2. check XT type is sudt typescript success!");
 
-    // - 3. check XT amount
+    // - 3. check XT amount == signer fee
     let cell_data = load_cell_data(output_index, Source::Output)?;
     let mut data = [0u8; UDT_LEN];
     data.copy_from_slice(&cell_data);
-    let to_redeemer_amount = u128::from_le_bytes(data);
-
+    let to_user_amount = u128::from_le_bytes(data);
     debug!(
-        "to_redeemer_amount: {}, lot_amount: {}",
-        to_redeemer_amount, lot_amount
+        "to_redeemer_amount: {}, signer_fee: {}",
+        to_user_amount, signer_fee
     );
-    if to_redeemer_amount != lot_amount {
+    if to_user_amount != signer_fee {
         return Err(Error::InvalidAuctionXTCell);
     }
-    debug!("3. check XT amount is lot_amount success!");
+    debug!("3. check XT amount is signer_fee success!");
 
     // - 4. check XT cell capacity
     let redeemer_XT_cell_cap = load_cell_capacity(output_index, Source::Output)?;
@@ -174,7 +181,7 @@ fn verify_outputs(
 
     // check XT change, make sure inputs_sudt_amount == outputs_sudt_amount
     let outputs_xt_amount = get_sum_sudt_amount(output_index + 1, Source::Output, toCKB_lock_hash)?;
-    if inputs_xt_amount - outputs_xt_amount != lot_amount {
+    if inputs_xt_amount - outputs_xt_amount != lot_amount + signer_fee {
         return Err(Error::XTAmountInvalid);
     }
 
