@@ -2,15 +2,18 @@ use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{
         AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
-        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, VALUE_MASK, XT_CELL_CAPACITY,
+        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK, XT_CELL_CAPACITY,
     },
-    tools::{get_sum_sudt_amount, get_xchain_kind, XChainKind},
+    tools::{get_sum_sudt_amount, get_xchain_kind, is_XT_typescript, XChainKind},
     types::{Error, ToCKBCellDataView},
 };
 use ckb_std::{
     ckb_constants::Source,
     debug,
-    high_level::{load_cell_capacity, load_cell_lock, load_cell_lock_hash, load_input_since},
+    high_level::{
+        load_cell_capacity, load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type,
+        load_input_since,
+    },
 };
 use core::result::Result;
 use molecule::prelude::Entity;
@@ -130,7 +133,46 @@ fn verify_outputs(
         return Err(Error::InvalidTriggerOrSignerCell);
     }
 
-    // - check XT change, make sure inputs_sudt_amount == outputs_sudt_amount
+    // check XT cell
+    output_index += 1;
+    debug!("begin check XT cell, output_index={}", output_index);
+    // - 1. check if lock is deposit Requester's lockscript
+    let script = load_cell_lock(output_index, Source::Output)?;
+    if script.as_slice() != input_data.user_lockscript.as_ref() {
+        return Err(Error::InvalidAuctionXTCell);
+    }
+    debug!("1. check XT lock is redeemer's lock success!");
+
+    // - 2. check if typescript is sudt typescript
+    let script = load_cell_type(output_index, Source::Output)?.expect("sudt typescript must exist");
+    if !is_XT_typescript(&script, toCKB_lock_hash) {
+        return Err(Error::InvalidAuctionXTCell);
+    }
+    debug!("2. check XT type is sudt typescript success!");
+
+    // - 3. check XT amount
+    let cell_data = load_cell_data(output_index, Source::Output)?;
+    let mut data = [0u8; UDT_LEN];
+    data.copy_from_slice(&cell_data);
+    let to_redeemer_amount = u128::from_le_bytes(data);
+
+    debug!(
+        "to_redeemer_amount: {}, lot_amount: {}",
+        to_redeemer_amount, lot_amount
+    );
+    if to_redeemer_amount != lot_amount {
+        return Err(Error::InvalidAuctionXTCell);
+    }
+    debug!("3. check XT amount is lot_amount success!");
+
+    // - 4. check XT cell capacity
+    let redeemer_XT_cell_cap = load_cell_capacity(output_index, Source::Output)?;
+    if redeemer_XT_cell_cap != XT_CELL_CAPACITY {
+        return Err(Error::InvalidAuctionXTCell);
+    }
+    debug!("4. check XT cell capacity success!");
+
+    // check XT change, make sure inputs_sudt_amount == outputs_sudt_amount
     let outputs_xt_amount = get_sum_sudt_amount(output_index + 1, Source::Output, toCKB_lock_hash)?;
     if inputs_xt_amount - outputs_xt_amount != lot_amount {
         return Err(Error::XTAmountInvalid);
