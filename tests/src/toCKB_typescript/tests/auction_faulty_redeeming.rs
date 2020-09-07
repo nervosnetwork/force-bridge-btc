@@ -1,4 +1,3 @@
-
 use super::ToCKBCellData;
 use crate::toCKB_typescript::utils::{
     config::*,
@@ -20,8 +19,13 @@ const MAX_CYCLES: u64 = 10_000_000;
 #[test]
 fn test_correct_tx_max_time() {
     let since_max_auction_time = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | AUCTION_MAX_TIME;
-    let (context, tx) =
-        build_test_context(3_750_000 * CKB_UNITS, 3_750_000 * CKB_UNITS, 0, since_max_auction_time, 25_000_000);
+    let (context, tx) = build_test_context(
+        3_750_000 * CKB_UNITS,
+        3_750_000 * CKB_UNITS,
+        0,
+        since_max_auction_time,
+        25_000_000,
+    );
 
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -52,7 +56,13 @@ fn test_correct_tx_trigger() {
 #[test]
 fn test_wrong_since() {
     let since = LOCK_TYPE_FLAG | AUCTION_MAX_TIME;
-    let (context, tx) = build_test_context(3_750_000 * CKB_UNITS, 3_750_000 * CKB_UNITS, 0, since, 25_000_000);
+    let (context, tx) = build_test_context(
+        3_750_000 * CKB_UNITS,
+        3_750_000 * CKB_UNITS,
+        0,
+        since,
+        25_000_000,
+    );
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -65,7 +75,13 @@ fn test_wrong_since() {
 fn test_wrong_XT() {
     let since = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | AUCTION_MAX_TIME;
     let wrong_lot_amount: u128 = 999;
-    let (context, tx) = build_test_context(3_750_000 * CKB_UNITS, 3_750_000 * CKB_UNITS, 0, since, wrong_lot_amount);
+    let (context, tx) = build_test_context(
+        3_750_000 * CKB_UNITS,
+        3_750_000 * CKB_UNITS,
+        0,
+        since,
+        wrong_lot_amount,
+    );
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -95,7 +111,7 @@ fn test_wrong_trigger() {
     let toCKB_cap = 3_750_000 * CKB_UNITS;
     let bidder_cap = {
         let init_repayment = toCKB_cap * AUCTION_INIT_PERCENT as u64 / 100;
-        init_repayment + (toCKB_cap - init_repayment) / AUCTION_MAX_TIME * time 
+        init_repayment + (toCKB_cap - init_repayment) / AUCTION_MAX_TIME * time
     };
 
     let wrong_trigger = 10;
