@@ -45,6 +45,7 @@ fn verify_data(
         || input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
         || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
         || input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
+        || input_data.x_extra != output_data.x_extra
     {
         return Err(Error::InvariantDataMutated);
     }

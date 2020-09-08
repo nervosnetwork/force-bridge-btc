@@ -4,7 +4,7 @@ use crate::utils::tools::*;
 use ckb_std::ckb_types::bytes::Bytes;
 use core::result::Result;
 use int_enum::IntEnum;
-use molecule::prelude::*;
+use molecule::prelude::{Entity, Reader};
 
 const BTC_UNIT: u128 = 100_000_000;
 const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
@@ -22,19 +22,19 @@ pub struct ToCKBCellDataView {
     pub x_extra: XExtraView,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum XExtraView {
     Btc(BtcExtraView),
     Eth(EthExtraView),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct BtcExtraView {
     pub lock_tx_hash: Bytes,
     pub lock_vout_index: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct EthExtraView {
     pub dummy: Bytes,
 }

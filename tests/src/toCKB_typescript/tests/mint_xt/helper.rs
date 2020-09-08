@@ -1,12 +1,13 @@
 use super::{types::*, ToCKBCellData};
 use crate::toCKB_typescript::utils::types::{
-    generated::{basic, btc_difficulty, mint_xt_witness},
+    generated::{basic, btc_difficulty, mint_xt_witness, BtcExtra, Uint32, XExtra, XExtraUnion},
     ToCKBStatus,
 };
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{bytes::Bytes, core::TransactionBuilder, packed::*, prelude::*};
 use molecule::prelude::*;
+use std::vec::Vec;
 
 pub const MAX_CYCLES: u64 = 100_000_000;
 pub const PLEDGE: u64 = 10000;
@@ -69,12 +70,27 @@ pub fn run_test_case(case: TestCase) {
         .user_lockscript(user_lockscript.clone())
         .x_lock_address(x_lock_address.clone())
         .build();
+
+    let x_extra = match case.tockb_cell_data.x_extra {
+        XExtraView::Btc(btc_extra) => {
+            let lock_vout_index = Vec::<u8>::from(&btc_extra.lock_vout_index.to_le_bytes()[..]);
+            let lock_vout_index = Uint32::new_unchecked(Bytes::from(lock_vout_index));
+            let btc_extra = BtcExtra::new_builder()
+                .lock_tx_hash(btc_extra.lock_tx_hash)
+                .lock_vout_index(lock_vout_index)
+                .build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        XExtraView::Eth(_eth_extra) => todo!(),
+    };
     let output_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(ToCKBStatus::Warranty as u8))
         .lot_size(Byte::new(case.tockb_cell_data.lot_size))
         .signer_lockscript(signer_lockscript.clone())
         .user_lockscript(user_lockscript.clone())
         .x_lock_address(x_lock_address.clone())
+        .x_extra(x_extra)
         .build();
 
     let input_ckb_cell_out_point = context.create_cell(
