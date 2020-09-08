@@ -107,7 +107,7 @@ Abort:
 1. After users make a deposit request, nobody bonds their CKB to become the signer(step 2). Users can withdraw there pledge then.
 2. After someone bonds CKB to become the signer, user does not send the XAsset to signer(step 3). Signer can withdraw his collateral and user's pledge.
 3. During redeem process, signer does not send asset back to user within a limited time(step 7). Anyone can trigger liquidation.
-4. The exchange rate changes, causes the CKB value bonded lower than expected. It will trigger liquidation.
+4. The exchange rate changes, causes the CKB value bonded lower than expected. Anyone can trigger liquidation.
 
 Faulty:
 1. During the warranty period, signer spends the locked XAsset. Anyone can relay the proof to CKB to trigger liquidation.
