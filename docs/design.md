@@ -106,7 +106,7 @@ There are two kinds of failure: abort and faulty.
 Abort:
 1. After users make a deposit request, nobody bonds their CKB to become the signer(step 2). Users can withdraw there pledge then.
 2. After someone bonds CKB to become the signer, user does not send the XAsset to signer(step 3). Signer can withdraw his collateral and user's pledge.
-3. During redeem process, signer does not send asset back to user(step 7). It will trigger liquidation.
+3. During redeem process, signer does not send asset back to user within a limited time(step 7). Anyone can trigger liquidation.
 4. The exchange rate changes, causes the CKB value bonded lower than expected. It will trigger liquidation.
 
 Faulty:
