@@ -50,7 +50,7 @@ impl ::core::fmt::Display for ToCKBCellData {
 impl ::core::default::Default for ToCKBCellData {
     fn default() -> Self {
         let v: Vec<u8> = vec![
-            30, 1, 0, 0, 40, 0, 0, 0, 41, 0, 0, 0, 42, 0, 0, 0, 95, 0, 0, 0, 99, 0, 0, 0, 152, 0,
+            58, 1, 0, 0, 40, 0, 0, 0, 41, 0, 0, 0, 42, 0, 0, 0, 95, 0, 0, 0, 99, 0, 0, 0, 152, 0,
             0, 0, 156, 0, 0, 0, 209, 0, 0, 0, 6, 1, 0, 0, 0, 0, 53, 0, 0, 0, 16, 0, 0, 0, 48, 0, 0,
             0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 16, 0, 0, 0, 48, 0, 0,
@@ -59,8 +59,9 @@ impl ::core::default::Default for ToCKBCellData {
             0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 16, 0, 0, 0, 48, 0, 0, 0, 49, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 12, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48, 0, 0, 0, 12, 0, 0, 0, 44, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
         ];
         ToCKBCellData::new_unchecked(v.into())
     }
@@ -499,7 +500,8 @@ impl ::core::fmt::Display for XExtra {
 impl ::core::default::Default for XExtra {
     fn default() -> Self {
         let v: Vec<u8> = vec![
-            0, 0, 0, 0, 20, 0, 0, 0, 12, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 48, 0, 0, 0, 12, 0, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         XExtra::new_unchecked(v.into())
     }
@@ -800,7 +802,8 @@ impl ::core::fmt::Display for BtcExtra {
 impl ::core::default::Default for BtcExtra {
     fn default() -> Self {
         let v: Vec<u8> = vec![
-            20, 0, 0, 0, 12, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            48, 0, 0, 0, 12, 0, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         BtcExtra::new_unchecked(v.into())
     }
@@ -823,11 +826,11 @@ impl BtcExtra {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn lock_tx_hash(&self) -> Bytes {
+    pub fn lock_tx_hash(&self) -> Byte32 {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        Bytes::new_unchecked(self.0.slice(start..end))
+        Byte32::new_unchecked(self.0.slice(start..end))
     }
     pub fn lock_vout_index(&self) -> Uint32 {
         let slice = self.as_slice();
@@ -916,11 +919,11 @@ impl<'r> BtcExtraReader<'r> {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn lock_tx_hash(&self) -> BytesReader<'r> {
+    pub fn lock_tx_hash(&self) -> Byte32Reader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        BytesReader::new_unchecked(&self.as_slice()[start..end])
+        Byte32Reader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn lock_vout_index(&self) -> Uint32Reader<'r> {
         let slice = self.as_slice();
@@ -984,19 +987,19 @@ impl<'r> molecule::prelude::Reader<'r> for BtcExtraReader<'r> {
         if offsets.windows(2).any(|i| i[0] > i[1]) {
             return ve!(Self, OffsetsNotMatch);
         }
-        BytesReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        Byte32Reader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         Uint32Reader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         Ok(())
     }
 }
 #[derive(Debug, Default)]
 pub struct BtcExtraBuilder {
-    pub(crate) lock_tx_hash: Bytes,
+    pub(crate) lock_tx_hash: Byte32,
     pub(crate) lock_vout_index: Uint32,
 }
 impl BtcExtraBuilder {
     pub const FIELD_COUNT: usize = 2;
-    pub fn lock_tx_hash(mut self, v: Bytes) -> Self {
+    pub fn lock_tx_hash(mut self, v: Byte32) -> Self {
         self.lock_tx_hash = v;
         self
     }

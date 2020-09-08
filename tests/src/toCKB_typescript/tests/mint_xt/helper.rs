@@ -1,6 +1,8 @@
 use super::{types::*, ToCKBCellData};
 use crate::toCKB_typescript::utils::types::{
-    generated::{basic, btc_difficulty, mint_xt_witness, BtcExtra, Uint32, XExtra, XExtraUnion},
+    generated::{
+        basic, btc_difficulty, mint_xt_witness, BtcExtra, Byte32, Uint32, XExtra, XExtraUnion,
+    },
     ToCKBStatus,
 };
 use crate::*;
@@ -73,10 +75,11 @@ pub fn run_test_case(case: TestCase) {
 
     let x_extra = match case.tockb_cell_data.x_extra {
         XExtraView::Btc(btc_extra) => {
+            let lock_tx_hash = Byte32::new_unchecked(btc_extra.lock_tx_hash);
             let lock_vout_index = Vec::<u8>::from(&btc_extra.lock_vout_index.to_le_bytes()[..]);
             let lock_vout_index = Uint32::new_unchecked(Bytes::from(lock_vout_index));
             let btc_extra = BtcExtra::new_builder()
-                .lock_tx_hash(btc_extra.lock_tx_hash)
+                .lock_tx_hash(lock_tx_hash)
                 .lock_vout_index(lock_vout_index)
                 .build();
             let x_extra = XExtraUnion::BtcExtra(btc_extra);

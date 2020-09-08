@@ -18,7 +18,7 @@ union XExtra {
 }
 
 table BtcExtra {
-	lock_tx_hash: Bytes,
+	lock_tx_hash: Byte32,
 	lock_vout_index: Uint32,
 }
 

@@ -1,6 +1,6 @@
-use crate::toCKB_typescript::utils::types::generated::{mint_xt_witness, Bytes as MBytes};
+use crate::toCKB_typescript::utils::types::generated::mint_xt_witness;
 use anyhow::Result;
-use ckb_tool::ckb_types::{packed::*, prelude::*};
+use ckb_tool::ckb_types::{bytes::Bytes, packed::*, prelude::*};
 use molecule::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
@@ -19,12 +19,12 @@ pub enum XExtraView {
 }
 
 pub struct BtcExtraView {
-    pub lock_tx_hash: MBytes,
+    pub lock_tx_hash: Bytes,
     pub lock_vout_index: u32,
 }
 
 pub struct EthExtraView {
-    pub dummy: MBytes,
+    pub dummy: Bytes,
 }
 
 pub struct Output {
