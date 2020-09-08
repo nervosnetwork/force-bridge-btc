@@ -49,8 +49,7 @@ pub fn get_price(_kind: XChainKind) -> Result<u128, Error> {
     let mut buf = [0u8; 16];
     buf.copy_from_slice(&price_cell_data);
     let price: u128 = u128::from_le_bytes(buf);
-
-    price
+    Ok(price)
 
     // todo: check price
 }

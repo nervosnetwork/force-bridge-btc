@@ -226,6 +226,7 @@ fn build_test_context(
         2 => ETH_PRICE,
         _ => ETH_PRICE,
     };
+
     let value = (11000 + 2 * 200) * CKB_UNITS + (collateral / price as u64) * CKB_UNITS;
     // prepare cells
     let input_out_point = context.create_cell(
