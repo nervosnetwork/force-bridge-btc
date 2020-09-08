@@ -93,7 +93,7 @@ signer -> CKB: Withdraw Collateral
 1. User makes a deposit request on CKB, along with some pledge. If someone bonds as signer but the user does not follw up, the user will lose the pledge to compensate the loss of signer's CKB liquidity.
 2. Someone bonds CKB to become a signer, provide a XChain address for user to deposit XAsset.
 3. User transfers their XAsset to signer on XChain.
-4. User generates the transaction proof and relays it to CKB, mints 1-to-1 CKB token -- XToken.
+4. User generates the transaction proof and relays it to CKB, mints 1-to-1 CKB token -- XToken. Signer gets some percent of XToken as fee, e.g. 0.1%.
 5. User can deal with the XToken as he wishes.
 6. When user want to redeem XAsset on XChain, he can make a redeem request on CKB, burn his XToken on CKB via toCKB contract.
 7. Signer sends the XAsset back to user on XChain.
