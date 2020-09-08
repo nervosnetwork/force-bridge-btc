@@ -10,7 +10,7 @@ use molecule::prelude::*;
 
 pub const MAX_CYCLES: u64 = 100_000_000;
 pub const PLEDGE: u64 = 10000;
-pub const XT_CELL_CAPACITY: u64 = 100;
+pub const XT_CELL_CAPACITY: u64 = 200;
 
 pub fn run_test_case(case: TestCase) {
     let kind = case.kind;
