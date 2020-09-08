@@ -1,4 +1,5 @@
 use super::{Error, Script, ToCKBCellData};
+use crate::toCKB_typescript::utils::config::CKB_UNITS;
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
@@ -13,8 +14,11 @@ use toCKB_typescript::utils::types::generated::*;
 
 const MAX_CYCLES: u64 = 10_000_000;
 
-const ETH_COLLATERAL: u64 = 15 * 250_000_000_000_000_0 + 11000 + 2 * 200;
-const BTC_COLLATERAL: u64 = 15 * 25_000_0 + 11000 + 2 * 200;
+const ETH_PRICE: u128 = 100_000_000_000_000;
+const BTC_PRICE: u128 = 100_000;
+
+const ETH_COLLATERAL_WEI: u64 = 1_000_000_000_000_000_000 / (4 * 100) * 150;
+const BTC_COLLATERAL_SAT: u64 = 100_000_000 / (4 * 100) * 150;
 
 #[test]
 fn test_correct_tx_eth() {
@@ -28,7 +32,7 @@ fn test_correct_tx_eth() {
                 .build(),
         )
         .build();
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
@@ -54,7 +58,7 @@ fn test_correct_tx_btc() {
                 .build(),
         )
         .build();
-    let (context, tx) = build_test_context(1, BTC_COLLATERAL, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, BTC_COLLATERAL_SAT, toCKB_data.as_bytes());
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
@@ -81,7 +85,7 @@ fn test_wrong_tx_btc_address_invalid() {
         )
         .build();
 
-    let (context, tx) = build_test_context(1, BTC_COLLATERAL, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(1, BTC_COLLATERAL_SAT, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -103,7 +107,7 @@ fn test_wrong_tx_eth_address_invalid() {
         )
         .build();
 
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -125,7 +129,7 @@ fn test_wrong_tx_status_mismatch() {
         )
         .build();
 
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
@@ -144,7 +148,7 @@ fn test_wrong_tx_kind_mismatch() {
         )
         .build();
 
-    let (context, tx) = build_test_context(3, ETH_COLLATERAL, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(3, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(err, ScriptError::ValidationFailure(Error::Encoding as i8));
@@ -163,7 +167,7 @@ fn test_wrong_tx_lot_size_mismatch() {
         )
         .build();
 
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -184,7 +188,7 @@ fn test_wrong_tx_collateral_wrong() {
                 .build(),
         )
         .build();
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL + 1, toCKB_data.as_bytes());
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI * 10, toCKB_data.as_bytes());
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -194,7 +198,7 @@ fn test_wrong_tx_collateral_wrong() {
 
 fn build_test_context(
     kind: u8,
-    value: u64,
+    collateral: u64,
     output_toCKB_data: Bytes,
 ) -> (Context, TransactionView) {
     // deploy contract
@@ -217,6 +221,12 @@ fn build_test_context(
         .out_point(always_success_out_point)
         .build();
 
+    let price = match kind {
+        1 => BTC_PRICE,
+        2 => ETH_PRICE,
+        _ => ETH_PRICE,
+    };
+    let value = (11000 + 2 * 200) * CKB_UNITS + (collateral / price as u64) * CKB_UNITS;
     // prepare cells
     let input_out_point = context.create_cell(
         CellOutput::new_builder()
@@ -237,7 +247,7 @@ fn build_test_context(
 
     let input_ckb_cell_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(11000u64.pack())
+            .capacity((11000 * CKB_UNITS).pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
@@ -256,11 +266,6 @@ fn build_test_context(
         .build()];
     let outputs_data = vec![output_toCKB_data; 1];
 
-    let witness = WitnessArgs::new_builder()
-        .input_type(Some(Bytes::copy_from_slice(&vec![0u8; 1])).pack())
-        .build(); // build transaction
-
-    let price: u128 = 10;
     let price_data: [u8; 16] = price.to_le_bytes();
     let dep_data = Bytes::copy_from_slice(&price_data);
     let data_out_point = context.deploy_cell(dep_data);
@@ -269,7 +274,6 @@ fn build_test_context(
     let tx = TransactionBuilder::default()
         .inputs(inputs)
         .outputs(outputs)
-        .witness(witness.as_bytes().pack())
         .outputs_data(outputs_data.pack())
         .cell_dep(data_dep)
         .cell_dep(toCKB_typescript_dep)
