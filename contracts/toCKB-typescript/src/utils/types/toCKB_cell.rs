@@ -1,5 +1,6 @@
 use super::error::Error;
-use super::generated::toCKB_cell_data::ToCKBCellDataReader;
+use super::generated::toCKB_cell_data::{ToCKBCellDataReader, XExtraUnionReader};
+use crate::utils::tools::*;
 use ckb_std::ckb_types::bytes::Bytes;
 use core::result::Result;
 use int_enum::IntEnum;
@@ -18,6 +19,24 @@ pub struct ToCKBCellDataView {
     pub x_unlock_address: Bytes,
     pub redeemer_lockscript: Bytes,
     pub liquidation_trigger_lockscript: Bytes,
+    pub x_extra: XExtraView,
+}
+
+#[derive(Debug)]
+pub enum XExtraView {
+    Btc(BtcExtraView),
+    Eth(EthExtraView),
+}
+
+#[derive(Debug)]
+pub struct BtcExtraView {
+    pub lock_tx_hash: Bytes,
+    pub lock_vout_index: u32,
+}
+
+#[derive(Debug)]
+pub struct EthExtraView {
+    pub dummy: Bytes,
 }
 
 impl ToCKBCellDataView {
@@ -35,6 +54,28 @@ impl ToCKBCellDataView {
             .liquidation_trigger_lockscript()
             .to_entity()
             .as_bytes();
+        let x_extra = data_reader.x_extra().to_enum();
+        let x_kind = get_xchain_kind()?;
+        use XChainKind::*;
+        use XExtraUnionReader::*;
+        let x_extra = match (x_kind, x_extra) {
+            (Btc, BtcExtra(btc_extra)) => {
+                let lock_tx_hash = btc_extra.lock_tx_hash().to_entity().raw_data();
+                let lock_vout_index = btc_extra.lock_vout_index().raw_data();
+                let mut buf = [0u8; 4];
+                buf.copy_from_slice(lock_vout_index);
+                let lock_vout_index = u32::from_le_bytes(buf);
+                XExtraView::Btc(BtcExtraView {
+                    lock_tx_hash,
+                    lock_vout_index,
+                })
+            }
+            (Eth, EthExtra(eth_extra)) => {
+                let dummy = eth_extra.dummy().to_entity().raw_data();
+                XExtraView::Eth(EthExtraView { dummy })
+            }
+            _ => return Err(Error::XChainMismatch),
+        };
         Ok(ToCKBCellDataView {
             status,
             lot_size,
@@ -44,6 +85,7 @@ impl ToCKBCellDataView {
             x_unlock_address,
             redeemer_lockscript,
             liquidation_trigger_lockscript,
+            x_extra,
         })
     }
 
@@ -59,6 +101,13 @@ impl ToCKBCellDataView {
     // Caller should make sure xchain kind is Eth
     pub fn get_eth_lot_size(&self) -> Result<EthLotSize, Error> {
         EthLotSize::from_int(self.lot_size).map_err(|_e| Error::LotSizeInvalid)
+    }
+
+    pub fn get_xchain_kind(&self) -> XChainKind {
+        match self.x_extra {
+            XExtraView::Btc(_) => XChainKind::Btc,
+            XExtraView::Eth(_) => XChainKind::Eth,
+        }
     }
 }
 

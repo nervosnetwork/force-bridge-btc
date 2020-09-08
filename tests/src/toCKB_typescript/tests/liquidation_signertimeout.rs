@@ -106,7 +106,7 @@ fn test_wrong_status() {
         .build();
 
     let (context, tx) = build_test_context(
-        2,
+        1,
         SINCE_SIGNER_TIMEOUT,
         input_toCKB_data.as_bytes(),
         output_toCKB_data.as_bytes(),

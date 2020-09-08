@@ -41,7 +41,7 @@ pub fn get_xchain_kind() -> Result<XChainKind, Error> {
     XChainKind::from_int(kind).map_err(|_| Error::Encoding)
 }
 
-pub fn get_price(kind: XChainKind) -> Result<u128, Error> {
+pub fn get_price() -> Result<u128, Error> {
     let price_cell_data = load_cell_data(0, Source::CellDep)?;
     if price_cell_data.len() != 16 {
         return Err(Error::Encoding);
@@ -49,11 +49,6 @@ pub fn get_price(kind: XChainKind) -> Result<u128, Error> {
     let mut buf = [0u8; 16];
     buf.copy_from_slice(&price_cell_data);
     let price: u128 = u128::from_le_bytes(buf);
-
-    match kind {
-        XChainKind::Btc => todo!(),
-        XChainKind::Eth => todo!(),
-    }
     Ok(price)
 }
 
