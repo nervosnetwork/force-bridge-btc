@@ -91,13 +91,13 @@ fn generate_eth_corrent_case() -> TestCase {
             Output {
                 typescript: sudt_typescript.clone(),
                 lockscript: always_success_lockscript.clone(),
-                amount: 24950000,
+                amount: 249500000000000000,
                 capacity: PLEDGE,
             },
             Output {
                 typescript: sudt_typescript.clone(),
                 lockscript: always_success_lockscript.clone(),
-                amount: 50000,
+                amount: 500000000000000,
                 capacity: XT_CELL_CAPACITY,
             },
         ],
@@ -146,6 +146,10 @@ fn test_wrong_lot_size() {
     case.tockb_cell_data.lot_size = 100;
     case.expect_return_code = LotSizeInvalid as i8;
     run_test_case(case);
+    let mut case = generate_eth_corrent_case();
+    case.tockb_cell_data.lot_size = 100;
+    case.expect_return_code = LotSizeInvalid as i8;
+    run_test_case(case);
 }
 
 #[test]
@@ -154,11 +158,19 @@ fn test_wrong_x_lock_address() {
     case.tockb_cell_data.x_lock_address = "wrong_addr".to_owned();
     case.expect_return_code = WrongFundingAddr as i8;
     run_test_case(case);
+    let mut case = generate_eth_corrent_case();
+    case.tockb_cell_data.x_lock_address = "wrong_addr".to_owned();
+    case.expect_return_code = WrongFundingAddr as i8;
+    run_test_case(case);
 }
 
 #[test]
 fn test_wrong_mint_xt_amount() {
     let mut case = generate_btc_corrent_case();
+    case.outputs[0].amount = 1;
+    case.expect_return_code = InvalidMintOutput as i8;
+    run_test_case(case);
+    let mut case = generate_eth_corrent_case();
     case.outputs[0].amount = 1;
     case.expect_return_code = InvalidMintOutput as i8;
     run_test_case(case);
@@ -181,6 +193,14 @@ fn test_wrong_btc_spv() {
 }
 
 #[test]
+fn test_wrong_eth_spv() {
+    let mut case = generate_eth_corrent_case();
+    case.witness.spv_proof = SpvProof::ETH(mint_xt_witness::ETHSPVProof::default());
+    case.expect_return_code = -1;
+    run_test_case(case);
+}
+
+#[test]
 fn test_wrong_btc_difficulty() {
     let mut case = generate_btc_corrent_case();
     case.cell_deps_data = CellDepsData::BTC(BtcDifficultyTest {
@@ -194,6 +214,10 @@ fn test_wrong_btc_difficulty() {
 #[test]
 fn test_wrong_toCKB_capacity() {
     let mut case = generate_btc_corrent_case();
+    case.output_capacity = 10000;
+    case.expect_return_code = CapacityInvalid as i8;
+    run_test_case(case);
+    let mut case = generate_eth_corrent_case();
     case.output_capacity = 10000;
     case.expect_return_code = CapacityInvalid as i8;
     run_test_case(case);

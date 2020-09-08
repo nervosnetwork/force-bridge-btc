@@ -270,13 +270,6 @@ fn verify_btc_spv(proof: BTCSPVProofReader, difficulty: BTCDifficultyReader) -> 
 }
 
 fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
-    match get_xchain_kind()? {
-        XChainKind::Btc => verify_btc_xt_issue(data),
-        XChainKind::Eth => verify_btc_xt_issue(data),
-    }
-}
-
-fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     let lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
     debug!("lockscript hash: {:?}", hex::encode(lock_hash));
     let input_xt_num = QueryIter::new(load_cell_type, Source::Input)
@@ -304,7 +297,11 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     if output_xt_num != 2 {
         return Err(Error::InvalidXTInInputOrOutput);
     }
-    let xt_amount = data.get_btc_lot_size()?.get_sudt_amount();
+    let xt_amount = match get_xchain_kind()? {
+        XChainKind::Btc => data.get_btc_lot_size()?.get_sudt_amount(),
+        XChainKind::Eth => data.get_eth_lot_size()?.get_sudt_amount(),
+    };
+    // data.get_btc_lot_size()?.get_sudt_amount();
     debug!("xt_amount: {}", xt_amount);
     // fixed order of output cells is required
     // user-sudt-cell should be outputs[1]
