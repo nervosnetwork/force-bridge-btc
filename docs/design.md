@@ -147,9 +147,11 @@ The toCKB contract mediates the lifecycle of the deposit, including:
 
 The toCKB system relies on a price oracle who provides the CKB/XAsset price to remain security.
 
-In this stage, we will implement a centralized oracle which gets price from public APIs, and triggers update on specific conditions. It will be similar with [MakerDAO's price feed](https://developer.makerdao.com/feeds/).
-
-We will improve it in the future, which may involve some decentralized oracle implemented on CKB, or even [reuse the data on Ethereum](https://talk.nervos.org/t/hi-ckb/4890).
+We are still working on design and implementation on that. The possible solutions:
+- A [MakerDAO's price feed](https://developer.makerdao.com/feeds/) like oracle, which gets price from multiple public APIs.
+- Use some decentralized oracle implemented on CKB.
+- If there are some uniswap like DEX running on CKB, we can use it as price feed.
+- [Reuse the data on Ethereum](https://talk.nervos.org/t/hi-ckb/4890).
 
 #### The X Specific SPV Verification
 
@@ -158,3 +160,8 @@ For different XChain, we have to implement the spv verification logic on CKB. Du
 ### Off-Chain
 
 In this stage, we will make some scripts or command line tools to help users and signers construct transactions, monitor the chain events and even trigger the follow up actions automatically.
+
+There are 3 modules in plan right now:
+- A user client for users to deal with the deposit request, mint XT and other actions.
+- A signer client for signers to deal with bonding, redemption and other actions.
+- A guard service for users who want to get profits by watching frand behaviors on CKB and triggering the liquidation.
