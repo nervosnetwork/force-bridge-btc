@@ -1,6 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::*;
-use crate::utils::tools::{get_price, get_xchain_kind, XChainKind};
+use crate::utils::tools::{get_price, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
@@ -13,8 +13,7 @@ fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
     out_toCKB_data: &ToCKBCellDataView,
 ) -> Result<u128, Error> {
-    let coin_kind = get_xchain_kind()?;
-    let amount: u128 = match coin_kind {
+    let amount: u128 = match input_toCKB_data.get_xchain_kind() {
         XChainKind::Btc => {
             let (hrp, data) = bech32::decode(
                 core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap(),
@@ -43,6 +42,7 @@ fn verify_data(
     };
     if input_toCKB_data.user_lockscript.as_ref() != out_toCKB_data.user_lockscript.as_ref()
         || input_toCKB_data.get_raw_lot_size() != out_toCKB_data.get_raw_lot_size()
+        || input_toCKB_data.x_extra != out_toCKB_data.x_extra
     {
         return Err(Error::InvariantDataMutated);
     }
@@ -62,7 +62,7 @@ fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
 
     let diff_capacity = output_capacity - input_capacity;
 
-    let price = get_price(get_xchain_kind()?)?;
+    let price = get_price()?;
 
     let collateral: u128 = lot_amount * (COLLATERAL_PERCENT as u128)
         + (2 * XT_CELL_CAPACITY * 100 / CKB_UNITS) as u128 * price;

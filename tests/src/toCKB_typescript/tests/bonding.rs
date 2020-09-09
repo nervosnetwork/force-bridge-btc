@@ -31,6 +31,7 @@ fn test_correct_tx_eth() {
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
+        .x_extra(build_extra(2))
         .build();
     let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
     let cycles = context
@@ -57,6 +58,7 @@ fn test_correct_tx_btc() {
                 )
                 .build(),
         )
+        .x_extra(build_extra(1))
         .build();
     let (context, tx) = build_test_context(1, BTC_COLLATERAL_SAT, toCKB_data.as_bytes());
     let cycles = context
@@ -83,6 +85,7 @@ fn test_wrong_tx_btc_address_invalid() {
                 )
                 .build(),
         )
+        .x_extra(build_extra(1))
         .build();
 
     let (context, tx) = build_test_context(1, BTC_COLLATERAL_SAT, toCKB_data.as_bytes());
@@ -105,6 +108,7 @@ fn test_wrong_tx_eth_address_invalid() {
                 .set([Byte::new(1u8); 21].to_vec())
                 .build(),
         )
+        .x_extra(build_extra(2))
         .build();
 
     let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
@@ -127,6 +131,7 @@ fn test_wrong_tx_status_mismatch() {
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
+        .x_extra(build_extra(2))
         .build();
 
     let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
@@ -136,7 +141,7 @@ fn test_wrong_tx_status_mismatch() {
 }
 
 #[test]
-fn test_wrong_tx_kind_mismatch() {
+fn test_wrong_tx_kind_invalid() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
@@ -146,6 +151,7 @@ fn test_wrong_tx_kind_mismatch() {
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
+        .x_extra(build_extra(3))
         .build();
 
     let (context, tx) = build_test_context(3, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
@@ -165,6 +171,7 @@ fn test_wrong_tx_lot_size_mismatch() {
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
+        .x_extra(build_extra(2))
         .build();
 
     let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
@@ -187,6 +194,7 @@ fn test_wrong_tx_collateral_wrong() {
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
+        .x_extra(build_extra(2))
         .build();
     let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI * 10, toCKB_data.as_bytes());
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -194,6 +202,58 @@ fn test_wrong_tx_collateral_wrong() {
         err,
         ScriptError::ValidationFailure(Error::CollateralInvalid as i8)
     );
+}
+
+#[test]
+fn test_wrong_tx_extra_mismatch() {
+    let eth_extra = EthExtra::new_builder().dummy(basic::Bytes::new_builder()
+    .set([Byte::new(1u8); 20].to_vec())
+    .build())
+    .build();
+    let x_extra = XExtraUnion::EthExtra(eth_extra);
+    let extra = XExtra::new_builder().set(x_extra).build();
+
+    let toCKB_data = ToCKBCellData::new_builder()
+        .status(Byte::new(2u8))
+        .lot_size(Byte::new(1u8))
+        .user_lockscript(Script::new_builder().build())
+        .x_lock_address(
+            basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 20].to_vec())
+                .build(),
+        )
+        .x_extra(extra)
+        .build();
+    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI * 10, toCKB_data.as_bytes());
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
+    );
+}
+
+fn build_extra(kind: u8) -> XExtra {
+    let extra = match kind {
+        1 => {
+            let btc_extra = BtcExtra::new_builder()
+                .build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        2 => {
+            let eth_extra = EthExtra::new_builder()
+                .build();
+            let x_extra = XExtraUnion::EthExtra(eth_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        _ => {
+            let btc_extra = BtcExtra::new_builder()
+                .build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        } 
+    };
+    extra
 }
 
 fn build_test_context(
@@ -244,6 +304,7 @@ fn build_test_context(
         .status(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
         .user_lockscript(Script::new_builder().build())
+        .x_extra(build_extra(kind))
         .build();
 
     let input_ckb_cell_out_point = context.create_cell(
