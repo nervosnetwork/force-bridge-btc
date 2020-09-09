@@ -166,9 +166,9 @@ dependencies = [
 
 [[package]]
 name = "molecule"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "663f76cc52219e5957e2f5563cce9d89f98aa8503c9c898b5c412d97df663998"
+checksum = "3067ceba3d7f5dcc7427cfc584fc506e756f1161151032fec840455f5a3c2fd5"
 dependencies = [
  "cfg-if",
 ]

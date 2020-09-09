@@ -9,5 +9,19 @@ table ToCKBCellData {
     x_unlock_address: Bytes,
     redeemer_lockscript: Script,
     liquidation_trigger_lockscript: Script,
+    x_extra: XExtra,
 }
 
+union XExtra {
+	BtcExtra,
+	EthExtra,
+}
+
+table BtcExtra {
+	lock_tx_hash: Byte32,
+	lock_vout_index: Uint32,
+}
+
+table EthExtra {
+	dummy: Bytes,
+}
