@@ -1,6 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::config::{SIGNER_FEE_RATE, SUDT_CODE_HASH};
-use crate::utils::tools::{get_xchain_kind, XChainKind};
+use crate::utils::config::SIGNER_FEE_RATE;
+use crate::utils::tools::{is_XT_typescript, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
@@ -14,8 +14,7 @@ fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
     out_toCKB_data: &ToCKBCellDataView,
 ) -> Result<u128, Error> {
-    let kind = get_xchain_kind()?;
-    let lot_size = match kind {
+    let lot_size = match input_toCKB_data.get_xchain_kind() {
         XChainKind::Btc => {
             if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
                 return Err(Error::InvariantDataMutated);
@@ -51,6 +50,7 @@ fn verify_data(
     if input_toCKB_data.user_lockscript.as_ref() != out_toCKB_data.user_lockscript.as_ref()
         || input_toCKB_data.x_lock_address.as_ref() != out_toCKB_data.x_lock_address.as_ref()
         || input_toCKB_data.signer_lockscript.as_ref() != out_toCKB_data.signer_lockscript.as_ref()
+        || input_toCKB_data.x_extra != out_toCKB_data.x_extra
     {
         return Err(Error::InvariantDataMutated);
     }
@@ -74,11 +74,7 @@ fn verify_burn(lot_size: u128, out_toCKB_data: &ToCKBCellDataView) -> Result<(),
             Err(_err) => panic!("iter input return an error"),
             Ok(cell_type) => {
                 if !(cell_type.is_some()
-                    && cell_type.clone().unwrap().code_hash().raw_data().as_ref()
-                        == SUDT_CODE_HASH.as_ref()
-                    && cell_type.clone().unwrap().args().raw_data().as_ref()
-                        == lock_hash.clone().as_ref()
-                    && cell_type.clone().unwrap().hash_type() == 0u8.into())
+                    && is_XT_typescript(&cell_type.unwrap(), lock_hash.as_ref()))
                 {
                     input_index += 1;
                     continue;
@@ -110,11 +106,7 @@ fn verify_burn(lot_size: u128, out_toCKB_data: &ToCKBCellDataView) -> Result<(),
             Err(_err) => panic!("iter output return an error"),
             Ok(cell_type) => {
                 if !(cell_type.is_some()
-                    && cell_type.clone().unwrap().code_hash().raw_data().as_ref()
-                        == SUDT_CODE_HASH.as_ref()
-                    && cell_type.clone().unwrap().args().raw_data().as_ref()
-                        == lock_hash.clone().as_ref()
-                    && cell_type.clone().unwrap().hash_type() == 0u8.into())
+                    && is_XT_typescript(&cell_type.unwrap(), lock_hash.as_ref()))
                 {
                     output_index += 1;
                     continue;
