@@ -33,6 +33,7 @@ pub enum Error {
     InputSinceInvalid,
     UndercollateralInvalid,
     WitnessInvalid,
+    XTBurnInvalid,
 }
 
 impl From<SysError> for Error {
