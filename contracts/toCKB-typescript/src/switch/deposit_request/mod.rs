@@ -25,7 +25,7 @@ fn verify_capacity() -> Result<(), Error> {
 }
 
 fn verify_lot_size(toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
-    let xchain_kind = get_xchain_kind()?;
+    let xchain_kind = toCKB_data.get_xchain_kind();
     match xchain_kind {
         XChainKind::Btc if toCKB_data.get_btc_lot_size().is_ok() => Ok(()),
         XChainKind::Eth if toCKB_data.get_eth_lot_size().is_ok() => Ok(()),

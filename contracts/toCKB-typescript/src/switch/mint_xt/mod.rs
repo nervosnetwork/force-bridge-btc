@@ -1,8 +1,8 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, XT_CELL_CAPACITY},
-    tools::{get_xchain_kind, is_XT_typescript, verify_btc_witness, XChainKind},
-    types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView},
+    tools::{is_XT_typescript, verify_btc_witness, XChainKind},
+    types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView, XExtraView},
 };
 use ckb_std::{
     ckb_constants::Source,
@@ -18,11 +18,13 @@ use molecule::prelude::{Entity, Reader};
 fn verify_data(
     input_data: &ToCKBCellDataView,
     output_data: &ToCKBCellDataView,
+    x_extra: &XExtraView,
 ) -> Result<(), Error> {
     if input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
         || input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
         || input_data.get_raw_lot_size() != output_data.get_raw_lot_size()
         || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
+        || &output_data.x_extra != x_extra
     {
         return Err(Error::InvalidDataChange);
     }
@@ -30,7 +32,7 @@ fn verify_data(
 }
 
 /// ensure transfer happen on XChain by verifying the spv proof
-fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
+fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
     let witness_args = load_witness_args(0, Source::GroupInput)?.input_type();
     debug!("witness_args: {:?}", &witness_args);
     if witness_args.is_none() {
@@ -45,20 +47,23 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     debug!("witness: {:?}", witness);
     let proof = witness.spv_proof().raw_data();
     let cell_dep_index_list = witness.cell_dep_index_list().raw_data();
-    match get_xchain_kind()? {
-        XChainKind::Btc => verify_btc_witness(
-            data,
-            proof,
-            cell_dep_index_list,
-            data.x_lock_address.as_ref(),
-            data.get_btc_lot_size()?.get_sudt_amount(),
-        ),
+    match data.get_xchain_kind() {
+        XChainKind::Btc => {
+            let btc_extra = verify_btc_witness(
+                data,
+                proof,
+                cell_dep_index_list,
+                data.x_lock_address.as_ref(),
+                data.get_btc_lot_size()?.get_sudt_amount(),
+            )?;
+            Ok(XExtraView::Btc(btc_extra))
+        }
         XChainKind::Eth => todo!(),
     }
 }
 
 fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
-    match get_xchain_kind()? {
+    match data.get_xchain_kind() {
         XChainKind::Btc => verify_btc_xt_issue(data),
         XChainKind::Eth => todo!(),
     }
@@ -158,10 +163,10 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
     let output_data = toCKB_data_tuple.1.as_ref().expect("should not happen");
     verify_capacity()?;
-    verify_data(input_data, output_data)?;
-    debug!("verify data finish");
-    verify_witness(input_data)?;
+    let x_extra = verify_witness(input_data)?;
     debug!("verify witness finish");
+    verify_data(input_data, output_data, &x_extra)?;
+    debug!("verify data finish");
     verify_xt_issue(input_data)?;
     debug!("verify xt issue finish");
     Ok(())
