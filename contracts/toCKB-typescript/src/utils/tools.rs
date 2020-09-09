@@ -1,8 +1,8 @@
 use crate::utils::{
     config::{SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, UDT_LEN},
     types::{
-        btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader, Error,
-        ToCKBCellDataView,
+        btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader, BtcExtraView,
+        Error, ToCKBCellDataView,
     },
 };
 use alloc::string::String;
@@ -18,7 +18,7 @@ use ckb_std::{
     debug,
     high_level::{load_cell_data, load_cell_type, load_script},
 };
-use core::result::Result;
+use core::{convert::From, result::Result};
 use int_enum::IntEnum;
 use molecule::prelude::Reader;
 use primitive_types::U256;
@@ -39,6 +39,17 @@ pub fn get_xchain_kind() -> Result<XChainKind, Error> {
     buf.copy_from_slice(script_args.as_ref());
     let kind = u8::from_le_bytes(buf);
     XChainKind::from_int(kind).map_err(|_| Error::Encoding)
+}
+
+pub fn get_price() -> Result<u128, Error> {
+    let price_cell_data = load_cell_data(0, Source::CellDep)?;
+    if price_cell_data.len() != 16 {
+        return Err(Error::Encoding);
+    }
+    let mut buf = [0u8; 16];
+    buf.copy_from_slice(&price_cell_data);
+    let price: u128 = u128::from_le_bytes(buf);
+    Ok(price)
 }
 
 pub fn is_XT_typescript(script: &Script, toCKB_lock_hash: &[u8]) -> bool {
@@ -86,7 +97,7 @@ pub fn verify_btc_witness(
     cell_dep_index_list: &[u8],
     expect_address: &[u8],
     expect_value: u128,
-) -> Result<(), Error> {
+) -> Result<BtcExtraView, Error> {
     debug!(
         "proof: {:?}, cell_dep_index_list: {:?}",
         proof, cell_dep_index_list
@@ -109,7 +120,7 @@ pub fn verify_btc_witness(
     let proof_reader = BTCSPVProofReader::new_unchecked(proof);
     debug!("proof_reader: {:?}", proof_reader);
     // verify btc spv
-    verify_btc_spv(proof_reader, difficulty_reader)?;
+    let tx_hash = verify_btc_spv(proof_reader, difficulty_reader)?;
     // verify transfer amount, to matches
     let funding_output_index: u8 = proof_reader.funding_output_index().into();
     let vout = Vout::new(proof_reader.vout().raw_data())?;
@@ -140,13 +151,16 @@ pub fn verify_btc_witness(
     if value < expect_value {
         return Err(Error::FundingNotEnough);
     }
-    Ok(())
+    Ok(BtcExtraView {
+        lock_tx_hash: tx_hash,
+        lock_vout_index: funding_output_index as u32,
+    })
 }
 
 pub fn verify_btc_spv(
     proof: BTCSPVProofReader,
     difficulty: BTCDifficultyReader,
-) -> Result<(), Error> {
+) -> Result<Bytes, Error> {
     debug!("start verify_btc_spv");
     if !btcspv::validate_vin(proof.vin().raw_data()) {
         return Err(Error::SpvProofInvalid);
@@ -217,5 +231,5 @@ pub fn verify_btc_spv(
     }
     debug!("finish merkle proof verify");
 
-    Ok(())
+    Ok(Bytes::from(&tx_id.as_ref()[..]))
 }
