@@ -40,7 +40,7 @@ fn verify_data(
             eth_lot_size.get_sudt_amount()
         }
     };
-    if input_toCKB_data.user_lockscript.as_ref() != out_toCKB_data.user_lockscript.as_ref()
+    if input_toCKB_data.user_lockscript != out_toCKB_data.user_lockscript
         || input_toCKB_data.get_raw_lot_size() != out_toCKB_data.get_raw_lot_size()
         || input_toCKB_data.x_extra != out_toCKB_data.x_extra
     {
