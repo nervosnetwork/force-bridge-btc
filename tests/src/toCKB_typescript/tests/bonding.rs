@@ -206,10 +206,13 @@ fn test_wrong_tx_collateral_wrong() {
 
 #[test]
 fn test_wrong_tx_extra_mismatch() {
-    let eth_extra = EthExtra::new_builder().dummy(basic::Bytes::new_builder()
-    .set([Byte::new(1u8); 20].to_vec())
-    .build())
-    .build();
+    let eth_extra = EthExtra::new_builder()
+        .dummy(
+            basic::Bytes::new_builder()
+                .set([Byte::new(1u8); 20].to_vec())
+                .build(),
+        )
+        .build();
     let x_extra = XExtraUnion::EthExtra(eth_extra);
     let extra = XExtra::new_builder().set(x_extra).build();
 
@@ -235,23 +238,20 @@ fn test_wrong_tx_extra_mismatch() {
 fn build_extra(kind: u8) -> XExtra {
     let extra = match kind {
         1 => {
-            let btc_extra = BtcExtra::new_builder()
-                .build();
+            let btc_extra = BtcExtra::new_builder().build();
             let x_extra = XExtraUnion::BtcExtra(btc_extra);
             XExtra::new_builder().set(x_extra).build()
         }
         2 => {
-            let eth_extra = EthExtra::new_builder()
-                .build();
+            let eth_extra = EthExtra::new_builder().build();
             let x_extra = XExtraUnion::EthExtra(eth_extra);
             XExtra::new_builder().set(x_extra).build()
         }
         _ => {
-            let btc_extra = BtcExtra::new_builder()
-                .build();
+            let btc_extra = BtcExtra::new_builder().build();
             let x_extra = XExtraUnion::BtcExtra(btc_extra);
             XExtra::new_builder().set(x_extra).build()
-        } 
+        }
     };
     extra
 }
