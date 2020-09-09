@@ -1,6 +1,6 @@
 use super::{types::*, ToCKBCellData};
 use crate::toCKB_typescript::utils::types::{
-    generated::{basic, btc_difficulty, mint_xt_witness},
+    generated::{basic, btc_difficulty, mint_xt_witness, BtcExtra, EthExtra, XExtra, XExtraUnion},
     ToCKBStatus,
 };
 use crate::*;
@@ -48,12 +48,26 @@ pub fn run_test_case(case: TestCase) {
         basic::Script::from_slice(case.tockb_cell_data.signer_lockscript.as_slice()).unwrap();
     let user_lockscript =
         basic::Script::from_slice(case.tockb_cell_data.user_lockscript.as_slice()).unwrap();
+
+    let x_extra = match case.tockb_cell_data.x_extra {
+        XExtraView::Btc(_btc_extra) => {
+            let btc_extra = BtcExtra::new_builder().build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        XExtraView::Eth(_eth_extra) => {
+            let eth_extra = EthExtra::new_builder().build();
+            let x_extra = XExtraUnion::EthExtra(eth_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+    };
     let input_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(ToCKBStatus::Redeeming as u8))
         .lot_size(Byte::new(case.tockb_cell_data.lot_size))
         .signer_lockscript(signer_lockscript.clone())
         .user_lockscript(user_lockscript.clone())
         .x_unlock_address(x_unlock_address.clone())
+        .x_extra(x_extra)
         .build();
 
     let input_ckb_cell_out_point = context.create_cell(

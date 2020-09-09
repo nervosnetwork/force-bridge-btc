@@ -1,6 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
-    tools::{get_xchain_kind, verify_btc_witness, XChainKind},
+    tools::{verify_btc_witness, XChainKind},
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView},
 };
 
@@ -29,14 +29,17 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     debug!("witness: {:?}", witness);
     let proof = witness.spv_proof().raw_data();
     let cell_dep_index_list = witness.cell_dep_index_list().raw_data();
-    match get_xchain_kind()? {
-        XChainKind::Btc => verify_btc_witness(
-            data,
-            proof,
-            cell_dep_index_list,
-            data.x_unlock_address.as_ref(),
-            data.get_btc_lot_size()?.get_sudt_amount(),
-        ),
+    match data.get_xchain_kind() {
+        XChainKind::Btc => {
+            let _btc_extra = verify_btc_witness(
+                data,
+                proof,
+                cell_dep_index_list,
+                data.x_unlock_address.as_ref(),
+                data.get_btc_lot_size()?.get_sudt_amount(),
+            )?;
+            Ok(())
+        }
         XChainKind::Eth => todo!(),
     }
 }
