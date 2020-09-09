@@ -29,6 +29,7 @@ fn test_correct_tx_eth() {
         Script::new_builder().build(),
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -63,6 +64,7 @@ fn test_correct_tx_btc() {
         Script::new_builder().build(),
         correct_btc_address,
         Script::new_builder().build(),
+        build_extra(1),
     );
 
     let (context, tx) = build_test_context(
@@ -93,6 +95,7 @@ fn test_wrong_tx_eth_address_invalid() {
         Script::new_builder().build(),
         wrong_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -138,6 +141,7 @@ fn test_wrong_tx_btc_address_invalid() {
         Script::new_builder().build(),
         wrong_btc_address,
         Script::new_builder().build(),
+        build_extra(1),
     );
 
     let (context, tx) = build_test_context(
@@ -166,6 +170,7 @@ fn test_wrong_tx_lot_size_mutated() {
         Script::new_builder().build(),
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -195,6 +200,7 @@ fn test_wrong_tx_user_lock_script_mutated() {
         Script::new_builder().build(),
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -226,6 +232,7 @@ fn test_wrong_tx_user_lock_address_mutated() {
         Script::new_builder().build(),
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -255,6 +262,42 @@ fn test_wrong_tx_user_signer_script_mutated() {
         mutated_signer_script,
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
+    );
+
+    let (context, tx) = build_test_context(
+        2,
+        ETH_BURN,
+        SINCE_AT_TERM_REDEEM,
+        toCKB_data.as_bytes(),
+        false,
+    );
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
+    );
+}
+
+#[test]
+fn test_wrong_tx_extra_mutated() {
+    let correct_eth_address = basic::Bytes::new_builder()
+        .set([Byte::new(1u8); 20].to_vec())
+        .build();
+    let eth_extra = EthExtra::new_builder()
+        .dummy(correct_eth_address.clone())
+        .build();
+    let x_extra = XExtraUnion::EthExtra(eth_extra);
+    let extra = XExtra::new_builder().set(x_extra).build();
+
+    let toCKB_data = build_to_ckb_data(
+        1,
+        Script::new_builder().build(),
+        correct_eth_address.clone(),
+        Script::new_builder().build(),
+        correct_eth_address,
+        Script::new_builder().build(),
+        extra,
     );
 
     let (context, tx) = build_test_context(
@@ -283,6 +326,7 @@ fn test_wrong_tx_output_has_xt_cell() {
         Script::new_builder().build(),
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -311,6 +355,7 @@ fn test_wrong_tx_xt_burn_invalid() {
         Script::new_builder().build(),
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -338,6 +383,7 @@ fn test_wrong_tx_since_invalid() {
         Script::new_builder().build(),
         correct_eth_address,
         Script::new_builder().build(),
+        build_extra(2),
     );
 
     let (context, tx) = build_test_context(
@@ -354,6 +400,27 @@ fn test_wrong_tx_since_invalid() {
     );
 }
 
+fn build_extra(kind: u8) -> XExtra {
+    let extra = match kind {
+        1 => {
+            let btc_extra = BtcExtra::new_builder().build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        2 => {
+            let eth_extra = EthExtra::new_builder().build();
+            let x_extra = XExtraUnion::EthExtra(eth_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        _ => {
+            let btc_extra = BtcExtra::new_builder().build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+    };
+    extra
+}
+
 fn build_to_ckb_data(
     lot_size: u8,
     user_lockscript: Script,
@@ -361,6 +428,7 @@ fn build_to_ckb_data(
     signer_lockscript: Script,
     unlock_address: basic::Bytes,
     redeemer_lockscript: Script,
+    extra: XExtra,
 ) -> toCKB_cell_data::ToCKBCellData {
     ToCKBCellData::new_builder()
         .status(Byte::new(4u8))
@@ -370,6 +438,7 @@ fn build_to_ckb_data(
         .signer_lockscript(signer_lockscript)
         .x_unlock_address(unlock_address)
         .redeemer_lockscript(redeemer_lockscript)
+        .x_extra(extra)
         .build()
 }
 
@@ -429,6 +498,7 @@ fn build_test_context(
         .user_lockscript(Script::new_builder().build())
         .x_lock_address(lock_address)
         .signer_lockscript(Script::new_builder().build())
+        .x_extra(build_extra(kind))
         .build();
 
     let input_ckb_cell_out_point = context.create_cell(
