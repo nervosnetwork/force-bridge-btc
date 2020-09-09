@@ -52,6 +52,27 @@ fn test_wrong_tx_capacity_mismatch() {
     );
 }
 
+fn build_extra(kind: u8) -> XExtra {
+    let extra = match kind {
+        1 => {
+            let btc_extra = BtcExtra::new_builder().build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        2 => {
+            let eth_extra = EthExtra::new_builder().build();
+            let x_extra = XExtraUnion::EthExtra(eth_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        _ => {
+            let btc_extra = BtcExtra::new_builder().build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+    };
+    extra
+}
+
 fn build_test_context(
     since: u64,
     input_capacity: u64,
@@ -89,6 +110,7 @@ fn build_test_context(
                 .build(),
         )
         .signer_lockscript(signer_lockscript)
+        .x_extra(build_extra(2))
         .build();
 
     let input_ckb_cell_out_point = context.create_cell(
