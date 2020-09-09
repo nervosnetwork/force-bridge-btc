@@ -16,7 +16,7 @@ fn verify_data(
     let amount: u128 = match input_toCKB_data.get_xchain_kind() {
         XChainKind::Btc => {
             let (hrp, data) = bech32::decode(
-                core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).unwrap(),
+                core::str::from_utf8(out_toCKB_data.x_lock_address.as_ref()).map_err(|_|Error::XChainAddressInvalid)?,
             )
             .map_err(|_| Error::XChainAddressInvalid)?;
             if hrp != "bc" {
