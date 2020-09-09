@@ -1,6 +1,6 @@
 use crate::toCKB_typescript::utils::types::generated::mint_xt_witness;
 use anyhow::Result;
-use ckb_tool::ckb_types::{packed::*, prelude::*};
+use ckb_tool::ckb_types::{bytes::Bytes, packed::*, prelude::*};
 use molecule::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
@@ -10,6 +10,21 @@ pub struct ToCKBCellDataTest {
     pub x_lock_address: String,
     pub user_lockscript: Script,
     pub signer_lockscript: Script,
+    pub x_extra: XExtraView,
+}
+
+pub enum XExtraView {
+    Btc(BtcExtraView),
+    Eth(EthExtraView),
+}
+
+pub struct BtcExtraView {
+    pub lock_tx_hash: Bytes,
+    pub lock_vout_index: u32,
+}
+
+pub struct EthExtraView {
+    pub dummy: Bytes,
 }
 
 pub struct Output {

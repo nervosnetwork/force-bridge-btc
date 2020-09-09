@@ -30,6 +30,10 @@ fn generate_btc_corrent_case() -> TestCase {
             x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
             user_lockscript: user_lockscript.clone(),
             signer_lockscript: signer_lockscript.clone(),
+            x_extra: XExtraView::Btc(BtcExtraView{
+                lock_tx_hash: hex::decode(clear_0x("0x2b21846ae6f15cc29e41b2846c78d756abfedb0d6fea7222263cac0024713bc3")).unwrap().into(),
+                lock_vout_index: 0,
+            })
         },
         outputs: vec![
             Output {
