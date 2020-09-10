@@ -3,6 +3,8 @@ pub const CKB_UNITS: u64 = 100_000_000;
 pub const PLEDGE: u64 = 10000 * CKB_UNITS;
 pub const XT_CELL_CAPACITY: u64 = 200 * CKB_UNITS;
 
+pub const COLLATERAL_PERCENT: u8 = 150;
+
 pub const TX_PROOF_DIFFICULTY_FACTOR: u8 = 1;
 // default value is 2/1000
 pub const SIGNER_FEE_RATE: (u128, u128) = (2, 1000);
