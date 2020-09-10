@@ -27,6 +27,7 @@ fn test_correct_tx() {
         ETH_BURN,
         110,
         (ETH_BURN / ETH_PRICE) as u64 * CKB_UNITS * 110 / 100,
+        true,
     );
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
@@ -40,6 +41,7 @@ fn test_wrong_tx_rate_higer_than_pre_undercollateral_rate() {
         ETH_BURN,
         130,
         (ETH_BURN / ETH_PRICE) as u64 * CKB_UNITS * 130 / 100,
+        true,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -54,6 +56,7 @@ fn test_wrong_tx_burn_xt_invalid() {
         ETH_BURN + 1,
         110,
         ((ETH_BURN + 1) / ETH_PRICE) as u64 * CKB_UNITS * 110 / 100,
+        true,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
@@ -62,17 +65,18 @@ fn test_wrong_tx_burn_xt_invalid() {
     );
 }
 #[test]
-fn test_wrong_tx_signer_capacity_less_than_collateral() {
+fn test_wrong_tx_input_no_signer() {
     let (context, tx) = build_test_context(
         2,
         ETH_BURN,
         110,
         (ETH_BURN / ETH_PRICE) as u64 * CKB_UNITS * 110 / 100 - 1,
+        false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
-        ScriptError::ValidationFailure(Error::CapacityInvalid as i8)
+        ScriptError::ValidationFailure(Error::InputSignerInvalid as i8)
     );
 }
 
@@ -102,6 +106,7 @@ fn build_test_context(
     xt_burn: u128,
     rate: u8,
     output_capacity: u64,
+    is_input_signer: bool,
 ) -> (Context, TransactionView) {
     // deploy contract
     let mut context = Context::default();
@@ -136,10 +141,15 @@ fn build_test_context(
         _ => (1, 1),
     };
 
-    let input_capacity = (lot_amount / price * CKB_UNITS as u128 * rate as u128 / 100) as u64;
+    let input_capacity =
+        (lot_amount / price * CKB_UNITS as u128 * rate as u128 / 100) as u64 + XT_CELL_CAPACITY;
 
-    let signer_lockscript =
-        basic::Script::from_slice(always_success_lockscript.as_slice()).unwrap();
+    let mut signer_lockscript = basic::Script::new_builder().build();
+    if is_input_signer {
+        signer_lockscript =
+            basic::Script::from_slice(always_success_lockscript.as_slice()).unwrap();
+    }
+
     let input_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(3u8))
         .lot_size(Byte::new(1u8))

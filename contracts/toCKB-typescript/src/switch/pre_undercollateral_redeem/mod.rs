@@ -1,5 +1,5 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::config::{CKB_UNITS, PRE_UNDERCOLLATERAL_RATE};
+use crate::utils::config::{CKB_UNITS, PRE_UNDERCOLLATERAL_RATE, XT_CELL_CAPACITY};
 use crate::utils::tools::{get_price, is_XT_typescript, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use ckb_std::ckb_constants::Source;
@@ -7,6 +7,7 @@ use ckb_std::debug;
 use ckb_std::error::SysError;
 use ckb_std::high_level::{
     load_cell_capacity, load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type,
+    QueryIter,
 };
 use core::result::Result;
 use molecule::prelude::*;
@@ -81,7 +82,7 @@ fn verify_collateral_rate(lot_size: u128) -> Result<(), Error> {
         "input_capacity {}, price {}, lot_size {} ",
         input_capacity, price, lot_size
     );
-    if (100 * input_capacity as u128 * price) / (CKB_UNITS as u128)
+    if (100 * (input_capacity - XT_CELL_CAPACITY) as u128 * price) / (CKB_UNITS as u128)
         >= PRE_UNDERCOLLATERAL_RATE as u128 * lot_size
     {
         return Err(Error::UndercollateralInvalid);
@@ -91,25 +92,11 @@ fn verify_collateral_rate(lot_size: u128) -> Result<(), Error> {
 }
 
 fn verify_signer(data: &ToCKBCellDataView) -> Result<(), Error> {
-    let mut output_signer_capacity = 0;
-    let mut output_index = 0;
-    loop {
-        let cell_lock = load_cell_lock(output_index, Source::Output);
-        match cell_lock {
-            Err(SysError::IndexOutOfBound) => break,
-            Err(_err) => panic!("iter output return an error"),
-            Ok(cell_lock) => {
-                if cell_lock.as_bytes() == data.signer_lockscript {
-                    output_signer_capacity += load_cell_capacity(output_index, Source::Output)?;
-                }
-                output_index += 1;
-            }
-        }
-    }
-
-    let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
-    if output_signer_capacity < input_capacity {
-        return Err(Error::CapacityInvalid);
+    let input_signer_count = QueryIter::new(load_cell_lock, Source::Input)
+        .filter(|lock| lock.as_bytes() == data.signer_lockscript)
+        .count();
+    if input_signer_count < 1 {
+        return Err(Error::InputSignerInvalid);
     }
     Ok(())
 }
@@ -123,7 +110,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         XChainKind::Btc => input_toCKB_data.get_btc_lot_size()?.get_sudt_amount(),
         XChainKind::Eth => input_toCKB_data.get_eth_lot_size()?.get_sudt_amount(),
     };
+    verify_signer(input_toCKB_data)?;
     verify_collateral_rate(lot_size)?;
-    verify_burn(lot_size)?;
-    verify_signer(input_toCKB_data)
+    verify_burn(lot_size)
 }
