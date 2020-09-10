@@ -36,6 +36,9 @@ pub enum Error {
     XChainAddressInvalid,
     CollateralInvalid,
     XTBurnInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
 }
 
 impl From<SysError> for Error {

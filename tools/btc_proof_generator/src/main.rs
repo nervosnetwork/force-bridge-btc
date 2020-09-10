@@ -71,13 +71,15 @@ pub struct MintXTProof {
     pub index: u64,
     pub headers: String,
     pub intermediate_nodes: String,
-    pub funding_output_index: u8,
+    pub funding_output_index: u32,
+    pub funding_input_index: u32,
 }
 
 fn generate_mint_xt_proof(
     block_hash: &str,
     tx_index: usize,
-    funding_output_index: u8,
+    funding_output_index: u32,
+    funding_input_index: u32,
 ) -> Result<(MintXTProof, Block)> {
     let block = fetch_block(block_hash)?;
     let tx = block.txdata[tx_index].clone();
@@ -98,6 +100,7 @@ fn generate_mint_xt_proof(
             headers: serialize_hex(&block.header),
             intermediate_nodes: hex::encode(flat_proof),
             funding_output_index,
+            funding_input_index,
         },
         block,
     ))
@@ -128,9 +131,16 @@ fn main() -> Result<()> {
             let block_hash = mint_xt_matches.value_of("block_hash").unwrap();
             let tx_index = value_t!(mint_xt_matches, "tx_index", usize).unwrap();
             let funding_output_index =
-                value_t!(mint_xt_matches, "funding_output_index", u8).unwrap();
-            let (mint_xt_proof, block) =
-                generate_mint_xt_proof(block_hash, tx_index, funding_output_index)?;
+                value_t!(mint_xt_matches, "funding_output_index", u32).unwrap();
+            let funding_input_index =
+                value_t!(mint_xt_matches, "funding_input_index", u32).unwrap();
+
+            let (mint_xt_proof, block) = generate_mint_xt_proof(
+                block_hash,
+                tx_index,
+                funding_output_index,
+                funding_input_index,
+            )?;
             assert!(spv_prove(&block, &mint_xt_proof)?);
             println!(
                 "btc mint xt proof:\n\n{}",

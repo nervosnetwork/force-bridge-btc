@@ -2,10 +2,11 @@ use crate::utils::{
     config::{SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, UDT_LEN},
     types::{
         btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader, BtcExtraView,
-        Error, ToCKBCellDataView,
+        Error, ToCKBCellDataView, XExtraView,
     },
 };
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
+
 use bech32::ToBase32;
 use bitcoin_spv::{
     btcspv,
@@ -155,6 +156,58 @@ pub fn verify_btc_witness(
         lock_tx_hash: tx_hash,
         lock_vout_index: funding_output_index as u32,
     })
+}
+
+pub fn verify_btc_faulty_witness(
+    data: &ToCKBCellDataView,
+    proof: &[u8],
+    cell_dep_index_list: &[u8],
+) -> Result<(), Error> {
+    debug!(
+        "proof: {:?}, cell_dep_index_list: {:?}",
+        proof, cell_dep_index_list
+    );
+    // parse difficulty
+    if cell_dep_index_list.len() != 1 {
+        return Err(Error::InvalidWitness);
+    }
+    let dep_data = load_cell_data(cell_dep_index_list[0].into(), Source::CellDep)?;
+    debug!("dep data is {:?}", &dep_data);
+    if BTCDifficultyReader::verify(&dep_data, false).is_err() {
+        return Err(Error::DifficultyDataInvalid);
+    }
+    let difficulty_reader = BTCDifficultyReader::new_unchecked(&dep_data);
+    debug!("difficulty_reader: {:?}", difficulty_reader);
+    // parse witness
+    if BTCSPVProofReader::verify(proof, false).is_err() {
+        return Err(Error::InvalidWitness);
+    }
+    let proof_reader = BTCSPVProofReader::new_unchecked(proof);
+    debug!("proof_reader: {:?}", proof_reader);
+
+    // verify btc spv
+    verify_btc_spv(proof_reader, difficulty_reader)?;
+
+    // get tx in
+    let funding_input_index: u8 = proof_reader.funding_input_index().into();
+    let vin = Vin::new(proof_reader.vin().raw_data())?;
+    let tx_in = vin.index(funding_input_index.into())?;
+
+    // get mint_xt's funding_output info from cell_data
+    let btc_extra = match &data.x_extra {
+        XExtraView::Btc(extra) => Ok(extra),
+        _ => Err(Error::FaultyBtcWitnessInvalid),
+    }?;
+
+    // check if the locked btc is transferred by signer
+    let btc_extra_txid: Vec<u8> = btc_extra.lock_tx_hash.clone().into();
+    if tx_in.outpoint().txid_le().as_ref().as_ref() != btc_extra_txid.as_slice()
+        || tx_in.outpoint().vout_index() != btc_extra.lock_vout_index
+    {
+        return Err(Error::FaultyBtcWitnessInvalid);
+    }
+
+    Ok(())
 }
 
 pub fn verify_btc_spv(
