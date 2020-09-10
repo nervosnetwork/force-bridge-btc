@@ -41,7 +41,9 @@ fn test_correct_tx_trigger() {
     let collateral = 3_750_000 * CKB_UNITS;
     let bidder_cap = {
         let init_repayment = collateral * AUCTION_INIT_PERCENT as u64 / 100;
-        init_repayment + (collateral - init_repayment) / AUCTION_MAX_TIME * auction_time
+        init_repayment
+            + ((collateral - init_repayment) as u128 * auction_time as u128
+                / AUCTION_MAX_TIME as u128) as u64
     };
 
     let trigger_cap = (collateral - bidder_cap) / 2;

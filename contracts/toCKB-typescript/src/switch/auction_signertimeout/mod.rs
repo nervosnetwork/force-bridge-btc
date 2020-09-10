@@ -116,8 +116,9 @@ fn verify_outputs(
     let mut to_bidder = asset_collateral;
     let init_collateral = asset_collateral * AUCTION_INIT_PERCENT as u64 / 100;
     if auction_time < AUCTION_MAX_TIME {
-        to_bidder =
-            init_collateral + (asset_collateral - init_collateral) / AUCTION_MAX_TIME * auction_time
+        to_bidder = init_collateral
+            + ((asset_collateral - init_collateral) as u128 * auction_time as u128
+                / AUCTION_MAX_TIME as u128) as u64
     }
     let to_trigger = (asset_collateral - to_bidder) / 2;
     let to_signer = asset_collateral - to_bidder - to_trigger;
