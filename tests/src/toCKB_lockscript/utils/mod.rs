@@ -1,4 +1,3 @@
-
 #[repr(i8)]
 pub enum Error {
     IndexOutOfBound = 1,
