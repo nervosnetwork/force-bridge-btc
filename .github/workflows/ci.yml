@@ -25,8 +25,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: install-capsule
         run: |
-          cargo install capsule --git https://github.com/nervosnetwork/capsule.git --tag v0.2.0
-          capsule check
+          wget -c https://github.com/nervosnetwork/capsule/releases/download/v0.2.3/capsule_v0.2.3_x86_64-linux.tar.gz
+          tar -zxvf capsule_v0.2.3_x86_64-linux.tar.gz
+          alias capsule='./capsule_v0.2.3_x86_64-linux/capsule'
       - name: build
         run: capsule build
       - name: test
