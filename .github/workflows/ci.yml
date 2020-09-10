@@ -32,6 +32,6 @@ jobs:
           wget -c https://github.com/nervosnetwork/capsule/releases/download/v0.2.3/capsule_v0.2.3_x86_64-linux.tar.gz
           tar -zxvf capsule_v0.2.3_x86_64-linux.tar.gz
       - name: build
-        run: ./capsule_v0.2.3_x86_64-linux.tar.gz/capsule build
+        run: ./capsule_v0.2.3_x86_64-linux/capsule build
       - name: test
-        run: ./capsule_v0.2.3_x86_64-linux.tar.gz/capsule test
+        run: ./capsule_v0.2.3_x86_64-linux/capsule test
