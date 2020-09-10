@@ -5,6 +5,7 @@ use molecule::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
+#[derive(Clone)]
 pub struct ToCKBCellDataTest {
     pub lot_size: u8,
     pub x_lock_address: String,
@@ -13,16 +14,19 @@ pub struct ToCKBCellDataTest {
     pub x_extra: XExtraView,
 }
 
+#[derive(Clone)]
 pub enum XExtraView {
     Btc(BtcExtraView),
     Eth(EthExtraView),
 }
 
+#[derive(Clone)]
 pub struct BtcExtraView {
     pub lock_tx_hash: Bytes,
     pub lock_vout_index: u32,
 }
 
+#[derive(Clone)]
 pub struct EthExtraView {
     pub dummy: Bytes,
 }
@@ -54,10 +58,12 @@ pub enum CellDepsData {
 
 pub struct TestCase {
     pub kind: u8,
-    pub status: u8,
+    pub input_status: u8,
+    pub output_status: u8,
     pub input_capacity: u64,
     pub output_capacity: u64,
-    pub tockb_cell_data: ToCKBCellDataTest,
+    pub input_tockb_cell_data: ToCKBCellDataTest,
+    pub output_tockb_cell_data: ToCKBCellDataTest,
     pub outputs: Vec<Output>,
     pub witness: Witness,
     pub cell_deps_data: CellDepsData,
@@ -75,6 +81,7 @@ pub struct BTCSPVProofJson {
     pub headers: String,
     pub intermediate_nodes: String,
     pub funding_output_index: u8,
+    pub funding_input_index: u8,
 }
 
 impl TryFrom<BTCSPVProofJson> for mint_xt_witness::BTCSPVProof {
@@ -91,6 +98,7 @@ impl TryFrom<BTCSPVProofJson> for mint_xt_witness::BTCSPVProof {
             .headers(hex::decode(clear_0x(&proof.headers))?.into())
             .intermediate_nodes(hex::decode(clear_0x(&proof.intermediate_nodes))?.into())
             .funding_output_index(proof.funding_output_index.into())
+            .funding_input_index(proof.funding_input_index.into())
             .build())
     }
 }

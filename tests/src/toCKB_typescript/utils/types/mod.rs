@@ -38,6 +38,9 @@ pub enum Error {
     CollateralInvalid,
     XTBurnInvalid,
     InputSignerInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
 }
 
 #[repr(u8)]
