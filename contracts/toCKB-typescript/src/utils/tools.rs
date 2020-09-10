@@ -201,6 +201,18 @@ pub fn verify_btc_faulty_witness(
 
     // check if the locked btc is transferred by signer
     let btc_extra_txid: Vec<u8> = btc_extra.lock_tx_hash.clone().into();
+    debug!(
+        "btc_extra_txid: {},  tx_in.outpoint().txid_le(): {}",
+        hex::encode(btc_extra_txid.as_slice()),
+        hex::encode(tx_in.outpoint().txid_le().as_ref().as_ref())
+    );
+
+    debug!(
+        "btc_extra.lock_vout_index: {},   tx_in.outpoint().vout_index(): {}",
+        btc_extra.lock_vout_index,
+        tx_in.outpoint().vout_index()
+    );
+
     if tx_in.outpoint().txid_le().as_ref().as_ref() != btc_extra_txid.as_slice()
         || tx_in.outpoint().vout_index() != btc_extra.lock_vout_index
     {

@@ -20,21 +20,29 @@ fn generate_btc_correct_case() -> TestCase {
     } = deploy(kind);
     let user_lockscript = always_success_lockscript.clone();
     let signer_lockscript = always_success_lockscript.clone();
+    let tockb_data = ToCKBCellDataTest {
+        lot_size: 1,
+        x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
+        user_lockscript: user_lockscript.clone(),
+        signer_lockscript: signer_lockscript.clone(),
+        x_extra: XExtraView::Btc(BtcExtraView {
+            lock_tx_hash: hex::decode(clear_0x(
+                "0x2b21846ae6f15cc29e41b2846c78d756abfedb0d6fea7222263cac0024713bc3",
+            ))
+            .unwrap()
+            .into(),
+            lock_vout_index: 0,
+        }),
+    };
+
     let case = TestCase {
         kind,
-        status: ToCKBStatus::Bonded as u8,
+        input_status: ToCKBStatus::Bonded as u8,
+        output_status: ToCKBStatus::Warranty as u8,
         input_capacity: COLLATERAL,
         output_capacity: COLLATERAL - PLEDGE - XT_CELL_CAPACITY,
-        tockb_cell_data: ToCKBCellDataTest {
-            lot_size: 1,
-            x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
-            user_lockscript: user_lockscript.clone(),
-            signer_lockscript: signer_lockscript.clone(),
-            x_extra: XExtraView::Btc(BtcExtraView{
-                lock_tx_hash: hex::decode(clear_0x("0x2b21846ae6f15cc29e41b2846c78d756abfedb0d6fea7222263cac0024713bc3")).unwrap().into(),
-                lock_vout_index: 0,
-            })
-        },
+        input_tockb_cell_data: tockb_data.clone(),
+        output_tockb_cell_data: tockb_data,
         outputs: vec![
             Output {
                 typescript: sudt_typescript.clone(),
@@ -61,6 +69,7 @@ fn generate_btc_correct_case() -> TestCase {
                 headers: "0x00000020acf05cadf6d066d01f5aca661690f4e1779a8144b90b070000000000000000006bbb5a7851af48d883e8ac5d6f61c6ad9a4132a9a12531c1b6f085760b3b2e427ba0455fea0710177d792e86".to_owned(),
                 intermediate_nodes: "0x8546dfccb488115f9c3210255523c0e186fb9b64d16ac68b3d8903bf037dc3ab26069e90c930cc55105d5f8b4ddd798bc33f057641e748fd2e70de0b8747cae802af46fb1e1fccf354b4b46d87f5a85c564fd5284cbe2a5711c16c446fbb6e9e0b3c7beec06a156a8005883b8cf224f665d361a2269b6b21491c1ccbb8160c311b609b5ca21b0a9f708e6124b36871b71c5536d8d556054be435cf0444da70d0814e678eb0e081805d777f9cf84911f9e04b6a80b6cf60dec31527ec73aaa8ba77ec6bff2e04fbb80c8c81b1cc38b415bc21dd732f51a4a903ee265b0eef2c589f751e66e46bb02aa36ed8418ae93317316b84d12f1b1702dd9641ead0ad7f8777526ad7a4ff599946d219a7a932ec8cd2e42649b3d5fa123d2e4532de6d46bddb27a8c02de8fb8fe2c4d88a14132de8cdd7d471bc6a8c8c217aeec600fd295e8925b663332f45bdb6877dd6e0ecd28bfae530ba3ed8bd3959644a82bc418f9c887746e15ae55d82369c3761187ea449c7f7bdff1acaa0b467e1335b3919089d".to_owned(),
                 funding_output_index: 0,
+                funding_input_index: 0,
             }.try_into().unwrap()),
         },
         cell_deps_data: CellDepsData::BTC(
@@ -83,7 +92,7 @@ fn test_btc_correct_case() {
 #[test]
 fn test_wrong_lot_size() {
     let mut case = generate_btc_correct_case();
-    case.tockb_cell_data.lot_size = 100;
+    case.input_tockb_cell_data.lot_size = 100;
     case.expect_return_code = LotSizeInvalid as i8;
     run_test_case(case);
 }
@@ -91,7 +100,7 @@ fn test_wrong_lot_size() {
 #[test]
 fn test_wrong_x_lock_address() {
     let mut case = generate_btc_correct_case();
-    case.tockb_cell_data.x_lock_address = "wrong_addr".to_owned();
+    case.input_tockb_cell_data.x_lock_address = "wrong_addr".to_owned();
     case.expect_return_code = WrongFundingAddr as i8;
     run_test_case(case);
 }

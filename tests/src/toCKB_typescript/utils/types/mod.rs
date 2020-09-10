@@ -37,6 +37,9 @@ pub enum Error {
     XChainAddressInvalid,
     CollateralInvalid,
     XTBurnInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
 }
 
 #[repr(u8)]
