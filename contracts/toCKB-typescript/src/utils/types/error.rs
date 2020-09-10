@@ -35,6 +35,7 @@ pub enum Error {
     WitnessInvalid,
     XChainAddressInvalid,
     CollateralInvalid,
+    XTBurnInvalid,
 }
 
 impl From<SysError> for Error {
