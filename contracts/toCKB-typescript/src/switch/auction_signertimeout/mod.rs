@@ -25,17 +25,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .as_ref()
         .expect("inputs should contain toCKB cell");
     let toCKB_lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
-
-    let lot_amount: u128 = match get_xchain_kind()? {
-        XChainKind::Btc => {
-            let btc_lot_size = input_data.get_btc_lot_size()?;
-            btc_lot_size.get_sudt_amount()
-        }
-        XChainKind::Eth => {
-            let eth_lot_size = input_data.get_eth_lot_size()?;
-            eth_lot_size.get_sudt_amount()
-        }
-    };
+    let lot_amount: u128 = input_data.get_lot_xt_amount()?;
 
     debug!("begin verify since");
     let auction_time = verify_since()?;
