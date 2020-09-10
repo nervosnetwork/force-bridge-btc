@@ -7,18 +7,18 @@
 
 mod utils;
 
-use core::result::Result;
+use alloc::vec;
+use ckb_std::high_level::load_script;
 use ckb_std::{
+    ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
     debug, default_alloc, entry,
     error::SysError,
-    high_level::{load_script_hash,load_cell_type_hash,load_cell,load_cell_lock_hash},
-    ckb_constants::Source,
+    high_level::{load_cell, load_cell_lock_hash, load_cell_type_hash, load_script_hash},
 };
-use utils::error::Error;
-use alloc::{vec};
+use core::result::Result;
 use hex;
-use ckb_std::high_level::load_script;
+use utils::error::Error;
 entry!(entry);
 default_alloc!();
 
@@ -35,12 +35,11 @@ fn main() -> Result<(), Error> {
     verify()
 }
 
-
 fn verify() -> Result<(), Error> {
     // load current lock_script hash
     let script_hash = load_script_hash().unwrap();
-    let args: Bytes  = load_script().unwrap().args().unpack();
-    let cell_source = vec![Source::Input,Source::Output];
+    let args: Bytes = load_script().unwrap().args().unpack();
+    let cell_source = vec![Source::Input, Source::Output];
 
     for &source in cell_source.iter() {
         for i in 0.. {
@@ -54,20 +53,28 @@ fn verify() -> Result<(), Error> {
     Ok(())
 }
 
-fn verify_single_cell(index: usize, source: Source, script_hash: [u8; 32], args:Bytes) -> Result<(), Error> {
-
+fn verify_single_cell(
+    index: usize,
+    source: Source,
+    script_hash: [u8; 32],
+    args: Bytes,
+) -> Result<(), Error> {
     let type_hash = match load_cell_type_hash(index, source) {
         Ok(current_cell_type_hash) => current_cell_type_hash,
         Err(SysError::IndexOutOfBound) => return Err(Error::IndexOutOfBound),
         Err(err) => return Err(err.into()),
     };
 
-    debug!("test_lock_args : {:?}-{:?} \t lock script args : {:?} \t type script hash : {:?} \n",
-           source, index, hex::encode(&args.to_vec()), hex::encode(type_hash.clone().unwrap()));
+    debug!(
+        "test_lock_args : {:?}-{:?} \t lock script args : {:?} \t type script hash : {:?} \n",
+        source,
+        index,
+        hex::encode(&args.to_vec()),
+        hex::encode(type_hash.clone().unwrap())
+    );
 
     // the cell is toCKBCell when lock_script args equal typescript hash
     if args[..] == type_hash.clone().unwrap()[..] {
-
         let lock_hash = match load_cell_lock_hash(index, source) {
             Ok(lock_hash) => lock_hash,
             Err(SysError::IndexOutOfBound) => return Err(Error::IndexOutOfBound),
