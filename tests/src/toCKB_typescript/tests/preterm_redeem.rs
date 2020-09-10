@@ -33,7 +33,7 @@ fn test_correct_tx_eth() {
         build_extra(2),
     );
 
-    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), true);
+    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), 11000, true);
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
@@ -64,7 +64,7 @@ fn test_correct_tx_btc() {
         build_extra(1),
     );
 
-    let (context, tx) = build_test_context(1, BTC_BURN, toCKB_data.as_bytes(), true);
+    let (context, tx) = build_test_context(1, BTC_BURN, toCKB_data.as_bytes(), 11000, true);
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
@@ -91,7 +91,7 @@ fn test_wrong_tx_eth_address_invalid() {
         build_extra(2),
     );
 
-    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), false);
+    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), 11000, false);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -132,7 +132,7 @@ fn test_wrong_tx_btc_address_invalid() {
         build_extra(1),
     );
 
-    let (context, tx) = build_test_context(1, BTC_BURN, toCKB_data.as_bytes(), false);
+    let (context, tx) = build_test_context(1, BTC_BURN, toCKB_data.as_bytes(), 11000, false);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -156,7 +156,7 @@ fn test_wrong_tx_lot_size_mutated() {
         build_extra(2),
     );
 
-    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), false);
+    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), 11000, false);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -180,7 +180,7 @@ fn test_wrong_tx_user_lock_script_mutated() {
         build_extra(2),
     );
 
-    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), false);
+    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), 11000, false);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -207,7 +207,7 @@ fn test_wrong_tx_user_lock_address_mutated() {
         build_extra(2),
     );
 
-    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), false);
+    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), 11000, false);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -233,7 +233,7 @@ fn test_wrong_tx_user_signer_script_mutated() {
         build_extra(2),
     );
 
-    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), false);
+    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), 11000, false);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
@@ -258,11 +258,35 @@ fn test_wrong_tx_input_xt_mismatch_expected() {
         build_extra(2),
     );
 
-    let (context, tx) = build_test_context(2, ETH_BURN + 1, toCKB_data.as_bytes(), false);
+    let (context, tx) = build_test_context(2, ETH_BURN + 1, toCKB_data.as_bytes(), 11000, false);
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
         ScriptError::ValidationFailure(Error::XTBurnInvalid as i8)
+    );
+}
+
+#[test]
+fn test_wrong_tx_capacity_mismatch() {
+    let user_lockscript = deploy_contracts();
+    let correct_eth_address = basic::Bytes::new_builder()
+        .set([Byte::new(1u8); 20].to_vec())
+        .build();
+    let toCKB_data = build_to_ckb_data(
+        1,
+        user_lockscript,
+        correct_eth_address.clone(),
+        Script::new_builder().build(),
+        correct_eth_address,
+        Script::new_builder().build(),
+        build_extra(2),
+    );
+
+    let (context, tx) = build_test_context(2, ETH_BURN, toCKB_data.as_bytes(), 10000, true);
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::CapacityInvalid as i8)
     );
 }
 
@@ -321,6 +345,7 @@ fn build_test_context(
     kind: u8,
     input_xt_value: u128,
     output_toCKB_data: Bytes,
+    output_capacity: u64,
     is_deposit_requestor: bool,
 ) -> (Context, TransactionView) {
     // deploy contract
@@ -410,7 +435,7 @@ fn build_test_context(
     let inputs = vec![input_ckb_cell, input_xt_cell];
 
     let output_ckb_cell = CellOutput::new_builder()
-        .capacity((100 * CKB_UNITS).pack())
+        .capacity((output_capacity * CKB_UNITS).pack())
         .type_(Some(toCKB_typescript.clone()).pack())
         .lock(always_success_lockscript.clone())
         .build();
