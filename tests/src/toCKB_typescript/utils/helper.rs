@@ -1,8 +1,9 @@
-use super::{types::*, ToCKBCellData};
 use crate::toCKB_typescript::utils::types::{
     generated::{
-        basic, btc_difficulty, mint_xt_witness, BtcExtra, Byte32, Uint32, XExtra, XExtraUnion,
+        basic, btc_difficulty, mint_xt_witness, BtcExtra, Byte32, ToCKBCellData, Uint32, XExtra,
+        XExtraUnion,
     },
+    test_case::*,
     ToCKBStatus,
 };
 use crate::*;
@@ -24,7 +25,7 @@ pub fn run_test_case(case: TestCase) {
     // let toCKB_lockscript_bin: Bytes = Loader::default().load_binary("toCKB-lockscript");
     // let toCKB_lockscript_out_point = context.deploy_cell(toCKB_lockscript_bin);
     let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-    let sudt_bin = include_bytes!("../../../../deps/simple_udt");
+    let sudt_bin = include_bytes!("../../../deps/simple_udt");
     let sudt_out_point = context.deploy_cell(Bytes::from(sudt_bin.as_ref()));
 
     // prepare scripts
@@ -66,7 +67,7 @@ pub fn run_test_case(case: TestCase) {
     let user_lockscript =
         basic::Script::from_slice(case.tockb_cell_data.user_lockscript.as_slice()).unwrap();
     let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Bonded as u8))
+        .status(Byte::new(case.status))
         .lot_size(Byte::new(case.tockb_cell_data.lot_size))
         .signer_lockscript(signer_lockscript.clone())
         .user_lockscript(user_lockscript.clone())
@@ -184,7 +185,7 @@ pub fn deploy(kind: u8) -> DeployResult {
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
     let toCKB_typescript_out_point = context.deploy_cell(toCKB_typescript_bin);
     let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-    let sudt_bin = include_bytes!("../../../../deps/simple_udt");
+    let sudt_bin = include_bytes!("../../../deps/simple_udt");
     let sudt_out_point = context.deploy_cell(Bytes::from(sudt_bin.as_ref()));
 
     // prepare scripts

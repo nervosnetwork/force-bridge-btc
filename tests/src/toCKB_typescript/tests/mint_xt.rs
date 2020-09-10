@@ -1,17 +1,16 @@
-mod helper;
-mod types;
-
-use helper::{deploy, run_test_case, DeployResult};
-use types::*;
-
-use super::{ToCKBCellData, CKB_UNITS, PLEDGE, XT_CELL_CAPACITY};
+use super::{CKB_UNITS, PLEDGE, XT_CELL_CAPACITY};
+use crate::toCKB_typescript::tests::ToCKBStatus;
 use crate::toCKB_typescript::utils::types::{generated::mint_xt_witness, Error::*};
+use crate::toCKB_typescript::utils::{
+    helper::{deploy, run_test_case, DeployResult},
+    types::test_case::*,
+};
 use molecule::prelude::*;
 use std::convert::TryInto;
 
 const COLLATERAL: u64 = 100_000 * CKB_UNITS;
 
-fn generate_btc_corrent_case() -> TestCase {
+fn generate_btc_correct_case() -> TestCase {
     let kind = 1;
     let DeployResult {
         context: _,
@@ -23,6 +22,7 @@ fn generate_btc_corrent_case() -> TestCase {
     let signer_lockscript = always_success_lockscript.clone();
     let case = TestCase {
         kind,
+        status: ToCKBStatus::Bonded as u8,
         input_capacity: COLLATERAL,
         output_capacity: COLLATERAL - PLEDGE - XT_CELL_CAPACITY,
         tockb_cell_data: ToCKBCellDataTest {
@@ -76,13 +76,13 @@ fn generate_btc_corrent_case() -> TestCase {
 
 #[test]
 fn test_btc_correct_case() {
-    let case = generate_btc_corrent_case();
+    let case = generate_btc_correct_case();
     run_test_case(case);
 }
 
 #[test]
 fn test_wrong_lot_size() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.tockb_cell_data.lot_size = 100;
     case.expect_return_code = LotSizeInvalid as i8;
     run_test_case(case);
@@ -90,7 +90,7 @@ fn test_wrong_lot_size() {
 
 #[test]
 fn test_wrong_x_lock_address() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.tockb_cell_data.x_lock_address = "wrong_addr".to_owned();
     case.expect_return_code = WrongFundingAddr as i8;
     run_test_case(case);
@@ -98,7 +98,7 @@ fn test_wrong_x_lock_address() {
 
 #[test]
 fn test_wrong_mint_xt_amount() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.outputs[0].amount = 1;
     case.expect_return_code = InvalidMintOutput as i8;
     run_test_case(case);
@@ -106,7 +106,7 @@ fn test_wrong_mint_xt_amount() {
 
 #[test]
 fn test_wrong_cell_dep_index_list_len() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.witness.cell_dep_index_list = vec![1, 2];
     case.expect_return_code = InvalidWitness as i8;
     run_test_case(case);
@@ -114,7 +114,7 @@ fn test_wrong_cell_dep_index_list_len() {
 
 #[test]
 fn test_wrong_btc_spv() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.witness.spv_proof = SpvProof::BTC(mint_xt_witness::BTCSPVProof::default());
     case.expect_return_code = -1;
     run_test_case(case);
@@ -122,7 +122,7 @@ fn test_wrong_btc_spv() {
 
 #[test]
 fn test_wrong_btc_difficulty() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.cell_deps_data = CellDepsData::BTC(BtcDifficultyTest {
         previous: 1,
         current: 1,
@@ -133,7 +133,7 @@ fn test_wrong_btc_difficulty() {
 
 #[test]
 fn test_wrong_toCKB_capacity() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.output_capacity = 10000;
     case.expect_return_code = CapacityInvalid as i8;
     run_test_case(case);
@@ -141,7 +141,7 @@ fn test_wrong_toCKB_capacity() {
 
 #[test]
 fn test_wrong_pledge_refund() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.outputs[0].capacity = 1;
     case.expect_return_code = CapacityInvalid as i8;
     run_test_case(case);
@@ -149,7 +149,7 @@ fn test_wrong_pledge_refund() {
 
 #[test]
 fn test_wrong_signer_xt_cell_capacity() {
-    let mut case = generate_btc_corrent_case();
+    let mut case = generate_btc_correct_case();
     case.outputs[1].capacity = 1;
     case.expect_return_code = CapacityInvalid as i8;
     run_test_case(case);
