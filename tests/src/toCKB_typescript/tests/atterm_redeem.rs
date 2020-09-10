@@ -37,6 +37,7 @@ fn test_correct_tx_eth() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let cycles = context
@@ -72,6 +73,7 @@ fn test_correct_tx_btc() {
         BTC_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let cycles = context
@@ -103,6 +105,7 @@ fn test_wrong_tx_eth_address_invalid() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -149,6 +152,7 @@ fn test_wrong_tx_btc_address_invalid() {
         BTC_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -178,6 +182,7 @@ fn test_wrong_tx_lot_size_mutated() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -208,6 +213,7 @@ fn test_wrong_tx_user_lock_script_mutated() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -240,6 +246,7 @@ fn test_wrong_tx_user_lock_address_mutated() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -270,6 +277,7 @@ fn test_wrong_tx_user_signer_script_mutated() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -305,6 +313,7 @@ fn test_wrong_tx_extra_mutated() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -334,6 +343,7 @@ fn test_wrong_tx_output_has_xt_cell() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         true,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -363,6 +373,7 @@ fn test_wrong_tx_xt_burn_invalid() {
         ETH_BURN + 1,
         SINCE_AT_TERM_REDEEM,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -391,12 +402,43 @@ fn test_wrong_tx_since_invalid() {
         ETH_BURN,
         SINCE_AT_TERM_REDEEM + 1,
         toCKB_data.as_bytes(),
+        11000,
         false,
     );
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
     assert_error_eq!(
         err,
         ScriptError::ValidationFailure(Error::InputSinceInvalid as i8)
+    );
+}
+
+#[test]
+fn test_wrong_tx_capacity_mismatch() {
+    let correct_eth_address = basic::Bytes::new_builder()
+        .set([Byte::new(1u8); 20].to_vec())
+        .build();
+    let toCKB_data = build_to_ckb_data(
+        1,
+        Script::new_builder().build(),
+        correct_eth_address.clone(),
+        Script::new_builder().build(),
+        correct_eth_address,
+        Script::new_builder().build(),
+        build_extra(2),
+    );
+
+    let (context, tx) = build_test_context(
+        2,
+        ETH_BURN,
+        SINCE_AT_TERM_REDEEM,
+        toCKB_data.as_bytes(),
+        10000,
+        false,
+    );
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::CapacityInvalid as i8)
     );
 }
 
@@ -447,6 +489,7 @@ fn build_test_context(
     xt_burn: u128,
     since: u64,
     output_toCKB_data: Bytes,
+    output_capacity: u64,
     output_xt_cell: bool,
 ) -> (Context, TransactionView) {
     // deploy contract
@@ -530,7 +573,7 @@ fn build_test_context(
     let inputs = vec![input_ckb_cell, input_xt_cell];
 
     let output_ckb_cell = CellOutput::new_builder()
-        .capacity((100 * CKB_UNITS).pack())
+        .capacity((output_capacity * CKB_UNITS).pack())
         .type_(Some(toCKB_typescript.clone()).pack())
         .lock(always_success_lockscript.clone())
         .build();

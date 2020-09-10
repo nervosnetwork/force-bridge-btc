@@ -1,6 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::SINCE_AT_TERM_REDEEM;
-use crate::utils::tools::{is_XT_typescript, XChainKind};
+use crate::utils::tools::{check_capacity, is_XT_typescript, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
@@ -126,15 +126,6 @@ fn verify_burn(lot_size: u128) -> Result<(), Error> {
     Ok(())
 }
 
-fn verify_capacity() -> Result<(), Error> {
-    input_capacity = load_capacity(0, Source::GroupInput)?;
-    output_capacity = load_capacity(0, Source::GroupOutput)?;
-    if input_capacity != output_capacity {
-        return Err(Error::CapacityInvalid);
-    }
-    Ok(())
-}
-
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     let input_toCKB_data = toCKB_data_tuple
         .0
@@ -144,7 +135,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .1
         .as_ref()
         .expect("outputs contain toCKB cell");
-    verify_capacity()?;
+    check_capacity()?;
     let lot_size = verify_data(input_toCKB_data, output_toCKB_data)?;
     verify_burn(lot_size)?;
     verify_since()
