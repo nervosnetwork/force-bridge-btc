@@ -67,7 +67,7 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     let proof = witness.spv_proof().raw_data();
     let cell_dep_index_list = witness.cell_dep_index_list().raw_data();
     match data.get_xchain_kind() {
-        XChainKind::Btc => verify_btc_faulty_witness(data, proof, cell_dep_index_list),
+        XChainKind::Btc => verify_btc_faulty_witness(data, proof, cell_dep_index_list, false),
         XChainKind::Eth => todo!(),
     }
 }

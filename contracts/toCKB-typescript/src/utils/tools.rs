@@ -171,6 +171,7 @@ pub fn verify_btc_faulty_witness(
     data: &ToCKBCellDataView,
     proof: &[u8],
     cell_dep_index_list: &[u8],
+    is_when_redeeming: bool,
 ) -> Result<(), Error> {
     debug!(
         "proof: {:?}, cell_dep_index_list: {:?}",
@@ -228,6 +229,60 @@ pub fn verify_btc_faulty_witness(
         return Err(Error::FaultyBtcWitnessInvalid);
     }
 
+    // if is_when_redeeming, check if signer transferred insufficient btc_amount to user_unlock_addr
+    if is_when_redeeming {
+        debug!("verify_btc_faulty_witness is_when_redeeming");
+        // verify transfer amount, to matches
+        let vout = Vout::new(proof_reader.vout().raw_data())?;
+        let mut index: usize = 0;
+        let mut sum_amount: u128 = 0;
+        let expect_address = data.x_unlock_address.as_ref();
+        let lot_amount = data.get_btc_lot_size()?.get_sudt_amount();
+
+        // calc sum_amount which signer transferred to user
+        debug!("begin calc sum_amount which signer transferred to user");
+        loop {
+            let tx_out = match vout.index(index.into()) {
+                Ok(out) => out,
+                Err(_) => {
+                    break;
+                }
+            };
+            index += 1;
+
+            let script_pubkey = tx_out.script_pubkey();
+            match script_pubkey.payload()? {
+                PayloadType::WPKH(_) => {
+                    let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
+                    debug!(
+                        "hex format: addr: {}, x_lock_address: {}",
+                        hex::encode(addr.as_bytes().to_vec()),
+                        hex::encode(data.x_lock_address.as_ref().to_vec())
+                    );
+                    debug!(
+                        "addr: {}, x_unlock_address: {}",
+                        String::from_utf8(addr.as_bytes().to_vec()).unwrap(),
+                        String::from_utf8(expect_address.to_vec()).unwrap()
+                    );
+                    if addr.as_bytes() != expect_address {
+                        continue;
+                    }
+                }
+                _ => continue,
+            }
+
+            sum_amount += tx_out.value() as u128;
+        }
+
+        debug!(
+            "calc sum_amount: {}, lot_amount: {}",
+            sum_amount, lot_amount
+        );
+        if sum_amount >= lot_amount {
+            // it means signer transferred enough amount to user, mismatch FaultyWhenRedeeming condition
+            return Err(Error::FaultyBtcWitnessInvalid);
+        }
+    }
     Ok(())
 }
 

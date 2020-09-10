@@ -61,6 +61,17 @@ pub fn run_test_case(case: TestCase) {
                 .into(),
         )
         .build();
+    let x_unlock_address_str = case.input_tockb_cell_data.x_unlock_address;
+    let x_unlock_address = basic::Bytes::new_builder()
+        .set(
+            x_unlock_address_str
+                .as_bytes()
+                .iter()
+                .map(|c| Byte::new(*c))
+                .collect::<Vec<_>>()
+                .into(),
+        )
+        .build();
     let signer_lockscript =
         basic::Script::from_slice(case.input_tockb_cell_data.signer_lockscript.as_slice()).unwrap();
     let user_lockscript =
@@ -87,6 +98,7 @@ pub fn run_test_case(case: TestCase) {
         .signer_lockscript(signer_lockscript.clone())
         .user_lockscript(user_lockscript.clone())
         .x_lock_address(x_lock_address.clone())
+        .x_unlock_address(x_unlock_address.clone())
         .x_extra(x_extra.clone())
         .build();
 
@@ -96,6 +108,7 @@ pub fn run_test_case(case: TestCase) {
         .signer_lockscript(signer_lockscript.clone())
         .user_lockscript(user_lockscript.clone())
         .x_lock_address(x_lock_address.clone())
+        .x_unlock_address(x_unlock_address.clone())
         .x_extra(x_extra.clone())
         .build();
 

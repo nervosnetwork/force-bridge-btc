@@ -23,6 +23,7 @@ fn generate_btc_correct_case() -> TestCase {
     let tockb_data = ToCKBCellDataTest {
         lot_size: 1,
         x_lock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
+        x_unlock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t".to_owned(),
         user_lockscript: user_lockscript.clone(),
         signer_lockscript: signer_lockscript.clone(),
         x_extra: XExtraView::Btc(BtcExtraView {

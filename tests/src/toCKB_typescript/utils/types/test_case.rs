@@ -9,6 +9,7 @@ use std::convert::{TryFrom, TryInto};
 pub struct ToCKBCellDataTest {
     pub lot_size: u8,
     pub x_lock_address: String,
+    pub x_unlock_address: String,
     pub user_lockscript: Script,
     pub signer_lockscript: Script,
     pub x_extra: XExtraView,
