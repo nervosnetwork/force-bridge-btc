@@ -1,4 +1,4 @@
-use super::{Error, Script, ToCKBCellData};
+use super::{Error, ToCKBCellData};
 use crate::toCKB_typescript::utils::config::*;
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
@@ -21,12 +21,59 @@ const ETH_BURN: u128 = 250_000_000_000_000_000;
 const BTC_BURN: u128 = 25_000_000;
 
 #[test]
-fn test_correct_tx_eth() {
-    let (context, tx) = build_test_context(2, ETH_BURN);
+fn test_correct_tx() {
+    let (context, tx) = build_test_context(
+        2,
+        ETH_BURN,
+        110,
+        (ETH_BURN / ETH_PRICE) as u64 * CKB_UNITS * 110 / 100,
+    );
     let cycles = context
         .verify_tx(&tx, MAX_CYCLES)
         .expect("pass verification");
     println!("consume cycles: {}", cycles);
+}
+#[test]
+fn test_wrong_tx_rate_higer_than_pre_undercollateral_rate() {
+    let (context, tx) = build_test_context(
+        2,
+        ETH_BURN,
+        130,
+        (ETH_BURN / ETH_PRICE) as u64 * CKB_UNITS * 130 / 100,
+    );
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::UndercollateralInvalid as i8)
+    );
+}
+#[test]
+fn test_wrong_tx_burn_xt_invalid() {
+    let (context, tx) = build_test_context(
+        2,
+        ETH_BURN + 1,
+        110,
+        ((ETH_BURN + 1) / ETH_PRICE) as u64 * CKB_UNITS * 110 / 100,
+    );
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::XTBurnInvalid as i8)
+    );
+}
+#[test]
+fn test_wrong_tx_signer_capacity_less_than_collateral() {
+    let (context, tx) = build_test_context(
+        2,
+        ETH_BURN,
+        110,
+        (ETH_BURN / ETH_PRICE) as u64 * CKB_UNITS * 110 / 100 - 1,
+    );
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::CapacityInvalid as i8)
+    );
 }
 
 fn build_extra(kind: u8) -> XExtra {
@@ -50,7 +97,12 @@ fn build_extra(kind: u8) -> XExtra {
     extra
 }
 
-fn build_test_context(kind: u8, xt_burn: u128) -> (Context, TransactionView) {
+fn build_test_context(
+    kind: u8,
+    xt_burn: u128,
+    rate: u8,
+    output_capacity: u64,
+) -> (Context, TransactionView) {
     // deploy contract
     let mut context = Context::default();
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
@@ -78,11 +130,13 @@ fn build_test_context(kind: u8, xt_burn: u128) -> (Context, TransactionView) {
         .expect("script");
     let sudt_typescript_dep = CellDep::new_builder().out_point(sudt_out_point).build();
 
-    let price = match kind {
-        1 => BTC_PRICE,
-        2 => ETH_PRICE,
-        _ => BTC_PRICE,
+    let (price, lot_amount) = match kind {
+        1 => (BTC_PRICE, BTC_BURN),
+        2 => (ETH_PRICE, ETH_BURN),
+        _ => (1, 1),
     };
+
+    let input_capacity = (lot_amount / price * CKB_UNITS as u128 * rate as u128 / 100) as u64;
 
     let signer_lockscript =
         basic::Script::from_slice(always_success_lockscript.as_slice()).unwrap();
@@ -95,7 +149,7 @@ fn build_test_context(kind: u8, xt_burn: u128) -> (Context, TransactionView) {
 
     let input_ckb_cell_out_point = context.create_cell(
         CellOutput::new_builder()
-            .capacity(((xt_burn / price) as u64 * CKB_UNITS).pack())
+            .capacity(input_capacity.pack())
             .lock(always_success_lockscript.clone())
             .type_(Some(toCKB_typescript.clone()).pack())
             .build(),
@@ -121,7 +175,7 @@ fn build_test_context(kind: u8, xt_burn: u128) -> (Context, TransactionView) {
     let inputs = vec![input_ckb_cell, input_xt_cell];
 
     let output_signer_cell = CellOutput::new_builder()
-        .capacity(((xt_burn / price) as u64 * CKB_UNITS).pack())
+        .capacity(output_capacity.pack())
         .lock(always_success_lockscript.clone())
         .build();
     let outputs = vec![output_signer_cell];

@@ -3,6 +3,7 @@ use crate::utils::config::{CKB_UNITS, PRE_UNDERCOLLATERAL_RATE};
 use crate::utils::tools::{get_price, is_XT_typescript, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use ckb_std::ckb_constants::Source;
+use ckb_std::debug;
 use ckb_std::error::SysError;
 use ckb_std::high_level::{
     load_cell_capacity, load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type,
@@ -75,9 +76,13 @@ fn verify_burn(lot_size: u128) -> Result<(), Error> {
 fn verify_collateral_rate(lot_size: u128) -> Result<(), Error> {
     let price = get_price()?;
     let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
-    if lot_size
-        >= (PRE_UNDERCOLLATERAL_RATE as u128 * input_capacity as u128 * price)
-            / (CKB_UNITS as u128 * 100)
+
+    debug!(
+        "input_capacity {}, price {}, lot_size {} ",
+        input_capacity, price, lot_size
+    );
+    if (100 * input_capacity as u128 * price) / (CKB_UNITS as u128)
+        >= PRE_UNDERCOLLATERAL_RATE as u128 * lot_size
     {
         return Err(Error::UndercollateralInvalid);
     }

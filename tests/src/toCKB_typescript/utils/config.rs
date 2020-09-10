@@ -19,3 +19,6 @@ pub const SINCE_SIGNER_TIMEOUT: u64 = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | 24
 
 // LIQUIDATION_COLLATERAL_PERCENT means min liquidation threshold of collateral/lot_amount
 pub const LIQUIDATION_COLLATERAL_PERCENT: u8 = 115;
+
+// PRE_UNDERCOLLATERAL_RATE represents max collateral rate that signer can start redeeming
+pub const PRE_UNDERCOLLATERAL_RATE: u8 = 120;
