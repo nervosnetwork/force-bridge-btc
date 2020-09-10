@@ -37,6 +37,9 @@ pub enum Error {
     CollateralInvalid,
     XTBurnInvalid,
     InputSignerInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
 }
 
 impl From<SysError> for Error {

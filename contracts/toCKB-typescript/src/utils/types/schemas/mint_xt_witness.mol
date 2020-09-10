@@ -15,4 +15,5 @@ table BTCSPVProof {
     headers: Bytes,
     intermediate_nodes: Bytes,
     funding_output_index: byte,
+    funding_input_index: byte,
 }
