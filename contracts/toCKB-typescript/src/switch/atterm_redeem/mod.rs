@@ -46,9 +46,9 @@ fn verify_data(
             out_toCKB_data.get_eth_lot_size()?.get_sudt_amount()
         }
     };
-    if input_toCKB_data.user_lockscript.as_ref() != out_toCKB_data.user_lockscript.as_ref()
-        || input_toCKB_data.x_lock_address.as_ref() != out_toCKB_data.x_lock_address.as_ref()
-        || input_toCKB_data.signer_lockscript.as_ref() != out_toCKB_data.signer_lockscript.as_ref()
+    if input_toCKB_data.user_lockscript != out_toCKB_data.user_lockscript
+        || input_toCKB_data.x_lock_address != out_toCKB_data.x_lock_address
+        || input_toCKB_data.signer_lockscript != out_toCKB_data.signer_lockscript
         || input_toCKB_data.x_extra != out_toCKB_data.x_extra
     {
         return Err(Error::InvariantDataMutated);
