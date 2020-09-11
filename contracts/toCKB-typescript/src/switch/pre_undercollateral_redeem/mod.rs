@@ -7,14 +7,14 @@ use ckb_std::debug;
 use ckb_std::error::SysError;
 use ckb_std::high_level::{
     load_cell_capacity, load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type,
-    QueryIter,
 };
 use core::result::Result;
 use molecule::prelude::*;
 
-fn verify_burn(lot_size: u128) -> Result<(), Error> {
+fn verify_burn(lot_size: u128, data: &ToCKBCellDataView) -> Result<(), Error> {
     let lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
 
+    let mut is_signer = false;
     let mut input_sudt_sum: u128 = 0;
     let mut input_index = 0;
     loop {
@@ -23,6 +23,10 @@ fn verify_burn(lot_size: u128) -> Result<(), Error> {
             Err(SysError::IndexOutOfBound) => break,
             Err(_err) => panic!("iter input return an error"),
             Ok(cell_type) => {
+                let lock = load_cell_lock(input_index, Source::Input)?;
+                if lock.as_bytes() == data.signer_lockscript {
+                    is_signer = true;
+                }
                 if !(cell_type.is_some()
                     && is_XT_typescript(&cell_type.unwrap(), lock_hash.as_ref()))
                 {
@@ -39,6 +43,10 @@ fn verify_burn(lot_size: u128) -> Result<(), Error> {
                 input_index += 1;
             }
         }
+    }
+
+    if !is_signer {
+        return Err(Error::InputSignerInvalid);
     }
 
     let mut output_sudt_num = 0;
@@ -91,16 +99,6 @@ fn verify_collateral_rate(lot_size: u128) -> Result<(), Error> {
     Ok(())
 }
 
-fn verify_signer(data: &ToCKBCellDataView) -> Result<(), Error> {
-    let input_signer_count = QueryIter::new(load_cell_lock, Source::Input)
-        .filter(|lock| lock.as_bytes() == data.signer_lockscript)
-        .count();
-    if input_signer_count < 1 {
-        return Err(Error::InputSignerInvalid);
-    }
-    Ok(())
-}
-
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     let input_toCKB_data = toCKB_data_tuple
         .0
@@ -110,7 +108,6 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         XChainKind::Btc => input_toCKB_data.get_btc_lot_size()?.get_sudt_amount(),
         XChainKind::Eth => input_toCKB_data.get_eth_lot_size()?.get_sudt_amount(),
     };
-    verify_signer(input_toCKB_data)?;
     verify_collateral_rate(lot_size)?;
-    verify_burn(lot_size)
+    verify_burn(lot_size, input_toCKB_data)
 }
