@@ -12,12 +12,11 @@ use ckb_std::high_level::load_script;
 use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
-    debug, default_alloc, entry,
+    default_alloc, entry,
     error::SysError,
     high_level::{load_cell_lock_hash, load_cell_type_hash, load_script_hash},
 };
 use core::result::Result;
-use hex;
 use utils::error::Error;
 entry!(entry);
 default_alloc!();
