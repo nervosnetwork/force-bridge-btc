@@ -60,17 +60,8 @@ fn verify_single_cell(
     args: Bytes,
 ) -> Result<(), Error> {
     match load_cell_type_hash(index, source) {
-        Ok(type_hash) => {
-            debug!(
-                "test_lock_args : {:?}-{:?} \t lock script args : {:?} \t type script hash : {:?} \n",
-                source,
-                index,
-                hex::encode(&args.to_vec()),
-                hex::encode(type_hash.clone().unwrap())
-            );
-
-            // the cell is toCKBCell when lock_script args equal typescript hash
-            if args[..] != type_hash.unwrap()[..] {
+        Ok(type_hash_opt) => {
+            if type_hash_opt.is_none() || type_hash_opt.unwrap()[..] != args[..] {
                 return Ok(());
             }
         }
@@ -79,14 +70,6 @@ fn verify_single_cell(
     };
 
     let lock_hash = load_cell_lock_hash(index, source)?;
-
-    debug!(
-        "test_lock_hash : {:?}-{:?} \t lock_script hash : {:?} \t current lock_hash : {:?}\n \n",
-        source,
-        index,
-        hex::encode(lock_hash.clone()),
-        hex::encode(script_hash.clone())
-    );
 
     //the toCKBCell is valid when the toCKB cell lock_script hash equal current lock_script hash
     if lock_hash[..] != script_hash[..] {
