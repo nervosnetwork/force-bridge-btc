@@ -36,6 +36,7 @@ pub enum Error {
     XChainAddressInvalid,
     CollateralInvalid,
     XTBurnInvalid,
+    InputSignerInvalid,
 }
 
 impl From<SysError> for Error {
