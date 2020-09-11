@@ -146,7 +146,8 @@ pub fn verify_btc_witness(
     debug!("script_pubkey payload: {:?}", script_pubkey.payload()?);
     match script_pubkey.payload()? {
         PayloadType::WPKH(_) => {
-            let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
+            let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32())
+                .expect("bech32 encode should not return error");
             debug!(
                 "hex format: addr: {}, x_lock_address: {}",
                 hex::encode(addr.as_bytes().to_vec()),
@@ -264,7 +265,8 @@ pub fn verify_btc_faulty_witness(
             let script_pubkey = tx_out.script_pubkey();
             match script_pubkey.payload()? {
                 PayloadType::WPKH(_) => {
-                    let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
+                    let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32())
+                        .expect("bech32 encode should not return error");
                     debug!(
                         "hex format: addr: {}, x_lock_address: {}",
                         hex::encode(addr.as_bytes().to_vec()),

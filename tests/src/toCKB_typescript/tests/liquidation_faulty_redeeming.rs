@@ -74,8 +74,9 @@ fn generate_btc_correct_case() -> TestCase {
 #[test]
 fn test_btc_correct_case() {
     let mut case = generate_btc_correct_case();
-    case.input_tockb_cell_data.x_unlock_address = "wrong_addr".to_owned();
-    case.output_tockb_cell_data.x_unlock_address = "wrong_addr".to_owned();
+    let wrong_addr = "bc1111111111111111111111111111111111111111111".to_owned();
+    case.input_tockb_cell_data.x_unlock_address = wrong_addr.clone();
+    case.output_tockb_cell_data.x_unlock_address = wrong_addr;
     run_test_case(case);
 }
 
