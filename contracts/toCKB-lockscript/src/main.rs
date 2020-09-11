@@ -14,7 +14,7 @@ use ckb_std::{
     ckb_types::{bytes::Bytes, prelude::*},
     debug, default_alloc, entry,
     error::SysError,
-    high_level::{load_cell, load_cell_lock_hash, load_cell_type_hash, load_script_hash},
+    high_level::{load_cell_lock_hash, load_cell_type_hash, load_script_hash},
 };
 use core::result::Result;
 use hex;
@@ -59,35 +59,38 @@ fn verify_single_cell(
     script_hash: [u8; 32],
     args: Bytes,
 ) -> Result<(), Error> {
-    let type_hash = match load_cell_type_hash(index, source) {
-        Ok(current_cell_type_hash) => current_cell_type_hash,
+    match load_cell_type_hash(index, source) {
+        Ok(type_hash) => {
+            debug!(
+                "test_lock_args : {:?}-{:?} \t lock script args : {:?} \t type script hash : {:?} \n",
+                source,
+                index,
+                hex::encode(&args.to_vec()),
+                hex::encode(type_hash.clone().unwrap())
+            );
+
+            // the cell is toCKBCell when lock_script args equal typescript hash
+            if args[..] != type_hash.unwrap()[..] {
+                return Ok(());
+            }
+        }
         Err(SysError::IndexOutOfBound) => return Err(Error::IndexOutOfBound),
         Err(err) => return Err(err.into()),
     };
 
+    let lock_hash = load_cell_lock_hash(index, source)?;
+
     debug!(
-        "test_lock_args : {:?}-{:?} \t lock script args : {:?} \t type script hash : {:?} \n",
+        "test_lock_hash : {:?}-{:?} \t lock_script hash : {:?} \t current lock_hash : {:?}\n \n",
         source,
         index,
-        hex::encode(&args.to_vec()),
-        hex::encode(type_hash.clone().unwrap())
+        hex::encode(lock_hash.clone()),
+        hex::encode(script_hash.clone())
     );
 
-    // the cell is toCKBCell when lock_script args equal typescript hash
-    if args[..] == type_hash.clone().unwrap()[..] {
-        let lock_hash = match load_cell_lock_hash(index, source) {
-            Ok(lock_hash) => lock_hash,
-            Err(SysError::IndexOutOfBound) => return Err(Error::IndexOutOfBound),
-            Err(err) => return Err(err.into()),
-        };
-
-        debug!("test_lock_hash : {:?}-{:?} \t lock_script hash : {:?} \t current lock_hash : {:?}\n \n",
-               source, index, hex::encode(lock_hash.clone()), hex::encode(script_hash.clone()));
-
-        //the toCKBCell is valid when the toCKB cell lock_script hash equal current lock_script hash
-        if lock_hash[..] != script_hash[..] {
-            return Err(Error::InvalidToCKBCell);
-        }
+    //the toCKBCell is valid when the toCKB cell lock_script hash equal current lock_script hash
+    if lock_hash[..] != script_hash[..] {
+        return Err(Error::InvalidToCKBCell);
     }
     Ok(())
 }
