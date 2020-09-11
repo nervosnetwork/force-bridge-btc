@@ -1,5 +1,6 @@
 pub mod convert;
 pub mod generated;
+pub mod test_case;
 
 #[repr(i8)]
 pub enum Error {
@@ -37,6 +38,9 @@ pub enum Error {
     CollateralInvalid,
     XTBurnInvalid,
     InputSignerInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
 }
 
 #[repr(u8)]

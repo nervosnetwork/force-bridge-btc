@@ -6,13 +6,14 @@ table MintXTWitness {
 }
 
 table BTCSPVProof {
-    version: Byte4,
+    version: Uint32,
     vin: Bytes,
     vout: Bytes,
-    locktime: Byte4,
+    locktime: Uint32,
     tx_id: Byte32,
     index: Uint64,
     headers: Bytes,
     intermediate_nodes: Bytes,
-    funding_output_index: byte,
+    funding_output_index: Uint32,
+    funding_input_index: Uint32,
 }
