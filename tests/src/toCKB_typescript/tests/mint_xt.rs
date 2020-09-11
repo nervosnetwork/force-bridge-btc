@@ -101,7 +101,8 @@ fn test_wrong_lot_size() {
 #[test]
 fn test_wrong_x_lock_address() {
     let mut case = generate_btc_correct_case();
-    case.input_tockb_cell_data.x_lock_address = "wrong_addr".to_owned();
+    let wrong_addr = "bc1111111111111111111111111111111111111111111".to_owned();
+    case.input_tockb_cell_data.x_lock_address = wrong_addr;
     case.expect_return_code = WrongFundingAddr as i8;
     run_test_case(case);
 }
