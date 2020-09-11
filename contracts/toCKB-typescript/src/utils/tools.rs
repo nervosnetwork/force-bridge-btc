@@ -129,12 +129,19 @@ pub fn verify_btc_witness(
     }
     let proof_reader = BTCSPVProofReader::new_unchecked(proof);
     debug!("proof_reader: {:?}", proof_reader);
+
     // verify btc spv
     let tx_hash = verify_btc_spv(proof_reader, difficulty_reader)?;
+
     // verify transfer amount, to matches
-    let funding_output_index: u8 = proof_reader.funding_output_index().into();
+    let funding_output_index = {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(proof_reader.funding_output_index().raw_data());
+        u32::from_le_bytes(buf)
+    };
+
     let vout = Vout::new(proof_reader.vout().raw_data())?;
-    let tx_out = vout.index(funding_output_index.into())?;
+    let tx_out = vout.index(funding_output_index as usize)?;
     let script_pubkey = tx_out.script_pubkey();
     debug!("script_pubkey payload: {:?}", script_pubkey.payload()?);
     match script_pubkey.payload()? {
@@ -163,7 +170,7 @@ pub fn verify_btc_witness(
     }
     Ok(BtcExtraView {
         lock_tx_hash: tx_hash,
-        lock_vout_index: funding_output_index as u32,
+        lock_vout_index: funding_output_index,
     })
 }
 
@@ -199,9 +206,13 @@ pub fn verify_btc_faulty_witness(
     verify_btc_spv(proof_reader, difficulty_reader)?;
 
     // get tx in
-    let funding_input_index: u8 = proof_reader.funding_input_index().into();
+    let funding_input_index = {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
+        u32::from_le_bytes(buf)
+    };
     let vin = Vin::new(proof_reader.vin().raw_data())?;
-    let tx_in = vin.index(funding_input_index.into())?;
+    let tx_in = vin.index(funding_input_index as usize)?;
 
     // get mint_xt's funding_output info from cell_data
     let btc_extra = match &data.x_extra {

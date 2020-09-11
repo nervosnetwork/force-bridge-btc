@@ -48,10 +48,10 @@ fn generate_btc_correct_case() -> TestCase {
         witness: Witness {
             cell_dep_index_list: vec![0],
             spv_proof: SpvProof::BTC(BTCSPVProofJson{
-                version: "0x02000000".to_owned(),
+                version: 2,
                 vin: "0x015227c5fbad9d9202ade7f02452cf880dac1ed270255ebfe6716e8b3e8956571d0100000017160014085fc2ea0c102fc4db8dbbb10dd6f93684c178c9feffffff".to_owned(),
                 vout: "0x028c79171300000000160014173ec3a12e289b102f8edcc1d4ecd3b5b893e2dc97b2030000000000160014ef9665bcf82fa83e870a350a6551a09ee819e4a3".to_owned(),
-                locktime: "0xdbd80900".to_owned(),
+                locktime: 645339,
                 tx_id: "0x2b21846ae6f15cc29e41b2846c78d756abfedb0d6fea7222263cac0024713bc3".to_owned(),
                 index: 3,
                 headers: "0x00000020acf05cadf6d066d01f5aca661690f4e1779a8144b90b070000000000000000006bbb5a7851af48d883e8ac5d6f61c6ad9a4132a9a12531c1b6f085760b3b2e427ba0455fea0710177d792e86".to_owned(),
