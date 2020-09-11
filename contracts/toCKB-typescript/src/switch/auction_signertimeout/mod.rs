@@ -4,7 +4,7 @@ use crate::utils::{
         AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
         REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK, XT_CELL_CAPACITY,
     },
-    tools::{get_sum_sudt_amount, get_xchain_kind, is_XT_typescript, XChainKind},
+    tools::{get_sum_sudt_amount, is_XT_typescript},
     types::{Error, ToCKBCellDataView},
 };
 use ckb_std::{

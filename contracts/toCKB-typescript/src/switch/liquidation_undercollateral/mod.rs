@@ -1,9 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::{CKB_UNITS, LIQUIDATION_COLLATERAL_PERCENT, XT_CELL_CAPACITY};
-use crate::utils::{
-    tools::{get_xchain_kind, XChainKind},
-    types::{Error, ToCKBCellDataView},
-};
+use crate::utils::types::{Error, ToCKBCellDataView};
 use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
