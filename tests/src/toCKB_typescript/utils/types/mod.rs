@@ -33,6 +33,9 @@ pub enum Error {
     InputSinceInvalid,
     UndercollateralInvalid,
     WitnessInvalid,
+    XChainAddressInvalid,
+    CollateralInvalid,
+    XTBurnInvalid,
 }
 
 #[repr(u8)]

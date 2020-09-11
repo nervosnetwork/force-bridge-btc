@@ -16,7 +16,7 @@ use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, packed::Script, prelude::Unpack},
     debug,
-    high_level::{load_cell_data, load_cell_type, load_script},
+    high_level::{load_cell_capacity, load_cell_data, load_cell_type, load_script},
 };
 use core::{convert::From, result::Result};
 use int_enum::IntEnum;
@@ -50,6 +50,15 @@ pub fn get_price() -> Result<u128, Error> {
     buf.copy_from_slice(&price_cell_data);
     let price: u128 = u128::from_le_bytes(buf);
     Ok(price)
+}
+
+pub fn check_capacity() -> Result<(), Error> {
+    let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
+    let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
+    if input_capacity != output_capacity {
+        return Err(Error::CapacityInvalid);
+    }
+    Ok(())
 }
 
 pub fn is_XT_typescript(script: &Script, toCKB_lock_hash: &[u8]) -> bool {
