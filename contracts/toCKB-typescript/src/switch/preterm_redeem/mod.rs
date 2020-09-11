@@ -1,6 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::SIGNER_FEE_RATE;
-use crate::utils::tools::{is_XT_typescript, XChainKind};
+use crate::utils::tools::{check_capacity, is_XT_typescript, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
 use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
@@ -153,6 +153,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .1
         .as_ref()
         .expect("outputs contain toCKB cell");
+    check_capacity()?;
     let lot_size = verify_data(input_toCKB_data, output_toCKB_data)?;
     verify_burn(lot_size, output_toCKB_data)
 }
