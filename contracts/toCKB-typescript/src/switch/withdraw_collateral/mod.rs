@@ -52,7 +52,7 @@ fn verify_capacity(input_data: &ToCKBCellDataView) -> Result<(), Error> {
         .into_iter()
         .sum::<u64>();
     let ckb_cell_cap = load_cell_capacity(0, Source::GroupInput)?;
-    if signer_xt_cell_cap != ckb_cell_cap {
+    if signer_xt_cell_cap < ckb_cell_cap {
         return Err(Error::CapacityInvalid);
     }
     Ok(())
