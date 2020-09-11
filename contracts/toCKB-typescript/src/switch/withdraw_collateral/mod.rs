@@ -46,7 +46,7 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
 
 fn verify_capacity(input_data: &ToCKBCellDataView) -> Result<(), Error> {
     let signer_xt_cell_cap = QueryIter::new(load_cell, Source::Output)
-        .filter(|cell| cell.lock().as_bytes().as_ref() == input_data.signer_lockscript.as_ref())
+        .filter(|cell| cell.lock().as_bytes() == input_data.signer_lockscript)
         .map(|cell| cell.capacity().unpack())
         .collect::<Vec<u64>>()
         .into_iter()
