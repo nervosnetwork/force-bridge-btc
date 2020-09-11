@@ -63,10 +63,10 @@ fn fetch_block(block_hash: &str) -> Result<Block> {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct MintXTProof {
-    pub version: String,
+    pub version: u32,
     pub vin: String,
     pub vout: String,
-    pub locktime: String,
+    pub locktime: u32,
     pub tx_id: String,
     pub index: u64,
     pub headers: String,
@@ -91,10 +91,10 @@ fn generate_mint_xt_proof(
 
     Ok((
         MintXTProof {
-            version: serialize_hex(&tx.version),
+            version: tx.version,
             vin: serialize_hex(&tx.input),
             vout: serialize_hex(&tx.output),
-            locktime: serialize_hex(&tx.lock_time),
+            locktime: tx.lock_time,
             tx_id: hex::encode(tx.txid().as_ref()),
             index: tx_index as u64,
             headers: serialize_hex(&block.header),
