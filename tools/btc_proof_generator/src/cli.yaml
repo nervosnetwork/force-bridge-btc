@@ -19,8 +19,14 @@ subcommands:
                 required: true
                 takes_value: true
             - funding_output_index:
-                long: funding_output_index
+                  long: funding_output_index
+                  short: f
+                  help: funding output index
+                  required: true
+                  takes_value: true
+            - funding_input_index:
+                long: funding_input_index
                 short: f
-                help: funding output index
+                help: funding input index
                 required: true
                 takes_value: true
