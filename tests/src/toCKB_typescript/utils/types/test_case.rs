@@ -32,6 +32,13 @@ pub struct EthExtraView {
     pub dummy: Bytes,
 }
 
+pub struct Input {
+    pub typescript: Script,
+    pub lockscript: Script,
+    pub amount: u128,
+    pub capacity: u64,
+}
+
 pub struct Output {
     pub typescript: Script,
     pub lockscript: Script,
@@ -59,12 +66,13 @@ pub enum CellDepsData {
 
 pub struct TestCase {
     pub kind: u8,
-    pub input_status: u8,
-    pub output_status: u8,
+    pub input_status: Option<u8>,
+    pub output_status: Option<u8>,
     pub input_capacity: u64,
     pub output_capacity: u64,
     pub input_tockb_cell_data: ToCKBCellDataTest,
     pub output_tockb_cell_data: ToCKBCellDataTest,
+    pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub witness: Witness,
     pub cell_deps_data: CellDepsData,

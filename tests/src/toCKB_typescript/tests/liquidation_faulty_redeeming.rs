@@ -38,12 +38,13 @@ fn generate_btc_correct_case() -> TestCase {
 
     let case = TestCase {
         kind,
-        input_status: ToCKBStatus::Redeeming as u8,
-        output_status: ToCKBStatus::FaultyWhenRedeeming as u8,
+        input_status: Some(ToCKBStatus::Redeeming as u8),
+        output_status: Some(ToCKBStatus::FaultyWhenRedeeming as u8),
         input_capacity: COLLATERAL,
         output_capacity: COLLATERAL,
         input_tockb_cell_data: tockb_data.clone(),
         output_tockb_cell_data: tockb_data,
+        inputs: vec![],
         outputs: vec![],
         witness: Witness {
             cell_dep_index_list: vec![0],
@@ -116,7 +117,7 @@ fn test_wrong_btc_spv() {
 #[test]
 fn test_wrong_x_lock_address() {
     let mut case = generate_btc_correct_case();
-    case.input_tockb_cell_data.x_extra = XExtraView::Btc(BtcExtraView {
+    let extra = XExtraView::Btc(BtcExtraView {
         lock_tx_hash: hex::decode(clear_0x(
             "0x1111c5fbad9d9202ade7f02452cf880dac1ed270255ebfe6716e8b3e8956571d",
         ))
@@ -124,6 +125,8 @@ fn test_wrong_x_lock_address() {
         .into(),
         lock_vout_index: 1,
     });
+    case.input_tockb_cell_data.x_extra = extra.clone();
+    case.output_tockb_cell_data.x_extra = extra;
     case.expect_return_code = FaultyBtcWitnessInvalid as i8;
     run_test_case(case);
 }

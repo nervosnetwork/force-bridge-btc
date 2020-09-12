@@ -1,7 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     tools::{verify_btc_witness, XChainKind},
-    types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView},
+    types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView, XExtraView},
 };
 
 use ckb_std::ckb_types::prelude::*;
@@ -14,7 +14,7 @@ use core::result::Result;
 use molecule::prelude::*;
 
 /// ensure transfer happen on XChain by verifying the spv proof
-fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
+fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
     let witness_args = load_witness_args(0, Source::GroupInput)?.input_type();
     debug!("witness_args: {:?}", &witness_args);
     if witness_args.is_none() {
@@ -31,14 +31,16 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     let cell_dep_index_list = witness.cell_dep_index_list().raw_data();
     match data.get_xchain_kind() {
         XChainKind::Btc => {
-            let _btc_extra = verify_btc_witness(
+            let btc_extra = verify_btc_witness(
                 data,
                 proof,
                 cell_dep_index_list,
                 data.x_unlock_address.as_ref(),
                 data.get_btc_lot_size()?.get_sudt_amount(),
+                true,
             )?;
-            Ok(())
+            debug!("extra {:?}", btc_extra);
+            Ok(XExtraView::Btc(btc_extra))
         }
         XChainKind::Eth => todo!(),
     }
@@ -58,12 +60,21 @@ fn verify_capacity(input_data: &ToCKBCellDataView) -> Result<(), Error> {
     Ok(())
 }
 
+fn verify_extra(data: &ToCKBCellDataView, x_extra: &XExtraView) -> Result<(), Error> {
+    if &data.x_extra != x_extra {
+        return Err(Error::FaultyBtcWitnessInvalid);
+    }
+    Ok(())
+}
+
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("start withdraw collateral");
     let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
     verify_capacity(input_data)?;
     debug!("verify capacity finish");
-    verify_witness(input_data)?;
+    let extra = verify_witness(input_data)?;
     debug!("verify witness finish");
+    verify_extra(input_data, &extra)?;
+    debug!("verify extra finish");
     Ok(())
 }

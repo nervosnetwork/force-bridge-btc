@@ -107,6 +107,7 @@ pub fn verify_btc_witness(
     cell_dep_index_list: &[u8],
     expect_address: &[u8],
     expect_value: u128,
+    is_return_vin: bool,
 ) -> Result<BtcExtraView, Error> {
     debug!(
         "proof: {:?}, cell_dep_index_list: {:?}",
@@ -164,15 +165,35 @@ pub fn verify_btc_witness(
         }
         _ => return Err(Error::UnsupportedFundingType),
     }
+
     let value = tx_out.value() as u128;
     debug!("actual value: {}, expect: {}", value, expect_value);
     if value < expect_value {
         return Err(Error::FundingNotEnough);
     }
-    Ok(BtcExtraView {
-        lock_tx_hash: tx_hash,
-        lock_vout_index: funding_output_index,
-    })
+    if is_return_vin {
+        let funding_input_index = {
+            let mut buf = [0u8; 4];
+            buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
+            u32::from_le_bytes(buf)
+        };
+        let vin = Vin::new(proof_reader.vin().raw_data())?;
+        let tx_in = vin.index(funding_input_index as usize)?;
+        debug!(
+            "vin tx_id {}",
+            hex::encode(tx_in.outpoint().txid_le().as_ref().as_ref())
+        );
+        debug!("vin input index {}", funding_input_index);
+        Ok(BtcExtraView {
+            lock_tx_hash: tx_in.outpoint().txid_le().as_ref().as_ref().into(),
+            lock_vout_index: funding_input_index,
+        })
+    } else {
+        Ok(BtcExtraView {
+            lock_tx_hash: tx_hash,
+            lock_vout_index: funding_output_index,
+        })
+    }
 }
 
 pub fn verify_btc_faulty_witness(
