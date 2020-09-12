@@ -41,6 +41,13 @@ pub enum Error {
 
     // Faulty witness
     FaultyBtcWitnessInvalid,
+
+    // Auction
+    InvalidInputs,
+    InvalidAuctionBidderCell,
+    InvalidTriggerOrSignerCell,
+    InvalidAuctionXTCell,
+    XTAmountInvalid,
 }
 
 #[repr(u8)]

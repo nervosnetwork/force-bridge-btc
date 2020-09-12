@@ -86,7 +86,7 @@ pub fn get_sum_sudt_amount(
         }
         let script = res.unwrap();
         if script.is_none() || !is_XT_typescript(&script.unwrap(), toCKB_lock_hash) {
-            return Err(Error::TxInvalid);
+            continue;
         }
 
         let cell_data = load_cell_data(index, source)?;
