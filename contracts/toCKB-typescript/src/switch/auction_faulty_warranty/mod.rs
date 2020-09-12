@@ -5,7 +5,7 @@ use crate::utils::{
         REMAIN_FLAGS_BITS, SIGNER_FEE_RATE, SINCE_TYPE_TIMESTAMP, UDT_LEN, VALUE_MASK,
         XT_CELL_CAPACITY,
     },
-    tools::{get_sum_sudt_amount, get_xchain_kind, is_XT_typescript, XChainKind},
+    tools::{get_sum_sudt_amount, is_XT_typescript},
     types::{Error, ToCKBCellDataView},
 };
 use ckb_std::{
@@ -27,16 +27,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .expect("inputs should contain toCKB cell");
     let toCKB_lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
 
-    let lot_amount: u128 = match get_xchain_kind()? {
-        XChainKind::Btc => {
-            let btc_lot_size = input_data.get_btc_lot_size()?;
-            btc_lot_size.get_sudt_amount()
-        }
-        XChainKind::Eth => {
-            let eth_lot_size = input_data.get_eth_lot_size()?;
-            eth_lot_size.get_sudt_amount()
-        }
-    };
+    let lot_amount = input_data.get_lot_xt_amount()?;
     let signer_fee = lot_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
 
     debug!("begin verify since");
@@ -154,7 +145,11 @@ fn verify_outputs(
     debug!("1. check XT lock is redeemer's lock success!");
 
     // - 2. check if typescript is sudt typescript
-    let script = load_cell_type(output_index, Source::Output)?.expect("sudt typescript must exist");
+    let script = match load_cell_type(output_index, Source::Output)? {
+        Some(typescript) => typescript,
+        None => return Err(Error::InvalidAuctionXTCell),
+    };
+
     if !is_XT_typescript(&script, toCKB_lock_hash) {
         return Err(Error::InvalidAuctionXTCell);
     }
