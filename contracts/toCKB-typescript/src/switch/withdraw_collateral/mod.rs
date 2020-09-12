@@ -48,13 +48,13 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
 
 fn verify_capacity(input_data: &ToCKBCellDataView) -> Result<(), Error> {
     let signer_xt_cell_cap = QueryIter::new(load_cell, Source::Output)
-        .filter(|cell| cell.lock().as_bytes().as_ref() == input_data.signer_lockscript.as_ref())
+        .filter(|cell| cell.lock().as_bytes() == input_data.signer_lockscript)
         .map(|cell| cell.capacity().unpack())
         .collect::<Vec<u64>>()
         .into_iter()
         .sum::<u64>();
     let ckb_cell_cap = load_cell_capacity(0, Source::GroupInput)?;
-    if signer_xt_cell_cap != ckb_cell_cap {
+    if signer_xt_cell_cap < ckb_cell_cap {
         return Err(Error::CapacityInvalid);
     }
     Ok(())
