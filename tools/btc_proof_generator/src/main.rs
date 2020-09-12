@@ -122,6 +122,20 @@ fn bytes_to_hash256digest(b: &[u8]) -> Hash256Digest {
     tmp.into()
 }
 
+pub fn clear_0x(s: &str) -> &str {
+    if &s[..2] == "0x" || &s[..2] == "0X" {
+        &s[2..]
+    } else {
+        s
+    }
+}
+
+fn hex_string_le_be_transform(hex_str: &str) -> Result<String> {
+    let mut bytes = hex::decode(clear_0x(hex_str).as_bytes())?;
+    bytes.reverse();
+    Ok(hex::encode(bytes.as_slice()))
+}
+
 fn main() -> Result<()> {
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from(yaml).get_matches();
@@ -150,4 +164,16 @@ fn main() -> Result<()> {
         _ => {}
     }
     Ok(())
+}
+
+#[test]
+fn test_reverse() {
+    let tx_id_be = hex_string_le_be_transform(
+        "0x2b21846ae6f15cc29e41b2846c78d756abfedb0d6fea7222263cac0024713bc3",
+    )
+    .unwrap();
+    assert_eq!(
+        "c33b712400ac3c262272ea6f0ddbfeab56d7786c84b2419ec25cf1e66a84212b".to_owned(),
+        tx_id_be
+    );
 }
