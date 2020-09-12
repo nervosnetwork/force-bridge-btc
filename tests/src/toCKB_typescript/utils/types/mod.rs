@@ -41,8 +41,14 @@ pub enum Error {
 
     // Faulty witness
     FaultyBtcWitnessInvalid,
-}
 
+    // Auction
+    InvalidInputs,
+    InvalidAuctionBidderCell,
+    InvalidTriggerOrSignerCell,
+    InvalidAuctionXTCell,
+    XTAmountInvalid,
+}
 #[repr(u8)]
 pub enum ToCKBStatus {
     Initial = 1,
