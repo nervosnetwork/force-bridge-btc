@@ -4,7 +4,7 @@ use crate::utils::{
         AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
         REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, VALUE_MASK, XT_CELL_CAPACITY,
     },
-    tools::{get_sum_sudt_amount, get_xchain_kind, XChainKind},
+    tools::get_sum_sudt_amount,
     types::{Error, ToCKBCellDataView},
 };
 use ckb_std::{
@@ -23,16 +23,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .expect("inputs should contain toCKB cell");
     let toCKB_lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
 
-    let lot_amount: u128 = match get_xchain_kind()? {
-        XChainKind::Btc => {
-            let btc_lot_size = input_data.get_btc_lot_size()?;
-            btc_lot_size.get_sudt_amount()
-        }
-        XChainKind::Eth => {
-            let eth_lot_size = input_data.get_eth_lot_size()?;
-            eth_lot_size.get_sudt_amount()
-        }
-    };
+    let lot_amount = input_data.get_lot_xt_amount()?;
 
     debug!("begin verify since");
     let auction_time = verify_since()?;
