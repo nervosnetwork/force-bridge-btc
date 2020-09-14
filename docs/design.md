@@ -90,7 +90,7 @@ signer -> CKB: Withdraw Collateral
 ```
 -->
 
-1. User makes a deposit request on CKB, along with some pledge. If someone bonds as signer but the user does not follw up, the user will lose the pledge to compensate the loss of signer's CKB liquidity.
+1. User makes a deposit request on `CKB CHAIN`, along with some pledge. If someone bonds CKB as signer but the user does not follow up, the user will lose the pledge to compensate the loss of signer's CKB liquidity.
 2. Someone bonds CKB to become a signer, provide a XChain address for user to deposit XAsset.
 3. User transfers their XAsset to signer on XChain.
 4. User generates the transaction proof and relays it to CKB, mints 1-to-1 CKB token -- XToken. Signer gets some percent of XToken as fee, e.g. 0.1%.
