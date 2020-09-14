@@ -2,7 +2,10 @@ use crate::error::Error;
 use crate::generated::tockb_cell_data::{ToCKBCellDataReader, XExtraUnionReader};
 use core::result::Result;
 use int_enum::IntEnum;
-use molecule::{bytes::Bytes, prelude::{Entity, Reader}};
+use molecule::{
+    bytes::Bytes,
+    prelude::{Entity, Reader},
+};
 
 const BTC_UNIT: u128 = 100_000_000;
 const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
