@@ -1,4 +1,4 @@
-use super::{Error, ToCKBCellData};
+use super::{Error, Script, ToCKBCellData};
 use crate::toCKB_typescript::utils::config::*;
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
@@ -10,7 +10,7 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
-use tockb_types::{tockb_cell_data::*, *};
+use tockb_types::{generated::*, tockb_cell_data::*};
 
 const MAX_CYCLES: u64 = 10_000_000;
 
@@ -27,9 +27,9 @@ fn test_correct_tx_eth() {
         1,
         user_lockscript,
         correct_eth_address.clone(),
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -58,9 +58,9 @@ fn test_correct_tx_btc() {
         1,
         user_lockscript,
         correct_btc_address.clone(),
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         correct_btc_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(1),
     );
 
@@ -85,9 +85,9 @@ fn test_wrong_tx_eth_address_invalid() {
         1,
         user_lockscript,
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         wrong_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -126,9 +126,9 @@ fn test_wrong_tx_btc_address_invalid() {
         1,
         user_lockscript,
         correct_btc_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         wrong_btc_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(1),
     );
 
@@ -150,9 +150,9 @@ fn test_wrong_tx_lot_size_mutated() {
         2,
         user_lockscript,
         correct_eth_address.clone(),
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -169,14 +169,14 @@ fn test_wrong_tx_user_lock_script_mutated() {
     let correct_eth_address = basic::Bytes::new_builder()
         .set([Byte::new(1u8); 20].to_vec())
         .build();
-    let mutated_user_lock_script = basic::Script::new_builder().hash_type(Byte::new(2)).build();
+    let mutated_user_lock_script = Script::new_builder().hash_type(Byte::new(2)).build();
     let toCKB_data = build_to_ckb_data(
         1,
         mutated_user_lock_script,
         correct_eth_address.clone(),
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -201,9 +201,9 @@ fn test_wrong_tx_user_lock_address_mutated() {
         1,
         user_lockscript,
         mutated_lock_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -222,16 +222,14 @@ fn test_wrong_tx_user_signer_script_mutated() {
     let correct_eth_address = basic::Bytes::new_builder()
         .set([Byte::new(1u8); 20].to_vec())
         .build();
-    let mutated_signer_script = basic::Script::new_builder()
-        .hash_type(Byte::new(2u8))
-        .build();
+    let mutated_signer_script = Script::new_builder().hash_type(Byte::new(2u8)).build();
     let toCKB_data = build_to_ckb_data(
         1,
         user_lockscript,
         correct_eth_address.clone(),
         mutated_signer_script,
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -254,9 +252,9 @@ fn test_wrong_tx_input_xt_mismatch_expected() {
         1,
         user_lockscript,
         correct_eth_address.clone(),
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -278,9 +276,9 @@ fn test_wrong_tx_capacity_mismatch() {
         1,
         user_lockscript,
         correct_eth_address.clone(),
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         correct_eth_address,
-        basic::Script::new_builder().build(),
+        Script::new_builder().build(),
         build_extra(2),
     );
 
@@ -324,11 +322,11 @@ fn build_extra(kind: u8) -> XExtra {
 
 fn build_to_ckb_data(
     lot_size: u8,
-    user_lockscript: basic::Script,
+    user_lockscript: Script,
     lock_address: basic::Bytes,
-    signer_lockscript: basic::Script,
+    signer_lockscript: Script,
     unlock_address: basic::Bytes,
-    redeemer_lockscript: basic::Script,
+    redeemer_lockscript: Script,
     extra: XExtra,
 ) -> ToCKBCellData {
     ToCKBCellData::new_builder()
@@ -398,7 +396,7 @@ fn build_test_context(
         .lot_size(Byte::new(1u8))
         .user_lockscript(basic::Script::from_slice(always_success_lockscript.as_slice()).unwrap())
         .x_lock_address(lock_address)
-        .signer_lockscript(basic::Script::new_builder().build())
+        .signer_lockscript(Script::new_builder().build())
         .x_extra(build_extra(kind))
         .build();
 
