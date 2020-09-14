@@ -4,6 +4,8 @@ schema:
 	moleculec --language rust --schema-file contracts/toCKB-typescript/src/utils/types/schemas/btc_difficulty.mol > contracts/toCKB-typescript/src/utils/types/generated/btc_difficulty.rs
 	moleculec --language rust --schema-file contracts/toCKB-typescript/src/utils/types/schemas/mint_xt_witness.mol > contracts/toCKB-typescript/src/utils/types/generated/mint_xt_witness.rs
 	cp contracts/toCKB-typescript/src/utils/types/generated/*.rs tests/src/toCKB_typescript/utils/types/generated
+	cp contracts/toCKB-typescript/src/utils/types/generated/*.rs sdk/src/types/generated
+	cp contracts/toCKB-typescript/src/utils/config.rs sdk/src/types
 
 fmt:
 	cd contracts/toCKB-typescript && cargo fmt --all

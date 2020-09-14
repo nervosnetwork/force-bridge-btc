@@ -26,6 +26,7 @@ use ckb_std::{
     debug,
     high_level::{load_cell_data, load_cell_type, load_input_since, QueryIter},
 };
+use crate::utils::tools::get_xchain_kind;
 
 #[derive(Debug)]
 enum TxType {
@@ -72,8 +73,9 @@ fn get_toCKB_data(source: Source) -> Result<Option<ToCKBCellDataView>, Error> {
     let toCKB_data_list = QueryIter::new(load_cell_data, source).collect::<Vec<Vec<u8>>>();
     match toCKB_data_list.len() {
         0 => Ok(None),
-        1 => Ok(Some(ToCKBCellDataView::from_slice(
+        1 => Ok(Some(ToCKBCellDataView::new(
             toCKB_data_list[0].as_slice(),
+            get_xchain_kind()?
         )?)),
         _ => Err(Error::TxInvalid),
     }

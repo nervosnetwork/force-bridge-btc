@@ -279,6 +279,18 @@ dependencies = [
  "int-enum",
  "molecule",
  "primitive-types",
+ "tockb-types",
+]
+
+[[package]]
+name = "tockb-types"
+version = "0.1.0"
+dependencies = [
+ "bitcoin-spv",
+ "cfg-if",
+ "ckb-std",
+ "int-enum",
+ "molecule",
 ]
 
 [[package]]

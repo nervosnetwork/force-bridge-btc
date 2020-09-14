@@ -6,3 +6,5 @@ contracts/**/target/*
 .tmp/
 **.idea
 **.DS_Store
+
+deps/*

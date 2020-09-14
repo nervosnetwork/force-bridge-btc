@@ -1,0 +1,18 @@
+[package]
+name = "tockb-types"
+version = "0.1.0"
+authors = ["huwenchao <me@huwenchao.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["std"]
+std = ["molecule/std", "int-enum/std"]
+contract = ["ckb-std", "bitcoin-spv"]
+
+[dependencies]
+molecule = { version = "0.6", default-features = false }
+int-enum = { version = "0.4", default-features = false }
+cfg-if = "0.1"
+ckb-std = { version = "0.6", optional = true }
+bitcoin-spv = { git = "https://github.com/summa-tx/bitcoin-spv.git", branch = "rust/dep-change", default-features = false, optional = true }
