@@ -58,13 +58,13 @@ fn verify() -> Result<(), Error> {
     let script_hash = load_script_hash()?;
     let args: Bytes = load_script()?.args().unpack();
 
-    verify_source_cells(Source::Input, script_hash, args.clone())?;
-    verify_source_cells(Source::Output, script_hash, args)?;
+    verify_toCKB_cells(Source::Input, &script_hash, args.as_ref())?;
+    verify_toCKB_cells(Source::Output, &script_hash, args.as_ref())?;
 
     Ok(())
 }
 
-fn verify_source_cells(source: Source, script_hash: [u8; 32], args: Bytes) -> Result<(), Error> {
+fn verify_toCKB_cells(source: Source, script_hash: &[u8; 32], args: &[u8]) -> Result<(), Error> {
     for i in 0.. {
         match load_cell_type_hash(i, source) {
             Ok(type_hash_opt) => {

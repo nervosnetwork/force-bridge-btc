@@ -50,32 +50,32 @@ fn load_context_and_out_points() -> (Context, OutPoint, OutPoint) {
     );
 }
 
-fn build_output_cell(cell_case: CellCase) -> CellOutput {
+fn build_cell(cell_case: CellCase) -> CellOutput {
     let (mut context, toCKB_lockscript_out_point, always_success_out_point) =
         load_context_and_out_points();
 
     // prepare scripts
-    let fake_script = context
+    let mock_toCKB_typescript = context
         .build_script(&always_success_out_point, [3; 1].to_vec().into())
         .expect("script");
 
-    let lockscript_args: Bytes =
-        get_lock_script_args(fake_script.clone(), cell_case.is_type_toCKB_cell);
-
     let lock_script = if cell_case.is_valid_toCKB_cell {
+        let lockscript_args: Bytes =
+            get_lock_script_args(mock_toCKB_typescript.clone(), cell_case.is_type_toCKB_cell);
+
         context
             .build_script(&toCKB_lockscript_out_point, lockscript_args)
             .expect("script")
     } else {
         context
-            .build_script(&always_success_out_point, lockscript_args)
+            .build_script(&always_success_out_point, Bytes::new())
             .expect("script")
     };
     // build cell output
     CellOutput::new_builder()
         .capacity(11000u64.pack())
         .lock(lock_script)
-        .type_(Some(fake_script).pack())
+        .type_(Some(mock_toCKB_typescript).pack())
         .build()
 }
 
@@ -99,9 +99,9 @@ fn build_test_context(
 
     //prepare input cell
     for &cell_case in input_valid.iter() {
-        let output = build_output_cell(cell_case);
+        let cell = build_cell(cell_case);
 
-        let input_out_point = context.create_cell(output, Bytes::new());
+        let input_out_point = context.create_cell(cell, Bytes::new());
 
         let input = CellInput::new_builder()
             .previous_output(input_out_point)
@@ -112,9 +112,9 @@ fn build_test_context(
 
     //prepare output cells
     for &cell_case in output_valid.iter() {
-        let output = build_output_cell(cell_case);
+        let cell = build_cell(cell_case);
 
-        outputs.push(output);
+        outputs.push(cell);
         outputs_data.push(Bytes::new());
     }
 
