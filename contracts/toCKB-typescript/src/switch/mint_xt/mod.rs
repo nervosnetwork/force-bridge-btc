@@ -55,6 +55,7 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
                 cell_dep_index_list,
                 data.x_lock_address.as_ref(),
                 data.get_btc_lot_size()?.get_sudt_amount(),
+                false,
             )?;
             Ok(XExtraView::Btc(btc_extra))
         }

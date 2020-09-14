@@ -38,12 +38,13 @@ fn generate_btc_correct_case() -> TestCase {
 
     let case = TestCase {
         kind,
-        input_status: ToCKBStatus::Bonded as u8,
-        output_status: ToCKBStatus::Warranty as u8,
+        input_status: Some(ToCKBStatus::Bonded as u8),
+        output_status: Some(ToCKBStatus::Warranty as u8),
         input_capacity: COLLATERAL,
         output_capacity: COLLATERAL - PLEDGE - XT_CELL_CAPACITY,
         input_tockb_cell_data: tockb_data.clone(),
         output_tockb_cell_data: tockb_data,
+        inputs: vec![],
         outputs: vec![
             Output {
                 typescript: sudt_typescript.clone(),
