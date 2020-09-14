@@ -2,7 +2,7 @@
 
 ## Abstract
 
-The toCKB is an asset cross-chain system, which consists of a bunch of protocols, CKB contracts and off-chain modules, to support decentralized, redeemable token on CKB supply-pegged to any asset on any blockchain.
+The toCKB is an asset cross-chain system, which consists of a bunch of protocols, CKB contracts and off-chain modules, to support decentralized, redeemable token issued on `CKB CHAIN` supply-pegged to any asset on any blockchain.
 
 As long as you can transfer an asset on a blockchain and construct a spv proof to verify the transaction, you can implement the spv verification logic in the toCKB contract. Then anyone can use the contract to mint a token on CKB pegged to the asset by locking the asset. They can transfer the token and burn it to redeem the asset on original blockchain as well. The peg is implemented using an approch mixed with bonding and spv proof verification, which involves a new role called signer. Signers act as a guard on the original blockchain to ensure the asset is locked when minting token and send the asset back to user when redeeming. Anyone can be signer by bonding an amount of CKB that ensures their behavior in the system remains honest, at risk of losing their bond in case of dishonesty or undercollateralization.
 
