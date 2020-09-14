@@ -5,9 +5,6 @@
 #![feature(panic_info_message)]
 #![allow(non_snake_case)]
 
-mod utils;
-
-use alloc::vec;
 use ckb_std::high_level::load_script;
 use ckb_std::{
     ckb_constants::Source,
@@ -17,7 +14,6 @@ use ckb_std::{
     high_level::{load_cell_lock_hash, load_cell_type_hash, load_script_hash},
 };
 use core::result::Result;
-use utils::error::Error;
 entry!(entry);
 default_alloc!();
 
@@ -30,49 +26,61 @@ fn entry() -> i8 {
     }
 }
 
+/// Error
+#[repr(i8)]
+pub enum Error {
+    IndexOutOfBound = 1,
+    ItemMissing,
+    LengthNotEnough,
+    Encoding,
+    // Add customized errors here...
+    InvalidToCKBCell,
+}
+
+impl From<SysError> for Error {
+    fn from(err: SysError) -> Self {
+        use SysError::*;
+        match err {
+            IndexOutOfBound => Self::IndexOutOfBound,
+            ItemMissing => Self::ItemMissing,
+            LengthNotEnough(_) => Self::LengthNotEnough,
+            Encoding => Self::Encoding,
+            Unknown(err_code) => panic!("unexpected sys error {}", err_code),
+        }
+    }
+}
+
 fn main() -> Result<(), Error> {
     verify()
 }
 
 fn verify() -> Result<(), Error> {
-    // load current lock_script hash
-    let script_hash = load_script_hash().unwrap();
-    let args: Bytes = load_script().unwrap().args().unpack();
-    let cell_source = vec![Source::Input, Source::Output];
+    let script_hash = load_script_hash()?;
+    let args: Bytes = load_script()?.args().unpack();
 
-    for &source in cell_source.iter() {
-        for i in 0.. {
-            match verify_single_cell(i, source, script_hash, args.clone()) {
-                Ok(()) => {}
-                Err(Error::IndexOutOfBound) => break,
-                Err(err) => return Err(err.into()),
-            };
-        }
-    }
+    verify_source_cells(Source::Input, script_hash, args.clone())?;
+    verify_source_cells(Source::Output, script_hash, args)?;
+
     Ok(())
 }
 
-fn verify_single_cell(
-    index: usize,
-    source: Source,
-    script_hash: [u8; 32],
-    args: Bytes,
-) -> Result<(), Error> {
-    match load_cell_type_hash(index, source) {
-        Ok(type_hash_opt) => {
-            if type_hash_opt.is_none() || type_hash_opt.unwrap()[..] != args[..] {
-                return Ok(());
+fn verify_source_cells(source: Source, script_hash: [u8; 32], args: Bytes) -> Result<(), Error> {
+    for i in 0.. {
+        match load_cell_type_hash(i, source) {
+            Ok(type_hash_opt) => {
+                if type_hash_opt.is_none() || type_hash_opt.unwrap()[..] != args[..] {
+                    continue;
+                }
             }
+            Err(SysError::IndexOutOfBound) => return Ok(()),
+            Err(err) => return Err(err.into()),
+        };
+
+        let lock_hash = load_cell_lock_hash(i, source)?;
+
+        if lock_hash[..] != script_hash[..] {
+            return Err(Error::InvalidToCKBCell);
         }
-        Err(SysError::IndexOutOfBound) => return Err(Error::IndexOutOfBound),
-        Err(err) => return Err(err.into()),
-    };
-
-    let lock_hash = load_cell_lock_hash(index, source)?;
-
-    //the toCKBCell is valid when the toCKB cell lock_script hash equal current lock_script hash
-    if lock_hash[..] != script_hash[..] {
-        return Err(Error::InvalidToCKBCell);
     }
     Ok(())
 }
