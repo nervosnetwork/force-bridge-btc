@@ -7,7 +7,6 @@ edition = "2018"
 
 [dependencies]
 ckb-std = "0.6.0"
-hex = { version = "0.4", default-features = false }
 
 [profile.release]
 overflow-checks = true
