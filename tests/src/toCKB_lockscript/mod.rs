@@ -27,15 +27,6 @@ pub enum Error {
     InvalidToCKBCell,
 }
 
-fn get_lock_script_args(type_script: Script, is_ToCKBCell: bool) -> Bytes {
-    if is_ToCKBCell {
-        let type_hash: [u8; 32] = type_script.calc_script_hash().unpack();
-        type_hash.to_vec().into()
-    } else {
-        [0u8; 32].to_vec().into()
-    }
-}
-
 fn load_context_and_out_points() -> (Context, OutPoint, OutPoint) {
     // deploy contract
     let mut context = Context::default();
@@ -60,10 +51,12 @@ fn build_cell(cell_case: CellCase) -> CellOutput {
         .expect("script");
 
     let lock_script = if cell_case.is_toCKB_lockscript {
-        let lockscript_args: Bytes = get_lock_script_args(
-            mock_toCKB_typescript.clone(),
-            cell_case.is_toCKB_typescript_hash,
-        );
+        let lockscript_args = if cell_case.is_toCKB_typescript_hash {
+            let type_hash: [u8; 32] = mock_toCKB_typescript.calc_script_hash().unpack();
+            type_hash.to_vec().into()
+        } else {
+            [0u8; 32].to_vec().into()
+        };
 
         context
             .build_script(&toCKB_lockscript_out_point, lockscript_args)
