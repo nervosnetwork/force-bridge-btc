@@ -7,8 +7,8 @@ use molecule::{
     prelude::{Entity, Reader},
 };
 
-const BTC_UNIT: u128 = 100_000_000;
-const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
+pub const BTC_UNIT: u128 = 100_000_000;
+pub const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
 
 #[repr(u8)]
 #[derive(Clone, Copy, IntEnum)]
