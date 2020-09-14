@@ -33,6 +33,20 @@ pub enum Error {
     InputSinceInvalid,
     UndercollateralInvalid,
     WitnessInvalid,
+    XChainAddressInvalid,
+    CollateralInvalid,
+    XTBurnInvalid,
+    InputSignerInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
+
+    // Auction
+    InvalidInputs,
+    InvalidAuctionBidderCell,
+    InvalidTriggerOrSignerCell,
+    InvalidAuctionXTCell,
+    XTAmountInvalid,
 }
 
 impl From<SysError> for Error {

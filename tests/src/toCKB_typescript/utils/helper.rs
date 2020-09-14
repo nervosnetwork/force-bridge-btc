@@ -1,9 +1,9 @@
-use super::{types::*, ToCKBCellData};
 use crate::toCKB_typescript::utils::types::{
     generated::{
-        basic, btc_difficulty, mint_xt_witness, BtcExtra, Byte32, Uint32, XExtra, XExtraUnion,
+        basic, btc_difficulty, mint_xt_witness, BtcExtra, Byte32, ToCKBCellData, Uint32, XExtra,
+        XExtraUnion,
     },
-    ToCKBStatus,
+    test_case::*,
 };
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
@@ -12,10 +12,71 @@ use molecule::prelude::*;
 use std::vec::Vec;
 
 pub const MAX_CYCLES: u64 = 100_000_000;
-pub const PLEDGE: u64 = 10000;
-pub const XT_CELL_CAPACITY: u64 = 200;
+
+fn build_toCKB_data(status: u8, data: ToCKBCellDataTest) -> Bytes {
+    let x_lock_address_str = &data.x_lock_address;
+    let x_lock_address = basic::Bytes::new_builder()
+        .set(
+            x_lock_address_str
+                .as_bytes()
+                .iter()
+                .map(|c| Byte::new(*c))
+                .collect::<Vec<_>>()
+                .into(),
+        )
+        .build();
+    let x_unlock_address_str = &data.x_unlock_address;
+    let x_unlock_address = basic::Bytes::new_builder()
+        .set(
+            x_unlock_address_str
+                .as_bytes()
+                .iter()
+                .map(|c| Byte::new(*c))
+                .collect::<Vec<_>>()
+                .into(),
+        )
+        .build();
+    let signer_lockscript = basic::Script::from_slice(data.signer_lockscript.as_slice()).unwrap();
+    let user_lockscript = basic::Script::from_slice(data.user_lockscript.as_slice()).unwrap();
+
+    let x_extra = match data.x_extra {
+        XExtraView::Btc(btc_extra) => {
+            let lock_tx_hash = Byte32::new_unchecked(btc_extra.lock_tx_hash);
+            let lock_vout_index = Vec::<u8>::from(&btc_extra.lock_vout_index.to_le_bytes()[..]);
+            let lock_vout_index = Uint32::new_unchecked(Bytes::from(lock_vout_index));
+            let btc_extra = BtcExtra::new_builder()
+                .lock_tx_hash(lock_tx_hash)
+                .lock_vout_index(lock_vout_index)
+                .build();
+            let x_extra = XExtraUnion::BtcExtra(btc_extra);
+            XExtra::new_builder().set(x_extra).build()
+        }
+        XExtraView::Eth(_eth_extra) => todo!(),
+    };
+
+    ToCKBCellData::new_builder()
+        .status(Byte::new(status))
+        .lot_size(Byte::new(data.lot_size))
+        .signer_lockscript(signer_lockscript.clone())
+        .user_lockscript(user_lockscript.clone())
+        .x_lock_address(x_lock_address.clone())
+        .x_unlock_address(x_unlock_address.clone())
+        .x_extra(x_extra.clone())
+        .build()
+        .as_bytes()
+}
 
 pub fn run_test_case(case: TestCase) {
+    let mut allow_toCKB_cell_input = false;
+    let mut allow_toCKB_cell_output = false;
+
+    if case.input_status.is_some() {
+        allow_toCKB_cell_input = true;
+    }
+    if case.output_status.is_some() {
+        allow_toCKB_cell_output = true;
+    }
+
     let kind = case.kind;
 
     let mut context = Context::default();
@@ -24,7 +85,7 @@ pub fn run_test_case(case: TestCase) {
     // let toCKB_lockscript_bin: Bytes = Loader::default().load_binary("toCKB-lockscript");
     // let toCKB_lockscript_out_point = context.deploy_cell(toCKB_lockscript_bin);
     let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-    let sudt_bin = include_bytes!("../../../../deps/simple_udt");
+    let sudt_bin = include_bytes!("../../../deps/simple_udt");
     let sudt_out_point = context.deploy_cell(Bytes::from(sudt_bin.as_ref()));
 
     // prepare scripts
@@ -50,70 +111,52 @@ pub fn run_test_case(case: TestCase) {
     let sudt_typescript_dep = CellDep::new_builder().out_point(sudt_out_point).build();
 
     // prepare cells
-    let x_lock_address_str = case.tockb_cell_data.x_lock_address;
-    let x_lock_address = basic::Bytes::new_builder()
-        .set(
-            x_lock_address_str
-                .as_bytes()
-                .iter()
-                .map(|c| Byte::new(*c))
-                .collect::<Vec<_>>()
-                .into(),
-        )
-        .build();
-    let signer_lockscript =
-        basic::Script::from_slice(case.tockb_cell_data.signer_lockscript.as_slice()).unwrap();
-    let user_lockscript =
-        basic::Script::from_slice(case.tockb_cell_data.user_lockscript.as_slice()).unwrap();
-    let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Bonded as u8))
-        .lot_size(Byte::new(case.tockb_cell_data.lot_size))
-        .signer_lockscript(signer_lockscript.clone())
-        .user_lockscript(user_lockscript.clone())
-        .x_lock_address(x_lock_address.clone())
-        .build();
+    let mut inputs = vec![];
+    if allow_toCKB_cell_input {
+        let data = build_toCKB_data(case.input_status.unwrap(), case.input_tockb_cell_data);
+        let input_ckb_cell_out_point = context.create_cell(
+            CellOutput::new_builder()
+                .capacity(case.input_capacity.pack())
+                .lock(always_success_lockscript.clone())
+                .type_(Some(toCKB_typescript.clone()).pack())
+                .build(),
+            data,
+        );
+        let input_ckb_cell = CellInput::new_builder()
+            .previous_output(input_ckb_cell_out_point)
+            .build();
+        inputs.push(input_ckb_cell);
+    }
 
-    let x_extra = match case.tockb_cell_data.x_extra {
-        XExtraView::Btc(btc_extra) => {
-            let lock_tx_hash = Byte32::new_unchecked(btc_extra.lock_tx_hash);
-            let lock_vout_index = Vec::<u8>::from(&btc_extra.lock_vout_index.to_le_bytes()[..]);
-            let lock_vout_index = Uint32::new_unchecked(Bytes::from(lock_vout_index));
-            let btc_extra = BtcExtra::new_builder()
-                .lock_tx_hash(lock_tx_hash)
-                .lock_vout_index(lock_vout_index)
-                .build();
-            let x_extra = XExtraUnion::BtcExtra(btc_extra);
-            XExtra::new_builder().set(x_extra).build()
-        }
-        XExtraView::Eth(_eth_extra) => todo!(),
-    };
-    let output_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Warranty as u8))
-        .lot_size(Byte::new(case.tockb_cell_data.lot_size))
-        .signer_lockscript(signer_lockscript.clone())
-        .user_lockscript(user_lockscript.clone())
-        .x_lock_address(x_lock_address.clone())
-        .x_extra(x_extra)
-        .build();
+    for input in case.inputs.into_iter() {
+        let input_cell_out_point = context.create_cell(
+            CellOutput::new_builder()
+                .capacity(input.capacity.pack())
+                .lock(input.lockscript.clone())
+                .type_(Some(input.typescript).pack())
+                .build(),
+            input.amount.to_le_bytes().to_vec().into(),
+        );
+        let input_cell = CellInput::new_builder()
+            .previous_output(input_cell_out_point)
+            .build();
+        inputs.push(input_cell);
+    }
 
-    let input_ckb_cell_out_point = context.create_cell(
-        CellOutput::new_builder()
-            .capacity(case.input_capacity.pack())
-            .lock(always_success_lockscript.clone())
-            .type_(Some(toCKB_typescript.clone()).pack())
-            .build(),
-        input_toCKB_data.as_bytes(),
-    );
-    let input_ckb_cell = CellInput::new_builder()
-        .previous_output(input_ckb_cell_out_point)
-        .build();
-    let inputs = vec![input_ckb_cell];
-    let mut outputs = vec![CellOutput::new_builder()
-        .capacity(case.output_capacity.pack())
-        .type_(Some(toCKB_typescript.clone()).pack())
-        .lock(always_success_lockscript.clone())
-        .build()];
-    let mut outputs_data = vec![output_toCKB_data.as_bytes()];
+    let mut outputs = vec![];
+    let mut outputs_data = vec![];
+    if allow_toCKB_cell_output {
+        let data = build_toCKB_data(case.output_status.unwrap(), case.output_tockb_cell_data);
+        outputs.push(
+            CellOutput::new_builder()
+                .capacity(case.output_capacity.pack())
+                .type_(Some(toCKB_typescript.clone()).pack())
+                .lock(always_success_lockscript.clone())
+                .build(),
+        );
+        outputs_data.push(data);
+    }
+
     for output in case.outputs.into_iter() {
         let cell_output = CellOutput::new_builder()
             .capacity(output.capacity.pack())
@@ -123,16 +166,19 @@ pub fn run_test_case(case: TestCase) {
         outputs.push(cell_output);
         outputs_data.push(output.amount.to_le_bytes().to_vec().into())
     }
-    let spv_proof = match case.witness.spv_proof {
+
+    let case_witness = case.witness;
+    let spv_proof = match case_witness.spv_proof {
         SpvProof::BTC(btc_spv_proof) => btc_spv_proof.as_slice().to_vec(),
     };
     let witness_data = mint_xt_witness::MintXTWitness::new_builder()
         .spv_proof(spv_proof.into())
-        .cell_dep_index_list(case.witness.cell_dep_index_list.into())
+        .cell_dep_index_list(case_witness.cell_dep_index_list.into())
         .build();
     let witness = WitnessArgs::new_builder()
         .input_type(Some(witness_data.as_bytes()).pack())
         .build();
+
     let dep_data = match case.cell_deps_data {
         CellDepsData::BTC(difficulty_data) => {
             let data = btc_difficulty::BTCDifficulty::new_builder()
@@ -184,7 +230,7 @@ pub fn deploy(kind: u8) -> DeployResult {
     let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
     let toCKB_typescript_out_point = context.deploy_cell(toCKB_typescript_bin);
     let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-    let sudt_bin = include_bytes!("../../../../deps/simple_udt");
+    let sudt_bin = include_bytes!("../../../deps/simple_udt");
     let sudt_out_point = context.deploy_cell(Bytes::from(sudt_bin.as_ref()));
 
     // prepare scripts
