@@ -14,7 +14,7 @@ We will support BTC and ETH in this stage, and provide a guide document to suppo
 
 ### A Note on Naming
 
-The system, in its entirety, is called "toCKB". The blockchain is refered as "XChain" and the asset as "XAsset". The token on CKB pegged to XAsset is refered as "XToken", sometimes it can be shorten as "XT".
+The system, in its entirety, is called "toCKB". The original blockchain is refered as "XChain" and the asset as "XAsset". The minted crosschain token on `CKB CHAIN` pegged to XAsset is refered as "XToken", sometimes it can be shorten as "XT".
 
 For BTC and ETH, the names mapping is like below:
 
