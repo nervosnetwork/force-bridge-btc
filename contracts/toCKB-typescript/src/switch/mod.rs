@@ -16,6 +16,7 @@ mod withdraw_collateral;
 mod withdraw_pledge;
 mod withdraw_pledge_collateral;
 
+use crate::utils::tools::get_xchain_kind;
 use crate::utils::{
     config::SUDT_CODE_HASH,
     types::{Error, ToCKBCellDataView, ToCKBStatus},
@@ -26,7 +27,6 @@ use ckb_std::{
     debug,
     high_level::{load_cell_data, load_cell_type, load_input_since, QueryIter},
 };
-use crate::utils::tools::get_xchain_kind;
 
 #[derive(Debug)]
 enum TxType {
@@ -75,7 +75,7 @@ fn get_toCKB_data(source: Source) -> Result<Option<ToCKBCellDataView>, Error> {
         0 => Ok(None),
         1 => Ok(Some(ToCKBCellDataView::new(
             toCKB_data_list[0].as_slice(),
-            get_xchain_kind()?
+            get_xchain_kind()?,
         )?)),
         _ => Err(Error::TxInvalid),
     }

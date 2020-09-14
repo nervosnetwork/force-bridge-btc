@@ -25,7 +25,6 @@ use molecule::prelude::Reader;
 use primitive_types::U256;
 pub use tockb_types::tockb_cell::XChainKind;
 
-
 pub fn get_xchain_kind() -> Result<XChainKind, Error> {
     let script_args: Bytes = load_script()?.args().unpack();
     if script_args.len() != 1 {
