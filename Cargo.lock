@@ -3190,6 +3190,7 @@ dependencies = [
  "primitive-types",
  "serde",
  "serde_json",
+ "tockb-types",
 ]
 
 [[package]]

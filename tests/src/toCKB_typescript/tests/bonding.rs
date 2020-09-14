@@ -1,4 +1,4 @@
-use super::{Error, Script, ToCKBCellData};
+use super::{Error, ToCKBCellData};
 use crate::toCKB_typescript::utils::config::CKB_UNITS;
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
@@ -10,7 +10,7 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
-use toCKB_typescript::utils::types::generated::*;
+use tockb_types::{tockb_cell_data::*, *};
 
 const MAX_CYCLES: u64 = 10_000_000;
 
@@ -25,7 +25,7 @@ fn test_correct_tx_eth() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
@@ -45,7 +45,7 @@ fn test_correct_tx_btc() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set(
@@ -72,7 +72,7 @@ fn test_wrong_tx_btc_address_invalid() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set(
@@ -102,7 +102,7 @@ fn test_wrong_tx_eth_address_invalid() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 21].to_vec())
@@ -125,7 +125,7 @@ fn test_wrong_tx_status_mismatch() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
@@ -145,7 +145,7 @@ fn test_wrong_tx_kind_invalid() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
@@ -165,7 +165,7 @@ fn test_wrong_tx_lot_size_mismatch() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(2u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
@@ -188,7 +188,7 @@ fn test_wrong_tx_collateral_wrong() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
@@ -219,7 +219,7 @@ fn test_wrong_tx_extra_mismatch() {
     let toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
@@ -303,7 +303,7 @@ fn build_test_context(
     let input_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(1u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_extra(build_extra(kind))
         .build();
 

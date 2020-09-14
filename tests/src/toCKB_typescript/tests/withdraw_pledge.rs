@@ -1,4 +1,4 @@
-use super::{Error, Script, ToCKBCellData};
+use super::{Error, ToCKBCellData};
 use crate::toCKB_typescript::utils::config::*;
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
@@ -10,7 +10,7 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
-use toCKB_typescript::utils::types::generated::*;
+use tockb_types::{tockb_cell_data::*, *};
 
 const MAX_CYCLES: u64 = 10_000_000;
 
@@ -107,7 +107,7 @@ fn build_test_context(since: u64, output_capacity: u64) -> (Context, Transaction
                 .set([Byte::new(1u8); 20].to_vec())
                 .build(),
         )
-        .signer_lockscript(Script::new_builder().build())
+        .signer_lockscript(basic::Script::new_builder().build())
         .x_extra(build_extra(2))
         .build();
 

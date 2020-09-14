@@ -3,7 +3,7 @@ use crate::toCKB_typescript::tests::ToCKBStatus;
 use crate::toCKB_typescript::utils::types::{generated::mint_xt_witness, Error::*};
 use crate::toCKB_typescript::utils::{
     helper::{deploy, run_test_case, DeployResult},
-    types::test_case::*,
+    test_case::*,
 };
 use molecule::prelude::*;
 use std::convert::TryInto;

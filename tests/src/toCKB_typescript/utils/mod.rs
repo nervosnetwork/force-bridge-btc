@@ -1,3 +1,7 @@
-pub mod config;
 pub mod helper;
-pub mod types;
+pub use tockb_types as types;
+pub use tockb_types::config;
+pub mod test_case;
+
+// pub mod types;
+// pub mod config;
