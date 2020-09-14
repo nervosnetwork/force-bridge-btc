@@ -183,10 +183,10 @@ pub fn verify_btc_witness(
             "vin tx_id {}",
             hex::encode(tx_in.outpoint().txid_le().as_ref().as_ref())
         );
-        debug!("vin input index {}", funding_input_index);
+        debug!("vin output index {}", tx_in.outpoint().vout_index());
         Ok(BtcExtraView {
             lock_tx_hash: tx_in.outpoint().txid_le().as_ref().as_ref().into(),
-            lock_vout_index: funding_input_index,
+            lock_vout_index: tx_in.outpoint().vout_index(),
         })
     } else {
         Ok(BtcExtraView {

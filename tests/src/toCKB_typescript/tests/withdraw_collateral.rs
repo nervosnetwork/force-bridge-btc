@@ -32,7 +32,7 @@ fn generate_btc_correct_case() -> TestCase {
             ))
             .unwrap()
             .into(),
-            lock_vout_index: 0,
+            lock_vout_index: 1,
         }),
     };
 
