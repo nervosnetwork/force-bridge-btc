@@ -16,6 +16,7 @@ mod withdraw_collateral;
 mod withdraw_pledge;
 mod withdraw_pledge_collateral;
 
+use crate::utils::tools::get_xchain_kind;
 use crate::utils::{
     config::SUDT_CODE_HASH,
     types::{Error, ToCKBCellDataView, ToCKBStatus},
@@ -72,8 +73,9 @@ fn get_toCKB_data(source: Source) -> Result<Option<ToCKBCellDataView>, Error> {
     let toCKB_data_list = QueryIter::new(load_cell_data, source).collect::<Vec<Vec<u8>>>();
     match toCKB_data_list.len() {
         0 => Ok(None),
-        1 => Ok(Some(ToCKBCellDataView::from_slice(
+        1 => Ok(Some(ToCKBCellDataView::new(
             toCKB_data_list[0].as_slice(),
+            get_xchain_kind()?,
         )?)),
         _ => Err(Error::TxInvalid),
     }

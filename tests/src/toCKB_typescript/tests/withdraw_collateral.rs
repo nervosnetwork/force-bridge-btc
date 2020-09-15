@@ -3,7 +3,7 @@ use crate::toCKB_typescript::tests::ToCKBStatus;
 use crate::toCKB_typescript::utils::types::{generated::mint_xt_witness, Error::*};
 use crate::toCKB_typescript::utils::{
     helper::{deploy, run_test_case, DeployResult},
-    types::test_case::*,
+    test_case::*,
 };
 use molecule::prelude::*;
 use std::convert::TryInto;
@@ -16,7 +16,7 @@ fn generate_btc_correct_case() -> TestCase {
         context: _,
         toCKB_typescript: _,
         always_success_lockscript,
-        sudt_typescript,
+        sudt_typescript: _,
     } = deploy(kind);
     let user_lockscript = always_success_lockscript.clone();
     let signer_lockscript = always_success_lockscript.clone();

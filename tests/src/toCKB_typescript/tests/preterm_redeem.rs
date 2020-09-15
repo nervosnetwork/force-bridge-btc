@@ -10,7 +10,7 @@ use ckb_tool::ckb_types::{
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
-use toCKB_typescript::utils::types::generated::*;
+use tockb_types::{generated::*, tockb_cell_data::*};
 
 const MAX_CYCLES: u64 = 10_000_000;
 
@@ -328,7 +328,7 @@ fn build_to_ckb_data(
     unlock_address: basic::Bytes,
     redeemer_lockscript: Script,
     extra: XExtra,
-) -> toCKB_cell_data::ToCKBCellData {
+) -> ToCKBCellData {
     ToCKBCellData::new_builder()
         .status(Byte::new(4u8))
         .lot_size(Byte::new(lot_size))

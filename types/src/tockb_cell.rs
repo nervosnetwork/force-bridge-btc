@@ -1,13 +1,21 @@
-use super::error::Error;
-use super::generated::toCKB_cell_data::{ToCKBCellDataReader, XExtraUnionReader};
-use crate::utils::tools::*;
-use ckb_std::ckb_types::bytes::Bytes;
+use crate::error::Error;
+use crate::generated::tockb_cell_data::{ToCKBCellDataReader, XExtraUnionReader};
 use core::result::Result;
 use int_enum::IntEnum;
-use molecule::prelude::{Entity, Reader};
+use molecule::{
+    bytes::Bytes,
+    prelude::{Entity, Reader},
+};
 
-const BTC_UNIT: u128 = 100_000_000;
-const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
+pub const BTC_UNIT: u128 = 100_000_000;
+pub const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
+
+#[repr(u8)]
+#[derive(Clone, Copy, IntEnum)]
+pub enum XChainKind {
+    Btc = 1,
+    Eth = 2,
+}
 
 #[derive(Debug)]
 pub struct ToCKBCellDataView {
@@ -40,9 +48,9 @@ pub struct EthExtraView {
 }
 
 impl ToCKBCellDataView {
-    pub fn from_slice(slice: &[u8]) -> Result<ToCKBCellDataView, Error> {
-        ToCKBCellDataReader::verify(slice, false).map_err(|_| Error::Encoding)?;
-        let data_reader = ToCKBCellDataReader::new_unchecked(slice);
+    pub fn new(data: &[u8], x_kind: XChainKind) -> Result<ToCKBCellDataView, Error> {
+        ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
+        let data_reader = ToCKBCellDataReader::new_unchecked(data);
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];
         let user_lockscript = data_reader.user_lockscript().to_entity().as_bytes();
@@ -55,7 +63,6 @@ impl ToCKBCellDataView {
             .to_entity()
             .as_bytes();
         let x_extra = data_reader.x_extra().to_enum();
-        let x_kind = get_xchain_kind()?;
         use XChainKind::*;
         use XExtraUnionReader::*;
         let x_extra = match (x_kind, x_extra) {

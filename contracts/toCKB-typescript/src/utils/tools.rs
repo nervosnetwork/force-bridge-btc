@@ -23,13 +23,7 @@ use core::{convert::From, result::Result};
 use int_enum::IntEnum;
 use molecule::prelude::Reader;
 use primitive_types::U256;
-
-#[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
-pub enum XChainKind {
-    Btc = 1,
-    Eth = 2,
-}
+pub use tockb_types::tockb_cell::XChainKind;
 
 pub fn get_xchain_kind() -> Result<XChainKind, Error> {
     let script_args: Bytes = load_script()?.args().unpack();
@@ -102,7 +96,7 @@ pub fn get_sum_sudt_amount(
 }
 
 pub fn verify_btc_witness(
-    data: &ToCKBCellDataView,
+    _data: &ToCKBCellDataView,
     proof: &[u8],
     cell_dep_index_list: &[u8],
     expect_address: &[u8],
