@@ -63,21 +63,23 @@ fn fetch_block(block_hash: &str) -> Result<Block> {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct MintXTProof {
-    pub version: String,
+    pub version: u32,
     pub vin: String,
     pub vout: String,
-    pub locktime: String,
+    pub locktime: u32,
     pub tx_id: String,
     pub index: u64,
     pub headers: String,
     pub intermediate_nodes: String,
-    pub funding_output_index: u8,
+    pub funding_output_index: u32,
+    pub funding_input_index: u32,
 }
 
 fn generate_mint_xt_proof(
     block_hash: &str,
     tx_index: usize,
-    funding_output_index: u8,
+    funding_output_index: u32,
+    funding_input_index: u32,
 ) -> Result<(MintXTProof, Block)> {
     let block = fetch_block(block_hash)?;
     let tx = block.txdata[tx_index].clone();
@@ -89,15 +91,16 @@ fn generate_mint_xt_proof(
 
     Ok((
         MintXTProof {
-            version: serialize_hex(&tx.version),
+            version: tx.version,
             vin: serialize_hex(&tx.input),
             vout: serialize_hex(&tx.output),
-            locktime: serialize_hex(&tx.lock_time),
+            locktime: tx.lock_time,
             tx_id: hex::encode(tx.txid().as_ref()),
             index: tx_index as u64,
             headers: serialize_hex(&block.header),
             intermediate_nodes: hex::encode(flat_proof),
             funding_output_index,
+            funding_input_index,
         },
         block,
     ))
@@ -119,6 +122,20 @@ fn bytes_to_hash256digest(b: &[u8]) -> Hash256Digest {
     tmp.into()
 }
 
+pub fn clear_0x(s: &str) -> &str {
+    if &s[..2] == "0x" || &s[..2] == "0X" {
+        &s[2..]
+    } else {
+        s
+    }
+}
+
+fn hex_string_le_be_transform(hex_str: &str) -> Result<String> {
+    let mut bytes = hex::decode(clear_0x(hex_str).as_bytes())?;
+    bytes.reverse();
+    Ok(hex::encode(bytes.as_slice()))
+}
+
 fn main() -> Result<()> {
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from(yaml).get_matches();
@@ -128,9 +145,16 @@ fn main() -> Result<()> {
             let block_hash = mint_xt_matches.value_of("block_hash").unwrap();
             let tx_index = value_t!(mint_xt_matches, "tx_index", usize).unwrap();
             let funding_output_index =
-                value_t!(mint_xt_matches, "funding_output_index", u8).unwrap();
-            let (mint_xt_proof, block) =
-                generate_mint_xt_proof(block_hash, tx_index, funding_output_index)?;
+                value_t!(mint_xt_matches, "funding_output_index", u32).unwrap();
+            let funding_input_index =
+                value_t!(mint_xt_matches, "funding_input_index", u32).unwrap();
+
+            let (mint_xt_proof, block) = generate_mint_xt_proof(
+                block_hash,
+                tx_index,
+                funding_output_index,
+                funding_input_index,
+            )?;
             assert!(spv_prove(&block, &mint_xt_proof)?);
             println!(
                 "btc mint xt proof:\n\n{}",
@@ -140,4 +164,16 @@ fn main() -> Result<()> {
         _ => {}
     }
     Ok(())
+}
+
+#[test]
+fn test_reverse() {
+    let tx_id_be = hex_string_le_be_transform(
+        "0x2b21846ae6f15cc29e41b2846c78d756abfedb0d6fea7222263cac0024713bc3",
+    )
+    .unwrap();
+    assert_eq!(
+        "c33b712400ac3c262272ea6f0ddbfeab56d7786c84b2419ec25cf1e66a84212b".to_owned(),
+        tx_id_be
+    );
 }

@@ -2,10 +2,11 @@ use crate::utils::{
     config::{SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, UDT_LEN},
     types::{
         btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader, BtcExtraView,
-        Error, ToCKBCellDataView,
+        Error, ToCKBCellDataView, XExtraView,
     },
 };
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
+
 use bech32::ToBase32;
 use bitcoin_spv::{
     btcspv,
@@ -16,7 +17,7 @@ use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, packed::Script, prelude::Unpack},
     debug,
-    high_level::{load_cell_data, load_cell_type, load_script},
+    high_level::{load_cell_capacity, load_cell_data, load_cell_type, load_script},
 };
 use core::{convert::From, result::Result};
 use int_enum::IntEnum;
@@ -52,6 +53,15 @@ pub fn get_price() -> Result<u128, Error> {
     Ok(price)
 }
 
+pub fn check_capacity() -> Result<(), Error> {
+    let input_capacity = load_cell_capacity(0, Source::GroupInput)?;
+    let output_capacity = load_cell_capacity(0, Source::GroupOutput)?;
+    if input_capacity != output_capacity {
+        return Err(Error::CapacityInvalid);
+    }
+    Ok(())
+}
+
 pub fn is_XT_typescript(script: &Script, toCKB_lock_hash: &[u8]) -> bool {
     if script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
         && script.args().raw_data().as_ref() == toCKB_lock_hash
@@ -76,7 +86,7 @@ pub fn get_sum_sudt_amount(
         }
         let script = res.unwrap();
         if script.is_none() || !is_XT_typescript(&script.unwrap(), toCKB_lock_hash) {
-            return Err(Error::TxInvalid);
+            continue;
         }
 
         let cell_data = load_cell_data(index, source)?;
@@ -97,6 +107,7 @@ pub fn verify_btc_witness(
     cell_dep_index_list: &[u8],
     expect_address: &[u8],
     expect_value: u128,
+    is_return_vin: bool,
 ) -> Result<BtcExtraView, Error> {
     debug!(
         "proof: {:?}, cell_dep_index_list: {:?}",
@@ -119,26 +130,34 @@ pub fn verify_btc_witness(
     }
     let proof_reader = BTCSPVProofReader::new_unchecked(proof);
     debug!("proof_reader: {:?}", proof_reader);
+
     // verify btc spv
     let tx_hash = verify_btc_spv(proof_reader, difficulty_reader)?;
+
     // verify transfer amount, to matches
-    let funding_output_index: u8 = proof_reader.funding_output_index().into();
+    let funding_output_index = {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(proof_reader.funding_output_index().raw_data());
+        u32::from_le_bytes(buf)
+    };
+
     let vout = Vout::new(proof_reader.vout().raw_data())?;
-    let tx_out = vout.index(funding_output_index.into())?;
+    let tx_out = vout.index(funding_output_index as usize)?;
     let script_pubkey = tx_out.script_pubkey();
     debug!("script_pubkey payload: {:?}", script_pubkey.payload()?);
     match script_pubkey.payload()? {
         PayloadType::WPKH(_) => {
-            let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
+            let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32())
+                .expect("bech32 encode should not return error");
             debug!(
-                "hex format: addr: {}, x_lock_address: {}",
+                "hex format: addr: {}, expect_address: {}",
                 hex::encode(addr.as_bytes().to_vec()),
-                hex::encode(data.x_lock_address.as_ref().to_vec())
+                hex::encode(expect_address.as_ref().to_vec())
             );
             debug!(
-                "addr: {}, x_lock_address: {}",
+                "addr: {}, expect_address: {}",
                 String::from_utf8(addr.as_bytes().to_vec()).unwrap(),
-                String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+                String::from_utf8(expect_address.as_ref().to_vec()).unwrap()
             );
             if addr.as_bytes() != expect_address {
                 return Err(Error::WrongFundingAddr);
@@ -146,15 +165,159 @@ pub fn verify_btc_witness(
         }
         _ => return Err(Error::UnsupportedFundingType),
     }
+
     let value = tx_out.value() as u128;
     debug!("actual value: {}, expect: {}", value, expect_value);
     if value < expect_value {
         return Err(Error::FundingNotEnough);
     }
-    Ok(BtcExtraView {
-        lock_tx_hash: tx_hash,
-        lock_vout_index: funding_output_index as u32,
-    })
+    if is_return_vin {
+        let funding_input_index = {
+            let mut buf = [0u8; 4];
+            buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
+            u32::from_le_bytes(buf)
+        };
+        let vin = Vin::new(proof_reader.vin().raw_data())?;
+        let tx_in = vin.index(funding_input_index as usize)?;
+        debug!(
+            "vin tx_id {}",
+            hex::encode(tx_in.outpoint().txid_le().as_ref().as_ref())
+        );
+        debug!("vin output index {}", tx_in.outpoint().vout_index());
+        Ok(BtcExtraView {
+            lock_tx_hash: tx_in.outpoint().txid_le().as_ref().as_ref().into(),
+            lock_vout_index: tx_in.outpoint().vout_index(),
+        })
+    } else {
+        Ok(BtcExtraView {
+            lock_tx_hash: tx_hash,
+            lock_vout_index: funding_output_index,
+        })
+    }
+}
+
+pub fn verify_btc_faulty_witness(
+    data: &ToCKBCellDataView,
+    proof: &[u8],
+    cell_dep_index_list: &[u8],
+    is_when_redeeming: bool,
+) -> Result<(), Error> {
+    debug!(
+        "proof: {:?}, cell_dep_index_list: {:?}",
+        proof, cell_dep_index_list
+    );
+    // parse difficulty
+    if cell_dep_index_list.len() != 1 {
+        return Err(Error::InvalidWitness);
+    }
+    let dep_data = load_cell_data(cell_dep_index_list[0].into(), Source::CellDep)?;
+    debug!("dep data is {:?}", &dep_data);
+    if BTCDifficultyReader::verify(&dep_data, false).is_err() {
+        return Err(Error::DifficultyDataInvalid);
+    }
+    let difficulty_reader = BTCDifficultyReader::new_unchecked(&dep_data);
+    debug!("difficulty_reader: {:?}", difficulty_reader);
+    // parse witness
+    if BTCSPVProofReader::verify(proof, false).is_err() {
+        return Err(Error::InvalidWitness);
+    }
+    let proof_reader = BTCSPVProofReader::new_unchecked(proof);
+    debug!("proof_reader: {:?}", proof_reader);
+
+    // verify btc spv
+    verify_btc_spv(proof_reader, difficulty_reader)?;
+
+    // get tx in
+    let funding_input_index = {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
+        u32::from_le_bytes(buf)
+    };
+    let vin = Vin::new(proof_reader.vin().raw_data())?;
+    let tx_in = vin.index(funding_input_index as usize)?;
+
+    // get mint_xt's funding_output info from cell_data
+    let btc_extra = match &data.x_extra {
+        XExtraView::Btc(extra) => Ok(extra),
+        _ => Err(Error::FaultyBtcWitnessInvalid),
+    }?;
+
+    // check if the locked btc is transferred by signer
+    let btc_extra_txid: Vec<u8> = btc_extra.lock_tx_hash.clone().into();
+    debug!(
+        "btc_extra_txid: {},  tx_in.outpoint().txid_le(): {}",
+        hex::encode(btc_extra_txid.as_slice()),
+        hex::encode(tx_in.outpoint().txid_le().as_ref().as_ref())
+    );
+
+    debug!(
+        "btc_extra.lock_vout_index: {},   tx_in.outpoint().vout_index(): {}",
+        btc_extra.lock_vout_index,
+        tx_in.outpoint().vout_index()
+    );
+
+    if tx_in.outpoint().txid_le().as_ref().as_ref() != btc_extra_txid.as_slice()
+        || tx_in.outpoint().vout_index() != btc_extra.lock_vout_index
+    {
+        return Err(Error::FaultyBtcWitnessInvalid);
+    }
+
+    // if is_when_redeeming, check if signer transferred insufficient btc_amount to user_unlock_addr
+    if is_when_redeeming {
+        debug!("verify_btc_faulty_witness is_when_redeeming");
+        // verify transfer amount, to matches
+        let vout = Vout::new(proof_reader.vout().raw_data())?;
+        let mut index: usize = 0;
+        let mut sum_amount: u128 = 0;
+        let expect_address = data.x_unlock_address.as_ref();
+        let lot_amount = data.get_btc_lot_size()?.get_sudt_amount();
+
+        // calc sum_amount which signer transferred to user
+        debug!("begin calc sum_amount which signer transferred to user");
+        loop {
+            let tx_out = match vout.index(index.into()) {
+                Ok(out) => out,
+                Err(_) => {
+                    break;
+                }
+            };
+            index += 1;
+
+            let script_pubkey = tx_out.script_pubkey();
+            match script_pubkey.payload()? {
+                PayloadType::WPKH(_) => {
+                    let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32())
+                        .expect("bech32 encode should not return error");
+                    debug!(
+                        "hex format: addr: {}, x_lock_address: {}",
+                        hex::encode(addr.as_bytes().to_vec()),
+                        hex::encode(data.x_lock_address.as_ref().to_vec())
+                    );
+                    debug!(
+                        "addr: {}, x_unlock_address: {}",
+                        String::from_utf8(addr.as_bytes().to_vec()).unwrap(),
+                        String::from_utf8(expect_address.to_vec()).unwrap()
+                    );
+                    if addr.as_bytes() != expect_address {
+                        continue;
+                    }
+                }
+                _ => continue,
+            }
+
+            sum_amount += tx_out.value() as u128;
+        }
+
+        debug!(
+            "calc sum_amount: {}, lot_amount: {}",
+            sum_amount, lot_amount
+        );
+        if sum_amount >= lot_amount {
+            // it means signer transferred enough amount to user, mismatch FaultyWhenRedeeming condition
+            return Err(Error::FaultyBtcWitnessInvalid);
+        }
+    }
+    Ok(())
 }
 
 pub fn verify_btc_spv(

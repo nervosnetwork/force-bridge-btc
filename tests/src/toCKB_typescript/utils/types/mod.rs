@@ -1,5 +1,6 @@
 pub mod convert;
 pub mod generated;
+pub mod test_case;
 
 #[repr(i8)]
 pub enum Error {
@@ -33,6 +34,20 @@ pub enum Error {
     InputSinceInvalid,
     UndercollateralInvalid,
     WitnessInvalid,
+    XChainAddressInvalid,
+    CollateralInvalid,
+    XTBurnInvalid,
+    InputSignerInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
+
+    // Auction
+    InvalidInputs,
+    InvalidAuctionBidderCell,
+    InvalidTriggerOrSignerCell,
+    InvalidAuctionXTCell,
+    XTAmountInvalid,
 }
 
 #[repr(u8)]

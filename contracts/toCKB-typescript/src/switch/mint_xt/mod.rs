@@ -20,10 +20,10 @@ fn verify_data(
     output_data: &ToCKBCellDataView,
     x_extra: &XExtraView,
 ) -> Result<(), Error> {
-    if input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
-        || input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
+    if input_data.signer_lockscript != output_data.signer_lockscript
+        || input_data.user_lockscript != output_data.user_lockscript
         || input_data.get_raw_lot_size() != output_data.get_raw_lot_size()
-        || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
+        || input_data.x_lock_address != output_data.x_lock_address
         || &output_data.x_extra != x_extra
     {
         return Err(Error::InvalidDataChange);
@@ -55,6 +55,7 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
                 cell_dep_index_list,
                 data.x_lock_address.as_ref(),
                 data.get_btc_lot_size()?.get_sudt_amount(),
+                false,
             )?;
             Ok(XExtraView::Btc(btc_extra))
         }

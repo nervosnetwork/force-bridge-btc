@@ -316,6 +316,12 @@ impl ::core::fmt::Display for BTCSPVProof {
             "funding_output_index",
             self.funding_output_index()
         )?;
+        write!(
+            f,
+            ", {}: {}",
+            "funding_input_index",
+            self.funding_input_index()
+        )?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -326,16 +332,17 @@ impl ::core::fmt::Display for BTCSPVProof {
 impl ::core::default::Default for BTCSPVProof {
     fn default() -> Self {
         let v: Vec<u8> = vec![
-            105, 0, 0, 0, 40, 0, 0, 0, 44, 0, 0, 0, 48, 0, 0, 0, 52, 0, 0, 0, 56, 0, 0, 0, 88, 0,
-            0, 0, 96, 0, 0, 0, 100, 0, 0, 0, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            116, 0, 0, 0, 44, 0, 0, 0, 48, 0, 0, 0, 52, 0, 0, 0, 56, 0, 0, 0, 60, 0, 0, 0, 92, 0,
+            0, 0, 100, 0, 0, 0, 104, 0, 0, 0, 108, 0, 0, 0, 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0,
         ];
         BTCSPVProof::new_unchecked(v.into())
     }
 }
 impl BTCSPVProof {
-    pub const FIELD_COUNT: usize = 9;
+    pub const FIELD_COUNT: usize = 10;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -352,11 +359,11 @@ impl BTCSPVProof {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn version(&self) -> Byte4 {
+    pub fn version(&self) -> Uint32 {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        Byte4::new_unchecked(self.0.slice(start..end))
+        Uint32::new_unchecked(self.0.slice(start..end))
     }
     pub fn vin(&self) -> Bytes {
         let slice = self.as_slice();
@@ -370,11 +377,11 @@ impl BTCSPVProof {
         let end = molecule::unpack_number(&slice[16..]) as usize;
         Bytes::new_unchecked(self.0.slice(start..end))
     }
-    pub fn locktime(&self) -> Byte4 {
+    pub fn locktime(&self) -> Uint32 {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
         let end = molecule::unpack_number(&slice[20..]) as usize;
-        Byte4::new_unchecked(self.0.slice(start..end))
+        Uint32::new_unchecked(self.0.slice(start..end))
     }
     pub fn tx_id(&self) -> Byte32 {
         let slice = self.as_slice();
@@ -400,14 +407,20 @@ impl BTCSPVProof {
         let end = molecule::unpack_number(&slice[36..]) as usize;
         Bytes::new_unchecked(self.0.slice(start..end))
     }
-    pub fn funding_output_index(&self) -> Byte {
+    pub fn funding_output_index(&self) -> Uint32 {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[36..]) as usize;
+        let end = molecule::unpack_number(&slice[40..]) as usize;
+        Uint32::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn funding_input_index(&self) -> Uint32 {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[40..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[40..]) as usize;
-            Byte::new_unchecked(self.0.slice(start..end))
+            let end = molecule::unpack_number(&slice[44..]) as usize;
+            Uint32::new_unchecked(self.0.slice(start..end))
         } else {
-            Byte::new_unchecked(self.0.slice(start..))
+            Uint32::new_unchecked(self.0.slice(start..))
         }
     }
     pub fn as_reader<'r>(&'r self) -> BTCSPVProofReader<'r> {
@@ -446,6 +459,7 @@ impl molecule::prelude::Entity for BTCSPVProof {
             .headers(self.headers())
             .intermediate_nodes(self.intermediate_nodes())
             .funding_output_index(self.funding_output_index())
+            .funding_input_index(self.funding_input_index())
     }
 }
 #[derive(Clone, Copy)]
@@ -486,6 +500,12 @@ impl<'r> ::core::fmt::Display for BTCSPVProofReader<'r> {
             "funding_output_index",
             self.funding_output_index()
         )?;
+        write!(
+            f,
+            ", {}: {}",
+            "funding_input_index",
+            self.funding_input_index()
+        )?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -494,7 +514,7 @@ impl<'r> ::core::fmt::Display for BTCSPVProofReader<'r> {
     }
 }
 impl<'r> BTCSPVProofReader<'r> {
-    pub const FIELD_COUNT: usize = 9;
+    pub const FIELD_COUNT: usize = 10;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -511,11 +531,11 @@ impl<'r> BTCSPVProofReader<'r> {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn version(&self) -> Byte4Reader<'r> {
+    pub fn version(&self) -> Uint32Reader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        Byte4Reader::new_unchecked(&self.as_slice()[start..end])
+        Uint32Reader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn vin(&self) -> BytesReader<'r> {
         let slice = self.as_slice();
@@ -529,11 +549,11 @@ impl<'r> BTCSPVProofReader<'r> {
         let end = molecule::unpack_number(&slice[16..]) as usize;
         BytesReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn locktime(&self) -> Byte4Reader<'r> {
+    pub fn locktime(&self) -> Uint32Reader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
         let end = molecule::unpack_number(&slice[20..]) as usize;
-        Byte4Reader::new_unchecked(&self.as_slice()[start..end])
+        Uint32Reader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn tx_id(&self) -> Byte32Reader<'r> {
         let slice = self.as_slice();
@@ -559,14 +579,20 @@ impl<'r> BTCSPVProofReader<'r> {
         let end = molecule::unpack_number(&slice[36..]) as usize;
         BytesReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn funding_output_index(&self) -> ByteReader<'r> {
+    pub fn funding_output_index(&self) -> Uint32Reader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[36..]) as usize;
+        let end = molecule::unpack_number(&slice[40..]) as usize;
+        Uint32Reader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn funding_input_index(&self) -> Uint32Reader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[40..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[40..]) as usize;
-            ByteReader::new_unchecked(&self.as_slice()[start..end])
+            let end = molecule::unpack_number(&slice[44..]) as usize;
+            Uint32Reader::new_unchecked(&self.as_slice()[start..end])
         } else {
-            ByteReader::new_unchecked(&self.as_slice()[start..])
+            Uint32Reader::new_unchecked(&self.as_slice()[start..])
         }
     }
 }
@@ -621,33 +647,35 @@ impl<'r> molecule::prelude::Reader<'r> for BTCSPVProofReader<'r> {
         if offsets.windows(2).any(|i| i[0] > i[1]) {
             return ve!(Self, OffsetsNotMatch);
         }
-        Byte4Reader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        Uint32Reader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         BytesReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         BytesReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
-        Byte4Reader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
+        Uint32Reader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
         Byte32Reader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
         Uint64Reader::verify(&slice[offsets[5]..offsets[6]], compatible)?;
         BytesReader::verify(&slice[offsets[6]..offsets[7]], compatible)?;
         BytesReader::verify(&slice[offsets[7]..offsets[8]], compatible)?;
-        ByteReader::verify(&slice[offsets[8]..offsets[9]], compatible)?;
+        Uint32Reader::verify(&slice[offsets[8]..offsets[9]], compatible)?;
+        Uint32Reader::verify(&slice[offsets[9]..offsets[10]], compatible)?;
         Ok(())
     }
 }
 #[derive(Debug, Default)]
 pub struct BTCSPVProofBuilder {
-    pub(crate) version: Byte4,
+    pub(crate) version: Uint32,
     pub(crate) vin: Bytes,
     pub(crate) vout: Bytes,
-    pub(crate) locktime: Byte4,
+    pub(crate) locktime: Uint32,
     pub(crate) tx_id: Byte32,
     pub(crate) index: Uint64,
     pub(crate) headers: Bytes,
     pub(crate) intermediate_nodes: Bytes,
-    pub(crate) funding_output_index: Byte,
+    pub(crate) funding_output_index: Uint32,
+    pub(crate) funding_input_index: Uint32,
 }
 impl BTCSPVProofBuilder {
-    pub const FIELD_COUNT: usize = 9;
-    pub fn version(mut self, v: Byte4) -> Self {
+    pub const FIELD_COUNT: usize = 10;
+    pub fn version(mut self, v: Uint32) -> Self {
         self.version = v;
         self
     }
@@ -659,7 +687,7 @@ impl BTCSPVProofBuilder {
         self.vout = v;
         self
     }
-    pub fn locktime(mut self, v: Byte4) -> Self {
+    pub fn locktime(mut self, v: Uint32) -> Self {
         self.locktime = v;
         self
     }
@@ -679,8 +707,12 @@ impl BTCSPVProofBuilder {
         self.intermediate_nodes = v;
         self
     }
-    pub fn funding_output_index(mut self, v: Byte) -> Self {
+    pub fn funding_output_index(mut self, v: Uint32) -> Self {
         self.funding_output_index = v;
+        self
+    }
+    pub fn funding_input_index(mut self, v: Uint32) -> Self {
+        self.funding_input_index = v;
         self
     }
 }
@@ -698,6 +730,7 @@ impl molecule::prelude::Builder for BTCSPVProofBuilder {
             + self.headers.as_slice().len()
             + self.intermediate_nodes.as_slice().len()
             + self.funding_output_index.as_slice().len()
+            + self.funding_input_index.as_slice().len()
     }
     fn write<W: ::molecule::io::Write>(&self, writer: &mut W) -> ::molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -720,6 +753,8 @@ impl molecule::prelude::Builder for BTCSPVProofBuilder {
         total_size += self.intermediate_nodes.as_slice().len();
         offsets.push(total_size);
         total_size += self.funding_output_index.as_slice().len();
+        offsets.push(total_size);
+        total_size += self.funding_input_index.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
@@ -733,6 +768,7 @@ impl molecule::prelude::Builder for BTCSPVProofBuilder {
         writer.write_all(self.headers.as_slice())?;
         writer.write_all(self.intermediate_nodes.as_slice())?;
         writer.write_all(self.funding_output_index.as_slice())?;
+        writer.write_all(self.funding_input_index.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {

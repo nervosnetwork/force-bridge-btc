@@ -109,6 +109,19 @@ impl ToCKBCellDataView {
             XExtraView::Eth(_) => XChainKind::Eth,
         }
     }
+
+    pub fn get_lot_xt_amount(&self) -> Result<u128, Error> {
+        Ok(match self.get_xchain_kind() {
+            XChainKind::Btc => {
+                let btc_lot_size = self.get_btc_lot_size()?;
+                btc_lot_size.get_sudt_amount()
+            }
+            XChainKind::Eth => {
+                let eth_lot_size = self.get_eth_lot_size()?;
+                eth_lot_size.get_sudt_amount()
+            }
+        })
+    }
 }
 
 #[repr(u8)]

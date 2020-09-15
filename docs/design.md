@@ -2,9 +2,9 @@
 
 ## Abstract
 
-The toCKB is an asset cross-chain system, which consists of a bunch of protocols, CKB contracts and off-chain modules, to support decentralized, redeemable token on CKB supply-pegged to any asset on any blockchain.
+The toCKB is an asset cross-chain system, which consists of a bunch of protocols, CKB contracts and off-chain modules, to support decentralized, redeemable token issued on `CKB CHAIN` supply-pegged to any asset on any blockchain.
 
-As long as you can transfer an asset on a blockchain and construct a spv proof to verify the transaction, you can implement the spv verification logic in the toCKB contract. Then anyone can use the contract to mint a token on CKB pegged to the asset by locking the asset. They can transfer the token and burn it to redeem the asset on original blockchain as well. The peg is implemented using an approach mixed with bonding and spv proof verification, which involves a new role called signer. Signers act as a guard on the original blockchain to ensure the asset is locked when minting token and send the asset back to user when redeeming. Anyone can be signer by bonding an amount of CKB that ensures their behavior in the system remains honest, at risk of losing their bond in case of dishonesty or under-collateralization.
+As long as you can transfer an asset on a blockchain and construct a spv proof to verify the transaction, you can implement the spv verification logic in the toCKB contract. Then anyone can use the contract to mint a crosschain token on `CKB CHAIN` pegged to the asset by locking the asset on original blockchain . They can transfer the minted token and burn it to redeem the asset on the original blockchain as well. The peg is implemented using an approch mixed with bonding and spv proof verification, which involves a new role called signer. Signers act as a guard on the original blockchain to ensure the asset is locked when minting a crosschain token and send the asset back to user when redeeming. Anyone can be signer by bonding an amount of CKB that ensures their behavior in the system remains honest, at risk of losing their bond in case of dishonesty or undercollateralization.
 
 The CKB contracts mediates the cross-chain's lifecycle, including request, bonding,  redemption and failure-handle. The off-chain modules help users use the whole system painlessly, including constructing transactions, monitoring CKB as well as other blockchains to act automatically, generating spv proof and so on.
 
@@ -14,7 +14,8 @@ We will support BTC and ETH in this stage, and provide a guide document to suppo
 
 ### A Note on Naming
 
-The system, in its entirety, is called "toCKB". The blockchain is referred as "XChain" and the asset as "XAsset". The token on CKB pegged to XAsset is referred as "XToken", sometimes it can be shorten as "XT".
+
+The system, in its entirety, is called "toCKB". The original blockchain is refered as "XChain" and the asset as "XAsset". The minted crosschain token on `CKB CHAIN` pegged to XAsset is refered as "XToken", sometimes it can be shorten as "XT".
 
 For BTC and ETH, the names mapping is like below:
 
@@ -90,7 +91,7 @@ signer -> CKB: Withdraw Collateral
 ```
 -->
 
-1. User makes a deposit request on CKB, along with some pledge. If someone bonds as signer but the user does not follow up, the user will lose the pledge to compensate the loss of signer's CKB liquidity.
+1. User makes a deposit request on `CKB CHAIN`, along with some pledge. If someone bonds CKB as signer but the user does not follow up, the user will lose the pledge to compensate the loss of signer's CKB liquidity.
 2. Someone bonds CKB to become a signer, provide a XChain address for user to deposit XAsset.
 3. User transfers their XAsset to signer on XChain.
 4. User generates the transaction proof and relays it to CKB, mints 1-to-1 CKB token -- XToken. Signer gets some percent of XToken as fee, e.g. 0.1%.
