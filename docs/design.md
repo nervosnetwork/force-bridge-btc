@@ -14,6 +14,7 @@ We will support BTC and ETH in this stage, and provide a guide document to suppo
 
 ### A Note on Naming
 
+
 The system, in its entirety, is called "toCKB". The original blockchain is refered as "XChain" and the asset as "XAsset". The minted crosschain token on `CKB CHAIN` pegged to XAsset is refered as "XToken", sometimes it can be shorten as "XT".
 
 For BTC and ETH, the names mapping is like below:
@@ -58,9 +59,9 @@ The core concepts of toCKB are:
 - Because we want to support the chains lack of ability to verify CKB spv proof, we involve a new role called signer to replace the contract in spv based bridge. Users transfer their asset to signer's address instead of the contract to lock.
 - Anyone can be signer by bonding an amount of CKB that ensures their behavior in the system remains honest. The exchange rate may changes over time, so the value of CKB have to be more than the locked asset for security. The collateral value percent is configurable, which is 150% in this stage.
 - With the help of signer, we can handle both mint and redeem logic on CKB by spv proof verification:
-    - When user locked their XAsset on XChain(which means they transfered their XAsset to signer), toCKB contract can verify the proof and mint XToken on CKB, owned by user.
+    - When user locked their XAsset on XChain(which means they transferred their XAsset to signer), toCKB contract can verify the proof and mint XToken on CKB, owned by user.
     - When user burns their XToken on CKB, signer has to send the XAsset to user on XChain and submit the proof to CKB. toCKB contract verifies the proof, and redeem the bond of signers.
-- There will be additional logics in toCKB contract to handle unexpected situations, e.g. signer incentive, signer fraud, undercollateralization caused by the exchange rate changes.
+- There will be additional logics in toCKB contract to handle unexpected situations, e.g. signer incentive, signer fraud, under-collateralization caused by the exchange rate changes.
 
 ## Process
 
@@ -99,7 +100,7 @@ signer -> CKB: Withdraw Collateral
 7. Signer sends the XAsset back to user on XChain.
 8. Signer generates the transaction proof, relays it on CKB, and withdraws his collateral back.
 
-### Handle Failture
+### Handle Failure
 
 There are two kinds of failure: abort and faulty.
 
@@ -164,4 +165,4 @@ In this stage, we will make some scripts or command line tools to help users and
 There are 3 modules in plan right now:
 - A user client for users to deal with the deposit request, mint XT and other actions.
 - A signer client for signers to deal with bonding, redemption and other actions.
-- A guard service for users who want to get profits by watching frand behaviors on CKB and triggering the liquidation.
+- A guard service for users who want to get profits by watching fraud behaviors on CKB and triggering the liquidation.
