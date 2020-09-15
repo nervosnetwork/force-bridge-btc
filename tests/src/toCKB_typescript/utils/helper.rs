@@ -1,15 +1,13 @@
-use crate::toCKB_typescript::utils::types::{
-    generated::{
-        basic, btc_difficulty, mint_xt_witness, BtcExtra, Byte32, ToCKBCellData, Uint32, XExtra,
-        XExtraUnion,
-    },
-    test_case::*,
-};
+use crate::toCKB_typescript::utils::test_case::*;
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{bytes::Bytes, core::TransactionBuilder, packed::*, prelude::*};
 use molecule::prelude::*;
 use std::vec::Vec;
+use tockb_types::{
+    generated::{basic, btc_difficulty, mint_xt_witness},
+    tockb_cell_data::{BtcExtra, ToCKBCellData, XExtra, XExtraUnion},
+};
 
 pub const MAX_CYCLES: u64 = 100_000_000;
 
@@ -41,9 +39,9 @@ fn build_toCKB_data(status: u8, data: ToCKBCellDataTest) -> Bytes {
 
     let x_extra = match data.x_extra {
         XExtraView::Btc(btc_extra) => {
-            let lock_tx_hash = Byte32::new_unchecked(btc_extra.lock_tx_hash);
+            let lock_tx_hash = basic::Byte32::new_unchecked(btc_extra.lock_tx_hash);
             let lock_vout_index = Vec::<u8>::from(&btc_extra.lock_vout_index.to_le_bytes()[..]);
-            let lock_vout_index = Uint32::new_unchecked(Bytes::from(lock_vout_index));
+            let lock_vout_index = basic::Uint32::new_unchecked(Bytes::from(lock_vout_index));
             let btc_extra = BtcExtra::new_builder()
                 .lock_tx_hash(lock_tx_hash)
                 .lock_vout_index(lock_vout_index)

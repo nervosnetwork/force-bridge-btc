@@ -2,6 +2,7 @@
 members = [
     "tests",
     "tools/btc_proof_generator",
+    "types",
 ]
 exclude = [
     "contracts",
