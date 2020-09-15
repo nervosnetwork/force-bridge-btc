@@ -1,0 +1,3 @@
+[submodule "tockb-cli"]
+	path = tockb-cli
+	url = https://github.com/nervosnetwork/tockb-cli.git
