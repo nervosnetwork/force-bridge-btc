@@ -15,25 +15,28 @@ use bitcoin_spv::{
 };
 use ckb_std::{
     ckb_constants::Source,
-    ckb_types::{bytes::Bytes, packed::Script, prelude::Unpack},
+    ckb_types::{bytes::Bytes, packed::Script},
     debug,
     high_level::{load_cell_capacity, load_cell_data, load_cell_type, load_script},
 };
 use core::{convert::From, result::Result};
-use int_enum::IntEnum;
 use molecule::prelude::Reader;
 use primitive_types::U256;
-pub use tockb_types::tockb_cell::XChainKind;
+use tockb_types::generated::basic::OutPoint;
+pub use tockb_types::tockb_cell::{ToCKBTypeArgsView, XChainKind};
+
+pub fn get_toCKB_type_args() -> Result<ToCKBTypeArgsView, Error> {
+    let toCKB_type_args = load_script()?.args().raw_data();
+    let toCKB_type_args = ToCKBTypeArgsView::from_slice(toCKB_type_args.as_ref())?;
+    Ok(toCKB_type_args)
+}
 
 pub fn get_xchain_kind() -> Result<XChainKind, Error> {
-    let script_args: Bytes = load_script()?.args().unpack();
-    if script_args.len() != 1 {
-        return Err(Error::Encoding);
-    }
-    let mut buf = [0u8; 1];
-    buf.copy_from_slice(script_args.as_ref());
-    let kind = u8::from_le_bytes(buf);
-    XChainKind::from_int(kind).map_err(|_| Error::Encoding)
+    Ok(get_toCKB_type_args()?.xchain_kind)
+}
+
+pub fn get_cell_id() -> Result<OutPoint, Error> {
+    Ok(get_toCKB_type_args()?.cell_id)
 }
 
 pub fn get_price() -> Result<u128, Error> {

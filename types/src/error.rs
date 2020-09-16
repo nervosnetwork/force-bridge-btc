@@ -11,6 +11,7 @@ pub enum Error {
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
+    CellIDInvalid,
     // MintXT Error
     InvalidDataChange,
     InvalidWitness,

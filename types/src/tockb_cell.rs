@@ -1,9 +1,8 @@
 use crate::error::Error;
-use crate::generated::tockb_cell_data::XExtra;
 use crate::generated::{
     basic,
     tockb_cell_data::{
-        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, XExtraUnion, XExtraUnionReader,
+        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, XExtraUnion, XExtraUnionReader, XExtra, ToCKBTypeArgsReader
     },
 };
 use core::convert::TryInto;
@@ -227,5 +226,24 @@ impl EthLotSize {
             Three => ETH_UNIT * 3,
             Four => ETH_UNIT * 4,
         }
+    }
+}
+
+pub struct ToCKBTypeArgsView {
+    pub xchain_kind: XChainKind,
+    pub cell_id: basic::OutPoint,
+}
+
+impl ToCKBTypeArgsView {
+    pub fn from_slice(slice: &[u8]) -> Result<ToCKBTypeArgsView, Error> {
+        ToCKBTypeArgsReader::verify(slice, false).map_err(|_|Error::Encoding)?;
+        let args_reader = ToCKBTypeArgsReader::new_unchecked(slice);
+        let xchain_kind = args_reader.xchain_kind().as_slice()[0];
+        let xchain_kind = XChainKind::from_int(xchain_kind)?;
+        let cell_id = args_reader.cell_id().to_entity();
+        Ok(ToCKBTypeArgsView {
+            xchain_kind,
+            cell_id,
+        })
     }
 }

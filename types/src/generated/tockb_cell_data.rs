@@ -1275,3 +1275,169 @@ impl molecule::prelude::Builder for EthExtraBuilder {
         EthExtra::new_unchecked(inner.into())
     }
 }
+#[derive(Clone)]
+pub struct ToCKBTypeArgs(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for ToCKBTypeArgs {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for ToCKBTypeArgs {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for ToCKBTypeArgs {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "xchain_kind", self.xchain_kind())?;
+        write!(f, ", {}: {}", "cell_id", self.cell_id())?;
+        write!(f, " }}")
+    }
+}
+impl ::core::default::Default for ToCKBTypeArgs {
+    fn default() -> Self {
+        let v: Vec<u8> = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        ToCKBTypeArgs::new_unchecked(v.into())
+    }
+}
+impl ToCKBTypeArgs {
+    pub const TOTAL_SIZE: usize = 37;
+    pub const FIELD_SIZES: [usize; 2] = [1, 36];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn xchain_kind(&self) -> Byte {
+        Byte::new_unchecked(self.0.slice(0..1))
+    }
+    pub fn cell_id(&self) -> OutPoint {
+        OutPoint::new_unchecked(self.0.slice(1..37))
+    }
+    pub fn as_reader<'r>(&'r self) -> ToCKBTypeArgsReader<'r> {
+        ToCKBTypeArgsReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for ToCKBTypeArgs {
+    type Builder = ToCKBTypeArgsBuilder;
+    const NAME: &'static str = "ToCKBTypeArgs";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        ToCKBTypeArgs(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        ToCKBTypeArgsReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        ToCKBTypeArgsReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder()
+            .xchain_kind(self.xchain_kind())
+            .cell_id(self.cell_id())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct ToCKBTypeArgsReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for ToCKBTypeArgsReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for ToCKBTypeArgsReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for ToCKBTypeArgsReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "xchain_kind", self.xchain_kind())?;
+        write!(f, ", {}: {}", "cell_id", self.cell_id())?;
+        write!(f, " }}")
+    }
+}
+impl<'r> ToCKBTypeArgsReader<'r> {
+    pub const TOTAL_SIZE: usize = 37;
+    pub const FIELD_SIZES: [usize; 2] = [1, 36];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn xchain_kind(&self) -> ByteReader<'r> {
+        ByteReader::new_unchecked(&self.as_slice()[0..1])
+    }
+    pub fn cell_id(&self) -> OutPointReader<'r> {
+        OutPointReader::new_unchecked(&self.as_slice()[1..37])
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for ToCKBTypeArgsReader<'r> {
+    type Entity = ToCKBTypeArgs;
+    const NAME: &'static str = "ToCKBTypeArgsReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        ToCKBTypeArgsReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], _compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len != Self::TOTAL_SIZE {
+            return ve!(Self, TotalSizeNotMatch, Self::TOTAL_SIZE, slice_len);
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Default)]
+pub struct ToCKBTypeArgsBuilder {
+    pub(crate) xchain_kind: Byte,
+    pub(crate) cell_id: OutPoint,
+}
+impl ToCKBTypeArgsBuilder {
+    pub const TOTAL_SIZE: usize = 37;
+    pub const FIELD_SIZES: [usize; 2] = [1, 36];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn xchain_kind(mut self, v: Byte) -> Self {
+        self.xchain_kind = v;
+        self
+    }
+    pub fn cell_id(mut self, v: OutPoint) -> Self {
+        self.cell_id = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for ToCKBTypeArgsBuilder {
+    type Entity = ToCKBTypeArgs;
+    const NAME: &'static str = "ToCKBTypeArgsBuilder";
+    fn expected_length(&self) -> usize {
+        Self::TOTAL_SIZE
+    }
+    fn write<W: ::molecule::io::Write>(&self, writer: &mut W) -> ::molecule::io::Result<()> {
+        writer.write_all(self.xchain_kind.as_slice())?;
+        writer.write_all(self.cell_id.as_slice())?;
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        ToCKBTypeArgs::new_unchecked(inner.into())
+    }
+}
