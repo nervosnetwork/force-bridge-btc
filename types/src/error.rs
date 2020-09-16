@@ -1,6 +1,4 @@
-pub mod convert;
-pub mod generated;
-pub mod test_case;
+use int_enum::{IntEnum, IntEnumError};
 
 #[repr(i8)]
 pub enum Error {
@@ -50,37 +48,29 @@ pub enum Error {
     XTAmountInvalid,
 }
 
-#[repr(u8)]
-pub enum ToCKBStatus {
-    Initial = 1,
-    Bonded = 2,
-    Warranty = 3,
-    Redeeming = 4,
-    SignerTimeout = 5,
-    Undercollateral = 6,
-    FaultyWhenWarranty = 7,
-    FaultyWhenRedeeming = 8,
+impl<T: IntEnum> From<IntEnumError<T>> for Error {
+    fn from(_err: IntEnumError<T>) -> Self {
+        Error::Encoding
+    }
 }
 
-#[repr(u8)]
-pub enum BtcLotSize {
-    Quarter = 1,
-    Half = 2,
-    Single = 3,
+#[cfg(feature = "contract")]
+impl From<ckb_std::error::SysError> for Error {
+    fn from(err: ckb_std::error::SysError) -> Self {
+        use ckb_std::error::SysError::*;
+        match err {
+            IndexOutOfBound => Self::IndexOutOfBound,
+            ItemMissing => Self::ItemMissing,
+            LengthNotEnough(_) => Self::LengthNotEnough,
+            Encoding => Self::Encoding,
+            Unknown(err_code) => panic!("unexpected sys error {}", err_code),
+        }
+    }
 }
 
-#[repr(u8)]
-pub enum EthLotSize {
-    Quarter = 1,
-    Half = 2,
-    Single = 3,
-    Two = 4,
-    Three = 5,
-    Four = 6,
-}
-
-#[repr(u8)]
-pub enum XChainKind {
-    Btc = 1,
-    Eth = 2,
+#[cfg(feature = "contract")]
+impl From<bitcoin_spv::types::SPVError> for Error {
+    fn from(_err: bitcoin_spv::types::SPVError) -> Self {
+        Error::SpvProofInvalid
+    }
 }

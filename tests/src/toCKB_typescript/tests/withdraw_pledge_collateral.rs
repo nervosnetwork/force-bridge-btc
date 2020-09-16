@@ -1,16 +1,19 @@
-use super::{Error, Script, ToCKBCellData};
-use crate::toCKB_typescript::utils::config::*;
-use crate::*;
+use crate::Loader;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
     bytes::Bytes,
     core::{TransactionBuilder, TransactionView},
-    packed::*,
+    packed::{CellDep, CellInput, CellOutput},
     prelude::*,
 };
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use molecule::prelude::*;
-use toCKB_typescript::utils::types::generated::*;
+use tockb_types::{
+    config::*,
+    error::Error,
+    generated::basic,
+    tockb_cell_data::{BtcExtra, EthExtra, ToCKBCellData, XExtra, XExtraUnion},
+};
 
 const MAX_CYCLES: u64 = 10_000_000;
 
@@ -103,7 +106,7 @@ fn build_test_context(
     let input_toCKB_data = ToCKBCellData::new_builder()
         .status(Byte::new(2u8))
         .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
+        .user_lockscript(basic::Script::new_builder().build())
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set([Byte::new(1u8); 20].to_vec())
