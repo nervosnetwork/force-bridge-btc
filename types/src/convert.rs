@@ -1,7 +1,7 @@
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-#[cfg(not(feature = "std"))]
 use alloc::borrow::ToOwned;
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 
 use crate::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint64};
 use core::convert::TryFrom;
