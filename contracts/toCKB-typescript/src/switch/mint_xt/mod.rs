@@ -3,11 +3,11 @@ use crate::utils::{
     config::{
         PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, XT_CELL_CAPACITY,
     },
-    tools::{get_xchain_kind, XChainKind},
+    tools::{get_xchain_kind, is_XT_typescript, verify_btc_witness, XChainKind},
     types::{
         btc_difficulty::BTCDifficultyReader,
         mint_xt_witness::{BTCSPVProofReader, ETHSPVProofReader, MintXTWitnessReader},
-        Error, ToCKBCellDataView,
+        Error, ToCKBCellDataView, XExtraView
     },
 };
 use alloc::string::String;
@@ -31,15 +31,18 @@ use eth_spv_lib::{eth_types::*, ethspv};
 use molecule::prelude::{Entity, Reader};
 use primitive_types::U256;
 use rlp;
+use crate::utils::types::EthExtraView;
 
 fn verify_data(
     input_data: &ToCKBCellDataView,
     output_data: &ToCKBCellDataView,
+    x_extra: &XExtraView,
 ) -> Result<(), Error> {
-    if input_data.signer_lockscript.as_ref() != output_data.signer_lockscript.as_ref()
-        || input_data.user_lockscript.as_ref() != output_data.user_lockscript.as_ref()
+    if input_data.signer_lockscript != output_data.signer_lockscript
+        || input_data.user_lockscript != output_data.user_lockscript
         || input_data.get_raw_lot_size() != output_data.get_raw_lot_size()
-        || input_data.x_lock_address.as_ref() != output_data.x_lock_address.as_ref()
+        || input_data.x_lock_address != output_data.x_lock_address
+        || &output_data.x_extra != x_extra
     {
         return Err(Error::InvalidDataChange);
     }
@@ -47,7 +50,7 @@ fn verify_data(
 }
 
 /// ensure transfer happen on XChain by verifying the spv proof
-fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
+fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
     let witness_args = load_witness_args(0, Source::GroupInput)?.input_type();
     debug!("witness_args: {:?}", &witness_args);
     if witness_args.is_none() {
@@ -62,9 +65,21 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     debug!("witness: {:?}", witness);
     let proof = witness.spv_proof().raw_data();
     let cell_dep_index_list = witness.cell_dep_index_list().raw_data();
-    match get_xchain_kind()? {
-        XChainKind::Btc => verify_btc_witness(data, proof, cell_dep_index_list),
-        XChainKind::Eth => verify_eth_witness(data, proof, cell_dep_index_list),
+    match data.get_xchain_kind() {
+        XChainKind::Btc => {
+            let btc_extra = verify_btc_witness(
+                data,
+                proof,
+                cell_dep_index_list,
+                data.x_lock_address.as_ref(),
+                data.get_btc_lot_size()?.get_sudt_amount(),
+                false,
+            )?;
+            Ok(XExtraView::Btc(btc_extra))
+        }
+        XChainKind::Eth => {
+            let eth_extra = verify_eth_witness(data, proof, cell_dep_index_list)?;
+        Ok(XExtraView::Eth(eth_extra))},
     }
 }
 
@@ -72,7 +87,7 @@ fn verify_eth_witness(
     data: &ToCKBCellDataView,
     proof: &[u8],
     cell_dep_index_list: &[u8],
-) -> Result<(), Error> {
+) -> Result<EthExtraView, Error> {
     debug!(
         "proof: {:?}, cell_dep_index_list: {:?}",
         proof, cell_dep_index_list
@@ -104,7 +119,6 @@ fn verify_eth_witness(
         proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
     }
     debug!("proof is {:?}", &proof);
-    //FIXME: check x_lock_address
     let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).unwrap();
     debug!("log_entry is {:?}", &log_entry);
     let receipt: Receipt = rlp::decode(receipt_data.as_slice()).unwrap();
@@ -115,158 +129,23 @@ fn verify_eth_witness(
         hex::encode(locker_address.to_vec()),
         String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
     );
-    if hex::encode(locker_address.to_vec())
-        != String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
-    {
-        return Err(Error::WrongFundingAddr);
+    // assert_eq!(hex::encode(locker_address.to_vec()),
+    //            String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap(),
+    //            "the x lock address should be equal with the address from data.");
+    if hex::encode(locker_address.to_vec()) != String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap() {
+        return Err(Error::WrongFundingAddr)
     }
-    if !ethspv::verify_log_entry(
+    assert_eq!(ethspv::verify_log_entry(
         u64::from_le_bytes(log_index),
         log_entry_data,
         u64::from_le_bytes(receipt_index),
         receipt_data,
         H256(receipts_root.into()),
         proof,
-    ) {
-        return Err(Error::BadMerkleProof);
-    }
-    Ok(())
-}
-
-fn verify_btc_witness(
-    data: &ToCKBCellDataView,
-    proof: &[u8],
-    cell_dep_index_list: &[u8],
-) -> Result<(), Error> {
-    debug!(
-        "proof: {:?}, cell_dep_index_list: {:?}",
-        proof, cell_dep_index_list
-    );
-    // parse difficulty
-    if cell_dep_index_list.len() != 1 {
-        return Err(Error::InvalidWitness);
-    }
-    let dep_data = load_cell_data(cell_dep_index_list[0].into(), Source::CellDep)?;
-    debug!("dep data is {:?}", &dep_data);
-    if BTCDifficultyReader::verify(&dep_data, false).is_err() {
-        return Err(Error::DifficultyDataInvalid);
-    }
-    let difficulty_reader = BTCDifficultyReader::new_unchecked(&dep_data);
-    debug!("difficulty_reader: {:?}", difficulty_reader);
-    // parse witness
-    if BTCSPVProofReader::verify(proof, false).is_err() {
-        return Err(Error::InvalidWitness);
-    }
-    let proof_reader = BTCSPVProofReader::new_unchecked(proof);
-    debug!("proof_reader: {:?}", proof_reader);
-    // verify btc spv
-    verify_btc_spv(proof_reader, difficulty_reader)?;
-    // verify transfer amount, to matches
-    let funding_output_index: u8 = proof_reader.funding_output_index().into();
-    let vout = Vout::new(proof_reader.vout().raw_data())?;
-    let tx_out = vout.index(funding_output_index.into())?;
-    let script_pubkey = tx_out.script_pubkey();
-    debug!("script_pubkey payload: {:?}", script_pubkey.payload()?);
-    match script_pubkey.payload()? {
-        PayloadType::WPKH(_) => {
-            let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32()).unwrap();
-            debug!(
-                "hex format: addr: {}, x_lock_address: {}",
-                hex::encode(addr.as_bytes().to_vec()),
-                hex::encode(data.x_lock_address.as_ref().to_vec())
-            );
-            debug!(
-                "addr: {}, x_lock_address: {}",
-                String::from_utf8(addr.as_bytes().to_vec()).unwrap(),
-                String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
-            );
-            if addr.as_bytes() != data.x_lock_address.as_ref() {
-                return Err(Error::WrongFundingAddr);
-            }
-        }
-        _ => return Err(Error::UnsupportedFundingType),
-    }
-    let expect_value = data.get_btc_lot_size()?.get_sudt_amount();
-    let value = tx_out.value() as u128;
-    debug!("actual value: {}, expect: {}", value, expect_value);
-    if value < expect_value {
-        return Err(Error::FundingNotEnough);
-    }
-    Ok(())
-}
-
-fn verify_btc_spv(proof: BTCSPVProofReader, difficulty: BTCDifficultyReader) -> Result<(), Error> {
-    debug!("start verify_btc_spv");
-    if !btcspv::validate_vin(proof.vin().raw_data()) {
-        return Err(Error::SpvProofInvalid);
-    }
-    debug!("finish validate_vin");
-    if !btcspv::validate_vout(proof.vout().raw_data()) {
-        return Err(Error::SpvProofInvalid);
-    }
-    debug!("finish validate_vout");
-    let mut ver = [0u8; 4];
-    ver.copy_from_slice(proof.version().raw_data());
-    let mut lock = [0u8; 4];
-    lock.copy_from_slice(proof.locktime().raw_data());
-    debug!("ver: {:?}, lock: {:?}", ver, lock);
-    // btcspv::hash256(&[version, vin.as_ref(), vout.as_ref(), locktime])
-    let vin = Vin::new(proof.vin().raw_data())?;
-    let vout = Vout::new(proof.vout().raw_data())?;
-    debug!("{:?}", &[&ver, vin.as_ref(), vout.as_ref(), &lock]);
-    let tx_id = validatespv::calculate_txid(&ver, &vin, &vout, &lock);
-    debug!("tx_id: {:?}", tx_id);
-    if tx_id.as_ref() != proof.tx_id().raw_data() {
-        return Err(Error::WrongTxId);
-    }
-
-    // verify difficulty
-    let raw_headers = proof.headers();
-    let headers = HeaderArray::new(raw_headers.raw_data())?;
-    let observed_diff = validatespv::validate_header_chain(&headers, false)?;
-    let previous_diff = U256::from_little_endian(difficulty.previous().raw_data());
-    let current_diff = U256::from_little_endian(difficulty.current().raw_data());
-    let first_header_diff = headers.index(0).difficulty();
-    debug!(
-        "previous: {:?}, current: {:?}, first_header_diff: {:?}",
-        previous_diff, current_diff, first_header_diff
-    );
-
-    let req_diff = if first_header_diff == current_diff {
-        current_diff
-    } else if first_header_diff == previous_diff {
-        previous_diff
-    } else {
-        return Err(Error::NotAtCurrentOrPreviousDifficulty);
-    };
-
-    if observed_diff < req_diff * TX_PROOF_DIFFICULTY_FACTOR {
-        return Err(Error::InsufficientDifficulty);
-    }
-    debug!("finish diff verify");
-
-    // verify tx
-    let header = headers.index(headers.len() - 1);
-    let mut idx = [0u8; 8];
-    idx.copy_from_slice(proof.index().raw_data());
-    debug!("tx_id: {}", hex::encode(tx_id.as_ref()));
-    debug!("merkle_root: {}", hex::encode(header.tx_root().as_ref()));
-    debug!(
-        "proof: {}",
-        hex::encode(proof.intermediate_nodes().raw_data())
-    );
-    debug!("index: {}", u64::from_le_bytes(idx));
-    if !validatespv::prove(
-        tx_id,
-        header.tx_root(),
-        &MerkleArray::new(proof.intermediate_nodes().raw_data())?,
-        u64::from_le_bytes(idx),
-    ) {
-        return Err(Error::BadMerkleProof);
-    }
-    debug!("finish merkle proof verify");
-
-    Ok(())
+    ), true, "invalid eth spv proof.");
+    Ok(EthExtraView {
+        dummy: Default::default(),
+    })
 }
 
 fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
@@ -275,11 +154,7 @@ fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     let input_xt_num = QueryIter::new(load_cell_type, Source::Input)
         .filter(|type_opt| type_opt.is_some())
         .map(|type_opt| type_opt.unwrap())
-        .filter(|script| {
-            script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
-                && script.args().raw_data().as_ref() == lock_hash.as_ref()
-                && script.hash_type() == 0u8.into()
-        })
+        .filter(|script| is_XT_typescript(script, lock_hash.as_ref()))
         .count();
     if input_xt_num != 0 {
         return Err(Error::InvalidXTInInputOrOutput);
@@ -287,11 +162,7 @@ fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     let output_xt_num = QueryIter::new(load_cell_type, Source::Output)
         .filter(|type_opt| type_opt.is_some())
         .map(|type_opt| type_opt.unwrap())
-        .filter(|script| {
-            script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
-                && script.args().raw_data().as_ref() == lock_hash.as_ref()
-                && script.hash_type() == 0u8.into()
-        })
+        .filter(|script| is_XT_typescript(script, lock_hash.as_ref()))
         .count();
     debug!("output_xt_num: {}", output_xt_num);
     if output_xt_num != 2 {
@@ -375,10 +246,10 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
     let output_data = toCKB_data_tuple.1.as_ref().expect("should not happen");
     verify_capacity()?;
-    verify_data(input_data, output_data)?;
-    debug!("verify data finish");
-    verify_witness(input_data)?;
+    let x_extra = verify_witness(input_data)?;
     debug!("verify witness finish");
+    verify_data(input_data, output_data, &x_extra)?;
+    debug!("verify data finish");
     verify_xt_issue(input_data)?;
     debug!("verify xt issue finish");
     Ok(())

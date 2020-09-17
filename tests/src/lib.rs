@@ -62,3 +62,12 @@ impl Loader {
         fs::read(path).expect("binary").into()
     }
 }
+
+pub fn load_dep_binary(name: &str) -> Bytes {
+    let dir = env::current_dir().unwrap();
+    let mut path = PathBuf::new();
+    path.push(dir);
+    path.push("deps");
+    path.push(name);
+    fs::read(path).expect("deps binary").into()
+}

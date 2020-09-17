@@ -1,4 +1,3 @@
-use ckb_std::error::SysError;
 use int_enum::{IntEnum, IntEnumError};
 
 #[repr(i8)]
@@ -31,11 +30,34 @@ pub enum Error {
     CapacityInvalid,
     InvariantDataMutated,
     InputSinceInvalid,
+    UndercollateralInvalid,
+    WitnessInvalid,
+    XChainAddressInvalid,
+    CollateralInvalid,
+    XTBurnInvalid,
+    InputSignerInvalid,
+
+    // Faulty witness
+    FaultyBtcWitnessInvalid,
+
+    // Auction
+    InvalidInputs,
+    InvalidAuctionBidderCell,
+    InvalidTriggerOrSignerCell,
+    InvalidAuctionXTCell,
+    XTAmountInvalid,
 }
 
-impl From<SysError> for Error {
-    fn from(err: SysError) -> Self {
-        use SysError::*;
+impl<T: IntEnum> From<IntEnumError<T>> for Error {
+    fn from(_err: IntEnumError<T>) -> Self {
+        Error::Encoding
+    }
+}
+
+#[cfg(feature = "contract")]
+impl From<ckb_std::error::SysError> for Error {
+    fn from(err: ckb_std::error::SysError) -> Self {
+        use ckb_std::error::SysError::*;
         match err {
             IndexOutOfBound => Self::IndexOutOfBound,
             ItemMissing => Self::ItemMissing,
@@ -46,12 +68,7 @@ impl From<SysError> for Error {
     }
 }
 
-impl<T: IntEnum> From<IntEnumError<T>> for Error {
-    fn from(_err: IntEnumError<T>) -> Self {
-        Error::Encoding
-    }
-}
-
+#[cfg(feature = "contract")]
 impl From<bitcoin_spv::types::SPVError> for Error {
     fn from(_err: bitcoin_spv::types::SPVError) -> Self {
         Error::SpvProofInvalid

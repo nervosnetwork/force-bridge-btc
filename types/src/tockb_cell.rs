@@ -1,12 +1,21 @@
-use super::error::Error;
-use super::generated::toCKB_cell_data::ToCKBCellDataReader;
-use ckb_std::ckb_types::bytes::Bytes;
+use crate::error::Error;
+use crate::generated::tockb_cell_data::{ToCKBCellDataReader, XExtraUnionReader};
 use core::result::Result;
 use int_enum::IntEnum;
-use molecule::prelude::*;
+use molecule::{
+    bytes::Bytes,
+    prelude::{Entity, Reader},
+};
 
-const BTC_UNIT: u128 = 100_000_000;
-const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
+pub const BTC_UNIT: u128 = 100_000_000;
+pub const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
+
+#[repr(u8)]
+#[derive(Clone, Copy, IntEnum)]
+pub enum XChainKind {
+    Btc = 1,
+    Eth = 2,
+}
 
 #[derive(Debug)]
 pub struct ToCKBCellDataView {
@@ -18,12 +27,30 @@ pub struct ToCKBCellDataView {
     pub x_unlock_address: Bytes,
     pub redeemer_lockscript: Bytes,
     pub liquidation_trigger_lockscript: Bytes,
+    pub x_extra: XExtraView,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum XExtraView {
+    Btc(BtcExtraView),
+    Eth(EthExtraView),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct BtcExtraView {
+    pub lock_tx_hash: Bytes,
+    pub lock_vout_index: u32,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct EthExtraView {
+    pub dummy: Bytes,
 }
 
 impl ToCKBCellDataView {
-    pub fn from_slice(slice: &[u8]) -> Result<ToCKBCellDataView, Error> {
-        ToCKBCellDataReader::verify(slice, false).map_err(|_| Error::Encoding)?;
-        let data_reader = ToCKBCellDataReader::new_unchecked(slice);
+    pub fn new(data: &[u8], x_kind: XChainKind) -> Result<ToCKBCellDataView, Error> {
+        ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
+        let data_reader = ToCKBCellDataReader::new_unchecked(data);
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];
         let user_lockscript = data_reader.user_lockscript().to_entity().as_bytes();
@@ -35,6 +62,27 @@ impl ToCKBCellDataView {
             .liquidation_trigger_lockscript()
             .to_entity()
             .as_bytes();
+        let x_extra = data_reader.x_extra().to_enum();
+        use XChainKind::*;
+        use XExtraUnionReader::*;
+        let x_extra = match (x_kind, x_extra) {
+            (Btc, BtcExtra(btc_extra)) => {
+                let lock_tx_hash = btc_extra.lock_tx_hash().to_entity().raw_data();
+                let lock_vout_index = btc_extra.lock_vout_index().raw_data();
+                let mut buf = [0u8; 4];
+                buf.copy_from_slice(lock_vout_index);
+                let lock_vout_index = u32::from_le_bytes(buf);
+                XExtraView::Btc(BtcExtraView {
+                    lock_tx_hash,
+                    lock_vout_index,
+                })
+            }
+            (Eth, EthExtra(eth_extra)) => {
+                let dummy = eth_extra.dummy().to_entity().raw_data();
+                XExtraView::Eth(EthExtraView { dummy })
+            }
+            _ => return Err(Error::XChainMismatch),
+        };
         Ok(ToCKBCellDataView {
             status,
             lot_size,
@@ -44,6 +92,7 @@ impl ToCKBCellDataView {
             x_unlock_address,
             redeemer_lockscript,
             liquidation_trigger_lockscript,
+            x_extra,
         })
     }
 
@@ -59,6 +108,26 @@ impl ToCKBCellDataView {
     // Caller should make sure xchain kind is Eth
     pub fn get_eth_lot_size(&self) -> Result<EthLotSize, Error> {
         EthLotSize::from_int(self.lot_size).map_err(|_e| Error::LotSizeInvalid)
+    }
+
+    pub fn get_xchain_kind(&self) -> XChainKind {
+        match self.x_extra {
+            XExtraView::Btc(_) => XChainKind::Btc,
+            XExtraView::Eth(_) => XChainKind::Eth,
+        }
+    }
+
+    pub fn get_lot_xt_amount(&self) -> Result<u128, Error> {
+        Ok(match self.get_xchain_kind() {
+            XChainKind::Btc => {
+                let btc_lot_size = self.get_btc_lot_size()?;
+                btc_lot_size.get_sudt_amount()
+            }
+            XChainKind::Eth => {
+                let eth_lot_size = self.get_eth_lot_size()?;
+                eth_lot_size.get_sudt_amount()
+            }
+        })
     }
 }
 
