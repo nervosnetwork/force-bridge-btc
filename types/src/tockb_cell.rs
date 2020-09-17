@@ -104,20 +104,20 @@ impl ToCKBCellDataView {
         })
     }
 
-    pub fn as_molecule_data(&self) -> Result<(Bytes, XChainKind), VerificationError> {
-        let (x_extra_union, kind) = match &self.x_extra {
+    pub fn as_molecule_data(&self) -> Result<Bytes, VerificationError> {
+        let x_extra_union = match &self.x_extra {
             XExtraView::Btc(btc_extra) => {
                 let btc_extra_mol = BtcExtra::new_builder()
                     .lock_tx_hash(btc_extra.lock_tx_hash.to_vec().try_into()?)
                     .lock_vout_index(btc_extra.lock_vout_index.into())
                     .build();
-                (XExtraUnion::BtcExtra(btc_extra_mol), XChainKind::Btc)
+                XExtraUnion::BtcExtra(btc_extra_mol)
             }
             XExtraView::Eth(eth_extra) => {
                 let eth_extra_mol = EthExtra::new_builder()
                     .dummy(eth_extra.dummy.to_vec().into())
                     .build();
-                (XExtraUnion::EthExtra(eth_extra_mol), XChainKind::Eth)
+                XExtraUnion::EthExtra(eth_extra_mol)
             }
         };
         let x_extra = XExtra::new_builder().set(x_extra_union).build();
@@ -135,7 +135,7 @@ impl ToCKBCellDataView {
             .x_extra(x_extra)
             .build();
 
-        Ok((mol_obj.as_bytes(), kind))
+        Ok(mol_obj.as_bytes())
     }
 
     pub fn get_raw_lot_size(&self) -> u8 {
