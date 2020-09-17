@@ -1,10 +1,18 @@
 use crate::error::Error;
-use crate::generated::tockb_cell_data::{ToCKBCellDataReader, XExtraUnionReader};
+use crate::generated::tockb_cell_data::XExtra;
+use crate::generated::{
+    basic,
+    tockb_cell_data::{
+        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, XExtraUnion, XExtraUnionReader,
+    },
+};
+use core::convert::TryInto;
 use core::result::Result;
 use int_enum::IntEnum;
 use molecule::{
     bytes::Bytes,
-    prelude::{Entity, Reader},
+    error::VerificationError,
+    prelude::{Builder, Entity, Reader},
 };
 
 pub const BTC_UNIT: u128 = 100_000_000;
@@ -94,6 +102,40 @@ impl ToCKBCellDataView {
             liquidation_trigger_lockscript,
             x_extra,
         })
+    }
+
+    pub fn as_molecule_data(&self) -> Result<Bytes, VerificationError> {
+        let x_extra_union = match &self.x_extra {
+            XExtraView::Btc(btc_extra) => {
+                let btc_extra_mol = BtcExtra::new_builder()
+                    .lock_tx_hash(btc_extra.lock_tx_hash.to_vec().try_into()?)
+                    .lock_vout_index(btc_extra.lock_vout_index.into())
+                    .build();
+                XExtraUnion::BtcExtra(btc_extra_mol)
+            }
+            XExtraView::Eth(eth_extra) => {
+                let eth_extra_mol = EthExtra::new_builder()
+                    .dummy(eth_extra.dummy.to_vec().into())
+                    .build();
+                XExtraUnion::EthExtra(eth_extra_mol)
+            }
+        };
+        let x_extra = XExtra::new_builder().set(x_extra_union).build();
+        let mol_obj = ToCKBCellData::new_builder()
+            .status(self.status.int_value().into())
+            .lot_size(self.lot_size.into())
+            .user_lockscript(basic::Script::from_slice(&self.user_lockscript)?)
+            .x_lock_address(self.x_lock_address.to_vec().into())
+            .signer_lockscript(basic::Script::from_slice(&self.signer_lockscript)?)
+            .x_unlock_address(self.x_unlock_address.to_vec().into())
+            .redeemer_lockscript(basic::Script::from_slice(&self.redeemer_lockscript)?)
+            .liquidation_trigger_lockscript(basic::Script::from_slice(
+                &self.liquidation_trigger_lockscript,
+            )?)
+            .x_extra(x_extra)
+            .build();
+
+        Ok(mol_obj.as_bytes())
     }
 
     pub fn get_raw_lot_size(&self) -> u8 {

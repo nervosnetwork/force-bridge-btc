@@ -102,7 +102,7 @@ impl TryFrom<BTCSPVProofJson> for mint_xt_witness::BTCSPVProof {
             .vin(hex::decode(clear_0x(&proof.vin))?.into())
             .vout(hex::decode(clear_0x(&proof.vout))?.into())
             .locktime(proof.locktime.into())
-            .tx_id(hex::decode(clear_0x(&proof.tx_id))?.into())
+            .tx_id(hex::decode(clear_0x(&proof.tx_id))?.try_into()?)
             .index(proof.index.into())
             .headers(hex::decode(clear_0x(&proof.headers))?.into())
             .intermediate_nodes(hex::decode(clear_0x(&proof.intermediate_nodes))?.into())
