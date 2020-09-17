@@ -27,7 +27,9 @@ pub use tockb_types::tockb_cell::{ToCKBTypeArgsView, XChainKind};
 
 pub fn get_toCKB_type_args() -> Result<ToCKBTypeArgsView, Error> {
     let toCKB_type_args = load_script()?.args().raw_data();
+    debug!("before molecule decode toCKB type args");
     let toCKB_type_args = ToCKBTypeArgsView::from_slice(toCKB_type_args.as_ref())?;
+    debug!("molecule decode toCKB type args succ");
     Ok(toCKB_type_args)
 }
 

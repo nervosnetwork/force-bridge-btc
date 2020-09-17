@@ -6,17 +6,20 @@ use crate::utils::{
 };
 use ckb_std::{
     ckb_constants::Source,
+    debug,
     high_level::{load_cell_capacity, load_input_out_point},
 };
 use core::result::Result;
 use molecule::prelude::Entity;
 
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
+    debug!("begin verify deposit request");
     let toCKB_data = toCKB_data_tuple
         .1
         .as_ref()
         .expect("outputs contain toCKB cell");
     verify_capacity()?;
+    debug!("verify capacity succ");
     verify_lot_size(toCKB_data)?;
     verify_cell_id()
 }

@@ -56,7 +56,9 @@ enum TxType {
 pub struct ToCKBCellDataTuple(Option<ToCKBCellDataView>, Option<ToCKBCellDataView>);
 
 pub fn verify() -> Result<(), Error> {
+    debug!("begin verify");
     let xchain_kind = get_xchain_kind()?;
+    debug!("get xchain kind succ");
     let toCKB_data_tuple = get_toCKB_data_tuple(xchain_kind)?;
     debug!("toCKB_data_tuple: {:?}", toCKB_data_tuple);
     let tx_type = get_tx_type(&toCKB_data_tuple)?;

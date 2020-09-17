@@ -2,8 +2,12 @@
 use alloc::borrow::ToOwned;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+#[cfg(not(feature = "std"))]
+use ckb_std::ckb_types::packed;
+#[cfg(feature = "std")]
+use ckb_types::packed;
 
-use crate::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint32Reader, Uint64};
+use crate::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint32Reader, Uint64, Script, OutPoint};
 use core::convert::TryFrom;
 use molecule::{
     error::VerificationError,
@@ -93,5 +97,17 @@ impl From<u64> for Uint64 {
             .collect::<Vec<_>>();
         inner.copy_from_slice(&v);
         Self::new_builder().set(inner).build()
+    }
+}
+
+impl From<packed::Script> for Script {
+    fn from(v: packed::Script) -> Self {
+        Self::new_unchecked(v.as_bytes())
+    }
+}
+
+impl From<packed::OutPoint> for OutPoint {
+    fn from(v: packed::OutPoint) -> Self {
+        Self::new_unchecked(v.as_bytes())
     }
 }

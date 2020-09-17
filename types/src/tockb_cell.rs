@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use ckb_std::debug;
+
 use crate::error::Error;
 use crate::generated::{
     basic,
@@ -56,7 +59,24 @@ pub struct EthExtraView {
 
 impl ToCKBCellDataView {
     pub fn new(data: &[u8], x_kind: XChainKind) -> Result<ToCKBCellDataView, Error> {
-        ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "std")] {
+                dbg!("before verify toCKB data format");
+            } else {
+                debug!("before verify toCKB data format");
+            }
+        }
+        // ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
+        let result = ToCKBCellDataReader::verify(data, false);
+
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "std")] {
+                dbg!("verify toCKB data format succ: {:?}", result);
+            } else {
+                debug!("verify toCKB data format succ: {:?}", result);
+            }
+        }
+
         let data_reader = ToCKBCellDataReader::new_unchecked(data);
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];
