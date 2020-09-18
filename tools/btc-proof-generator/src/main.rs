@@ -1,16 +1,20 @@
 use anyhow::Result;
+use std::convert::{TryFrom, TryInto};
 use bitcoin::{
     consensus::{deserialize, encode::serialize_hex},
     Block,
 };
+use molecule::prelude::{Entity, Builder};
 use bitcoin_spv::{
     btcspv::hash256_merkle_step,
     types::{Hash256Digest, MerkleArray},
     validatespv,
 };
-use clap::{load_yaml, value_t, App};
+use clap::Clap;
 use hex::FromHex;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tockb_types::generated::mint_xt_witness::BTCSPVProof;
 
 fn get_merkle_proof(block: &Block, index: usize) -> Result<Vec<Vec<u8>>> {
     let tx_len = block.txdata.len();
@@ -58,6 +62,8 @@ fn fetch_block(block_hash: &str) -> Result<Block> {
     let resp = reqwest::blocking::get(&url)?.text()?;
     let raw_block = Vec::from_hex(resp)?;
     let block: Block = deserialize(&raw_block)?;
+    // let raw_block = include_bytes!("../data/block_648783.raw");
+    // let block: Block = deserialize(&hex::decode(raw_block)?)?;
     Ok(block)
 }
 
@@ -75,13 +81,44 @@ pub struct MintXTProof {
     pub funding_input_index: u32,
 }
 
+impl TryFrom<MintXTProof> for BTCSPVProof {
+    type Error = anyhow::Error;
+
+    fn try_from(proof: MintXTProof) -> Result<Self> {
+        Ok(BTCSPVProof::new_builder()
+            .version(proof.version.into())
+            .vin(hex::decode(clear_0x(&proof.vin))?.into())
+            .vout(hex::decode(clear_0x(&proof.vout))?.into())
+            .locktime(proof.locktime.into())
+            .tx_id(hex::decode(clear_0x(&proof.tx_id))?.try_into()?)
+            .index(proof.index.into())
+            .headers(hex::decode(clear_0x(&proof.headers))?.into())
+            .intermediate_nodes(hex::decode(clear_0x(&proof.intermediate_nodes))?.into())
+            .funding_output_index(proof.funding_output_index.into())
+            .funding_input_index(proof.funding_input_index.into())
+            .build())
+    }
+}
+
 fn generate_mint_xt_proof(
     block_hash: &str,
-    tx_index: usize,
+    tx_hash: &str,
     funding_output_index: u32,
     funding_input_index: u32,
 ) -> Result<(MintXTProof, Block)> {
     let block = fetch_block(block_hash)?;
+    let tx_id = hex::decode(clear_0x(tx_hash))?
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>();
+    let tx_index = block
+        .txdata
+        .iter()
+        .enumerate()
+        .filter(|&t| t.1.txid().as_ref() == &tx_id[..])
+        .collect::<Vec<_>>();
+    // dbg!(&tx_index);
+    let tx_index = tx_index[0].0;
     let tx = block.txdata[tx_index].clone();
     let proof = get_merkle_proof(&block, tx_index)?;
     let flat_proof = proof
@@ -136,34 +173,62 @@ fn hex_string_le_be_transform(hex_str: &str) -> Result<String> {
     Ok(hex::encode(bytes.as_slice()))
 }
 
-fn main() -> Result<()> {
-    let yaml = load_yaml!("cli.yaml");
-    let matches = App::from(yaml).get_matches();
-    match matches.subcommand() {
-        ("mint_xt", mint_xt_matches) => {
-            let mint_xt_matches = mint_xt_matches.unwrap();
-            let block_hash = mint_xt_matches.value_of("block_hash").unwrap();
-            let tx_index = value_t!(mint_xt_matches, "tx_index", usize).unwrap();
-            let funding_output_index =
-                value_t!(mint_xt_matches, "funding_output_index", u32).unwrap();
-            let funding_input_index =
-                value_t!(mint_xt_matches, "funding_input_index", u32).unwrap();
+pub fn fetch_transaction(tx_hash: &str) -> Result<Value> {
+    let url = format!("https://api.blockcypher.com/v1/btc/main/txs/{}", tx_hash);
+    let resp = reqwest::blocking::get(&url)?.json()?;
+    Ok(resp)
+}
 
-            let (mint_xt_proof, block) = generate_mint_xt_proof(
-                block_hash,
-                tx_index,
-                funding_output_index,
-                funding_input_index,
-            )?;
-            assert!(spv_prove(&block, &mint_xt_proof)?);
-            println!(
-                "btc mint xt proof:\n\n{}",
-                serde_json::to_string_pretty(&mint_xt_proof)?
-            );
-        }
-        _ => {}
-    }
+/// generate btc proof for toCKB
+#[derive(Clap)]
+#[clap(version = "0.1", author = "Wenchao Hu <me@huwenchao.com>")]
+struct Opts {
+    #[clap(subcommand)]
+    subcmd: SubCommand,
+}
+
+#[derive(Clap)]
+enum SubCommand {
+    MintXt(MintXt),
+}
+
+/// generate proof for mint_xt
+#[derive(Clap)]
+struct MintXt {
+    #[clap(short, long)]
+    tx_hash: String,
+    #[clap(short = "i", long)]
+    funding_input_index: u32,
+    #[clap(short = "o", long)]
+    funding_output_index: u32,
+}
+
+fn process_mint_xt(args: MintXt) -> Result<()> {
+    let tx = fetch_transaction(&args.tx_hash)?;
+    // println!("{}", serde_json::to_string_pretty(&tx)?);
+    let block_hash = tx["block_hash"].as_str().expect("can not find block_hash");
+    // dbg!(&block_hash);
+    let (mint_xt_proof, block) = generate_mint_xt_proof(
+        block_hash,
+        &args.tx_hash,
+        args.funding_output_index,
+        args.funding_input_index,
+    )?;
+    assert!(spv_prove(&block, &mint_xt_proof)?);
+    println!(
+        "btc mint xt proof:\n\n{}",
+        serde_json::to_string_pretty(&mint_xt_proof)?
+    );
+    let btc_spv_proof: BTCSPVProof = mint_xt_proof.try_into()?;
+    println!("\n\nproof in molecule bytes:\n\n{}", hex::encode(btc_spv_proof.as_slice()));
     Ok(())
+}
+
+fn main() -> Result<()> {
+    let opts: Opts = Opts::parse();
+    match opts.subcmd {
+        SubCommand::MintXt(mint_xt) => process_mint_xt(mint_xt),
+    }
 }
 
 #[test]
