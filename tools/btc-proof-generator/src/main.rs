@@ -117,7 +117,7 @@ fn generate_mint_xt_proof(
         .enumerate()
         .filter(|&t| t.1.txid().as_ref() == &tx_id[..])
         .collect::<Vec<_>>();
-    // dbg!(&tx_index);
+    assert_eq!(tx_index.len(), 1);
     let tx_index = tx_index[0].0;
     let tx = block.txdata[tx_index].clone();
     let proof = get_merkle_proof(&block, tx_index)?;
@@ -207,7 +207,6 @@ fn process_mint_xt(args: MintXt) -> Result<()> {
     let tx = fetch_transaction(&args.tx_hash)?;
     // println!("{}", serde_json::to_string_pretty(&tx)?);
     let block_hash = tx["block_hash"].as_str().expect("can not find block_hash");
-    // dbg!(&block_hash);
     let (mint_xt_proof, block) = generate_mint_xt_proof(
         block_hash,
         &args.tx_hash,
