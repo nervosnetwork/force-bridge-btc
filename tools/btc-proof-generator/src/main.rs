@@ -1,10 +1,8 @@
 use anyhow::Result;
-use std::convert::{TryFrom, TryInto};
 use bitcoin::{
     consensus::{deserialize, encode::serialize_hex},
     Block,
 };
-use molecule::prelude::{Entity, Builder};
 use bitcoin_spv::{
     btcspv::hash256_merkle_step,
     types::{Hash256Digest, MerkleArray},
@@ -12,8 +10,10 @@ use bitcoin_spv::{
 };
 use clap::Clap;
 use hex::FromHex;
+use molecule::prelude::{Builder, Entity};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::convert::{TryFrom, TryInto};
 use tockb_types::generated::mint_xt_witness::BTCSPVProof;
 
 fn get_merkle_proof(block: &Block, index: usize) -> Result<Vec<Vec<u8>>> {
@@ -220,7 +220,10 @@ fn process_mint_xt(args: MintXt) -> Result<()> {
         serde_json::to_string_pretty(&mint_xt_proof)?
     );
     let btc_spv_proof: BTCSPVProof = mint_xt_proof.try_into()?;
-    println!("\n\nproof in molecule bytes:\n\n{}", hex::encode(btc_spv_proof.as_slice()));
+    println!(
+        "\n\nproof in molecule bytes:\n\n{}",
+        hex::encode(btc_spv_proof.as_slice())
+    );
     Ok(())
 }
 
