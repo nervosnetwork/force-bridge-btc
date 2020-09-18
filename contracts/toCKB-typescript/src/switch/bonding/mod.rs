@@ -23,13 +23,14 @@ fn verify_data(
             if hrp != "bc" {
                 return Err(Error::XChainAddressInvalid);
             }
-            let raw_data = Vec::<u8>::from_base32(&data).unwrap();
-            if raw_data.len() != 22 {
+            let (_, program): (bech32::u5, Vec<u8>) = {
+                let (v, p5) = data.split_at(1);
+                (v[0], FromBase32::from_base32(p5).map_err(|_| Error::XChainAddressInvalid)?)
+            };
+            if program.len() != 20  {
                 return Err(Error::XChainAddressInvalid);
             }
-            if &raw_data[..2] != &[0x00, 0x14] {
-                return Err(Error::XChainAddressInvalid);
-            }
+
             let btc_lot_size = out_toCKB_data.get_btc_lot_size()?;
             btc_lot_size.get_sudt_amount()
         }

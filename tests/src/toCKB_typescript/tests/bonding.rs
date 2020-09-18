@@ -49,7 +49,7 @@ fn test_correct_tx_btc() {
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set(
-                    "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t"
+                    "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah"
                         .as_bytes()
                         .iter()
                         .map(|c| Byte::new(*c))
@@ -76,7 +76,7 @@ fn test_wrong_tx_btc_address_invalid() {
         .x_lock_address(
             basic::Bytes::new_builder()
                 .set(
-                    "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00"
+                    "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t"
                         .as_bytes()
                         .iter()
                         .map(|c| Byte::new(*c))
