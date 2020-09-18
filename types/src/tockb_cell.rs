@@ -25,7 +25,7 @@ pub enum XChainKind {
     Eth = 2,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ToCKBCellDataView {
     pub status: ToCKBStatus,
     lot_size: u8,
@@ -38,19 +38,19 @@ pub struct ToCKBCellDataView {
     pub x_extra: XExtraView,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum XExtraView {
     Btc(BtcExtraView),
     Eth(EthExtraView),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BtcExtraView {
     pub lock_tx_hash: Bytes,
     pub lock_vout_index: u32,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct EthExtraView {
     pub dummy: Bytes,
 }
