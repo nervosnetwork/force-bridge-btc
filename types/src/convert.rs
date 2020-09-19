@@ -3,7 +3,7 @@ use alloc::borrow::ToOwned;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-use crate::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint64};
+use crate::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint32Reader, Uint64};
 use core::convert::TryFrom;
 use molecule::{
     error::VerificationError,
@@ -63,6 +63,22 @@ impl From<u32> for Uint32 {
             .collect::<Vec<_>>();
         inner.copy_from_slice(&v);
         Self::new_builder().set(inner).build()
+    }
+}
+
+impl From<Uint32> for u32 {
+    fn from(v: Uint32) -> Self {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(v.raw_data().as_ref());
+        u32::from_le_bytes(buf)
+    }
+}
+
+impl From<Uint32Reader<'_>> for u32 {
+    fn from(v: Uint32Reader<'_>) -> Self {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(v.raw_data());
+        u32::from_le_bytes(buf)
     }
 }
 
