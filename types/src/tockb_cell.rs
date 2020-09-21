@@ -5,7 +5,8 @@ use crate::error::Error;
 use crate::generated::{
     basic,
     tockb_cell_data::{
-        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, XExtraUnion, XExtraUnionReader, XExtra, ToCKBTypeArgsReader
+        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, ToCKBTypeArgsReader, XExtra,
+        XExtraUnion, XExtraUnionReader,
     },
 };
 use core::convert::TryInto;
@@ -66,7 +67,7 @@ impl ToCKBCellDataView {
                 debug!("before verify toCKB data format");
             }
         }
-        // ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
+
         let result = ToCKBCellDataReader::verify(data, false);
 
         cfg_if::cfg_if! {
@@ -76,6 +77,8 @@ impl ToCKBCellDataView {
                 debug!("verify toCKB data format succ: {:?}", result);
             }
         }
+
+        ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
 
         let data_reader = ToCKBCellDataReader::new_unchecked(data);
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
@@ -256,7 +259,7 @@ pub struct ToCKBTypeArgsView {
 
 impl ToCKBTypeArgsView {
     pub fn from_slice(slice: &[u8]) -> Result<ToCKBTypeArgsView, Error> {
-        ToCKBTypeArgsReader::verify(slice, false).map_err(|_|Error::Encoding)?;
+        ToCKBTypeArgsReader::verify(slice, false).map_err(|_| Error::Encoding)?;
         let args_reader = ToCKBTypeArgsReader::new_unchecked(slice);
         let xchain_kind = args_reader.xchain_kind().as_slice()[0];
         let xchain_kind = XChainKind::from_int(xchain_kind)?;

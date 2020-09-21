@@ -1,11 +1,15 @@
-use super::case_builder::{BuildCell, TestCase, OutpointsContext, FIRST_INPUT_OUTPOINT_KEY, TOCKB_TYPESCRIPT_OUTPOINT_KEY, TOCKB_LOCKSCRIPT_OUTPOINT_KEY, ALWAYS_SUCCESS_OUTPOINT_KEY, SUDT_TYPESCRIPT_OUTPOINT_KEY};
+use super::case_builder::{
+    CellBuilder, OutpointsContext, TestCase, ALWAYS_SUCCESS_OUTPOINT_KEY, FIRST_INPUT_OUTPOINT_KEY,
+    SUDT_TYPESCRIPT_OUTPOINT_KEY, TOCKB_LOCKSCRIPT_OUTPOINT_KEY, TOCKB_TYPESCRIPT_OUTPOINT_KEY,
+};
 use crate::*;
 use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
-    packed::{CellDep, CellInput, CellOutput},
     core::TransactionBuilder,
+    packed::{CellDep, CellInput, CellOutput},
     prelude::*,
 };
+use std::mem::replace;
 
 pub const MAX_CYCLES: u64 = 100_000_000;
 
@@ -22,24 +26,78 @@ pub fn run_test(case: TestCase) {
     // Script cell deps
     deploy_scripts(&mut context, &mut outpoints_context);
     for (_, v) in outpoints_context.iter() {
-        let cell_dep = CellDep::new_builder()
-            .out_point(v.clone())
-            .build();
+        let cell_dep = CellDep::new_builder().out_point(v.clone()).build();
         cell_deps.push(cell_dep);
     }
 
     // Cells
-    let mut inputs = Vec::<CellInput>::new();
-    let mut outputs = Vec::<CellOutput>::new();
-    let mut outputs_data = vec![];
+    // let mut inputs = vec![];
+    // let mut outputs = vec![];
+    // let mut outputs_data = vec![];
 
-    build_input_cell(case.toCKB_cells.inputs.into_iter(), &mut context, &mut outpoints_context, &mut inputs);
-    build_input_cell(case.sudt_cells.inputs.into_iter(), &mut context, &mut outpoints_context, &mut inputs);
-    build_input_cell(case.capacity_cells.inputs.into_iter(), &mut context, &mut outpoints_context, &mut inputs);
+    let inputs_len = case.toCKB_cells.inputs.len()
+        + case.sudt_cells.inputs.len()
+        + case.capacity_cells.inputs.len();
+    let outputs_len = case.toCKB_cells.outputs.len()
+        + case.sudt_cells.outputs.len()
+        + case.capacity_cells.outputs.len();
 
-    build_output_cell(case.toCKB_cells.outputs.into_iter(), &mut context, &mut outpoints_context, &mut outputs, &mut outputs_data);
-    build_output_cell(case.sudt_cells.outputs.into_iter(), &mut context, &mut outpoints_context, &mut outputs, &mut outputs_data);
-    build_output_cell(case.capacity_cells.outputs.into_iter(), &mut context, &mut outpoints_context, &mut outputs, &mut outputs_data);
+    let mut inputs = vec![CellInput::default(); inputs_len];
+    let mut outputs = vec![CellOutput::default(); outputs_len];
+    let mut outputs_data = vec![Bytes::default(); outputs_len];
+
+    // let mut inputs = Vec::<CellInput>::with_capacity(inputs_len);
+    // let mut outputs = Vec::<CellOutput>::with_capacity(outputs_len);
+    // let mut outputs_data = Vec::<Bytes>::with_capacity(outputs_len);
+    // unsafe {
+    //     inputs.set_len(inputs_len);
+    //     outputs.set_len(outputs_len);
+    //     outputs_data.set_len(outputs_len);
+    // }
+
+    build_input_cell(
+        case.toCKB_cells.inputs.into_iter(),
+        &mut context,
+        &mut outpoints_context,
+        &mut inputs,
+    );
+    build_input_cell(
+        case.sudt_cells.inputs.into_iter(),
+        &mut context,
+        &mut outpoints_context,
+        &mut inputs,
+    );
+    build_input_cell(
+        case.capacity_cells.inputs.into_iter(),
+        &mut context,
+        &mut outpoints_context,
+        &mut inputs,
+    );
+
+    build_output_cell(
+        case.toCKB_cells.outputs.into_iter(),
+        &mut context,
+        &mut outpoints_context,
+        &mut outputs,
+        &mut outputs_data,
+    );
+    build_output_cell(
+        case.sudt_cells.outputs.into_iter(),
+        &mut context,
+        &mut outpoints_context,
+        &mut outputs,
+        &mut outputs_data,
+    );
+    build_output_cell(
+        case.capacity_cells.outputs.into_iter(),
+        &mut context,
+        &mut outpoints_context,
+        &mut outputs,
+        &mut outputs_data,
+    );
+
+    dbg!("inputs: {:?}", &inputs);
+    dbg!("outputs: {:?}", &outputs);
 
     // Witnesses
     let mut witnesses = vec![];
@@ -74,35 +132,61 @@ fn deploy_scripts(context: &mut Context, outpoints_context: &mut OutpointsContex
     let sudt_typescript_bin = include_bytes!("../../../deps/simple_udt");
     let sudt_typescript_out_point = context.deploy_cell(Bytes::from(sudt_typescript_bin.as_ref()));
     let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-    outpoints_context.insert(TOCKB_TYPESCRIPT_OUTPOINT_KEY, toCKB_typescript_out_point.clone());
-    outpoints_context.insert(TOCKB_LOCKSCRIPT_OUTPOINT_KEY, always_success_out_point.clone());
-    outpoints_context.insert(SUDT_TYPESCRIPT_OUTPOINT_KEY, sudt_typescript_out_point.clone());
-    outpoints_context.insert(ALWAYS_SUCCESS_OUTPOINT_KEY, always_success_out_point.clone());
+    outpoints_context.insert(
+        TOCKB_TYPESCRIPT_OUTPOINT_KEY,
+        toCKB_typescript_out_point.clone(),
+    );
+    outpoints_context.insert(
+        TOCKB_LOCKSCRIPT_OUTPOINT_KEY,
+        always_success_out_point.clone(),
+    );
+    outpoints_context.insert(
+        SUDT_TYPESCRIPT_OUTPOINT_KEY,
+        sudt_typescript_out_point.clone(),
+    );
+    outpoints_context.insert(
+        ALWAYS_SUCCESS_OUTPOINT_KEY,
+        always_success_out_point.clone(),
+    );
 }
 
-fn build_input_cell<I, B>(iterator: I, context: &mut Context, outpoints_context: &mut OutpointsContext, inputs: &mut Vec::<CellInput>)
-    where I: Iterator<Item = B>,
-    B: BuildCell
+fn build_input_cell<I, B>(
+    iterator: I,
+    context: &mut Context,
+    outpoints_context: &mut OutpointsContext,
+    inputs: &mut Vec<CellInput>,
+) where
+    I: Iterator<Item = B>,
+    B: CellBuilder,
 {
     for input in iterator {
         let index = input.get_index();
         let (input_outpoint, input_cell) = input.build_input_cell(context, outpoints_context);
-        inputs.insert(index, input_cell);
+        // inputs.insert(index, input_cell);
+        replace(&mut inputs[index], input_cell);
         if 0 == index {
             outpoints_context.insert(FIRST_INPUT_OUTPOINT_KEY, input_outpoint);
         }
     }
 }
 
-fn build_output_cell<I, B>(iterator: I, context: &mut Context, outpoints_context: &mut OutpointsContext, outputs: &mut Vec::<CellOutput>, outputs_data: &mut Vec::<Bytes>)
-    where I: Iterator<Item = B>,
-    B: BuildCell
+fn build_output_cell<I, B>(
+    iterator: I,
+    context: &mut Context,
+    outpoints_context: &mut OutpointsContext,
+    outputs: &mut Vec<CellOutput>,
+    outputs_data: &mut Vec<Bytes>,
+) where
+    I: Iterator<Item = B>,
+    B: CellBuilder,
 {
     for output in iterator {
         let index = output.get_index();
         let (output_data, output_cell) = output.build_output_cell(context, outpoints_context);
-        outputs.insert(index, output_cell);
-        outputs_data.insert(index, output_data);
+        // outputs.insert(index, output_cell);
+        // outputs_data.insert(index, output_data);
+        replace(&mut outputs[index], output_cell);
+        replace(&mut outputs_data[index], output_data);
     }
 }
 
@@ -112,4 +196,3 @@ fn check_err(err: ckb_tool::ckb_error::Error, code: i8) -> bool {
     dbg!(&get, &expected);
     get == expected
 }
-

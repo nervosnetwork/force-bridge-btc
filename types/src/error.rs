@@ -6,13 +6,11 @@ pub enum Error {
     ItemMissing,
     LengthNotEnough,
     Encoding,
-    // Add customized errors here...
     XChainMismatch,
     TxInvalid,
     LotSizeInvalid,
     PledgeInvalid,
     CellIDInvalid,
-    // MintXT Error
     InvalidDataChange,
     InvalidWitness,
     DifficultyDataInvalid,
@@ -26,8 +24,7 @@ pub enum Error {
     InvalidMintOutput,
     WrongFundingAddr,
     InvalidXTInInputOrOutput,
-    InvalidXTMint,
-
+    InvalidXTMint, // 23
     CapacityInvalid,
     InvariantDataMutated,
     InputSinceInvalid,
@@ -37,11 +34,7 @@ pub enum Error {
     CollateralInvalid,
     XTBurnInvalid,
     InputSignerInvalid,
-
-    // Faulty witness
     FaultyBtcWitnessInvalid,
-
-    // Auction
     InvalidInputs,
     InvalidAuctionBidderCell,
     InvalidTriggerOrSignerCell,

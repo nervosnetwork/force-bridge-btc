@@ -26,8 +26,8 @@ use ckb_std::{
     ckb_constants::Source,
     debug,
     high_level::{
-        load_cell_data, load_cell_type, load_cell_type_hash, load_input_since,
-        load_script_hash, QueryIter,
+        load_cell_data, load_cell_type, load_cell_type_hash, load_input_since, load_script_hash,
+        QueryIter,
     },
 };
 

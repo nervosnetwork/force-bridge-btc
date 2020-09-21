@@ -1,12 +1,11 @@
 use crate::toCKB_typescript::utils::types::generated::{
-    basic, mint_xt_witness, btc_difficulty,
+    basic, btc_difficulty, mint_xt_witness,
     tockb_cell_data::{BtcExtra, EthExtra, ToCKBCellData, ToCKBTypeArgs, XExtra, XExtraUnion},
 };
-pub use crate::toCKB_typescript::utils::types::tockb_cell::XExtraView;
 use anyhow::Result;
-use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
-use ckb_tool::ckb_types::{bytes::Bytes, packed::*, prelude::*};
-use molecule::prelude::*;
+use ckb_testtool::context::Context;
+pub use ckb_tool::ckb_types::bytes::Bytes;
+use ckb_tool::ckb_types::{packed::*, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
@@ -21,7 +20,7 @@ pub const ALWAYS_SUCCESS_OUTPOINT_KEY: &str = "always_success_outpoint_key";
 
 pub type OutpointsContext = HashMap<&'static str, OutPoint>;
 
-pub trait BuildCell {
+pub trait CellBuilder {
     fn build_input_cell(
         &self,
         context: &mut Context,
@@ -36,9 +35,9 @@ pub trait BuildCell {
     }
 
     fn build_output_cell(
-    &self,
-    context: &mut Context,
-    outpoints: &OutpointsContext,
+        &self,
+        context: &mut Context,
+        outpoints: &OutpointsContext,
     ) -> (Bytes, CellOutput);
 
     fn get_index(&self) -> usize;
@@ -67,8 +66,10 @@ impl CellDepView {
                     .current(difficulty.current.to_le_bytes().to_vec().into())
                     .build();
                 let difficulty_outpoint = context.deploy_cell(difficulty.as_bytes());
-                CellDep::new_builder().out_point(difficulty_outpoint).build()
-            },
+                CellDep::new_builder()
+                    .out_point(difficulty_outpoint)
+                    .build()
+            }
             CellDepView::PriceOracle(price) => {
                 let price_outpoint = context.deploy_cell(price.to_le_bytes().to_vec().into());
                 CellDep::new_builder().out_point(price_outpoint).build()
@@ -91,6 +92,7 @@ pub struct ToCKBCell {
     pub capacity: u64,
     pub data: ToCKBCellDataView,
     pub type_args: ToCKBTypeArgsView,
+    pub since: u64,
     pub index: usize,
 }
 
@@ -112,7 +114,21 @@ impl ToCKBCell {
     }
 }
 
-impl BuildCell for ToCKBCell {
+impl CellBuilder for ToCKBCell {
+    fn build_input_cell(
+        &self,
+        context: &mut Context,
+        outpoints: &OutpointsContext,
+    ) -> (OutPoint, CellInput) {
+        let (cell_data, cell) = self.build_output_cell(context, outpoints);
+        let input_out_point = context.create_cell(cell, cell_data);
+        let input_cell = CellInput::new_builder()
+            .previous_output(input_out_point.clone())
+            .since(self.since.pack())
+            .build();
+        (input_out_point, input_cell)
+    }
+
     fn build_output_cell(
         &self,
         context: &mut Context,
@@ -144,10 +160,44 @@ pub struct ToCKBCellDataView {
     pub x_extra: XExtraView,
 }
 
-#[derive(Default)]
+impl ToCKBCellDataView {
+    pub fn as_molecule_bytes(&self, context: &mut Context, outpoints: &OutpointsContext) -> Bytes {
+        let toCKB_data = ToCKBCellData::new_builder()
+            .status(Byte::new(self.status))
+            .lot_size(Byte::new(self.lot_size))
+            .user_lockscript(self.user_lockscript.build_basic_script(context, outpoints))
+            .x_lock_address(str_to_molecule_bytes(self.x_lock_address.as_str()))
+            .signer_lockscript(
+                self.signer_lockscript
+                    .build_basic_script(context, outpoints),
+            )
+            .x_unlock_address(str_to_molecule_bytes(self.x_unlock_address.as_str()))
+            .redeemer_lockscript(
+                self.redeemer_lockscript
+                    .build_basic_script(context, outpoints),
+            )
+            .liquidation_trigger_lockscript(
+                self.liquidation_trigger_lockscript
+                    .build_basic_script(context, outpoints),
+            )
+            .x_extra(self.x_extra.as_xextra())
+            .build();
+        toCKB_data.as_bytes()
+    }
+}
+
 pub struct ScriptView {
     pub outpoint_key: &'static str,
     pub args: Bytes,
+}
+
+impl Default for ScriptView {
+    fn default() -> Self {
+        Self {
+            outpoint_key: ALWAYS_SUCCESS_OUTPOINT_KEY,
+            args: Default::default(),
+        }
+    }
 }
 
 impl ScriptView {
@@ -169,35 +219,91 @@ impl ScriptView {
     }
 }
 
-impl ToCKBCellDataView {
-    pub fn as_molecule_bytes(&self, context: &mut Context, outpoints: &OutpointsContext) -> Bytes {
-        let toCKB_data = ToCKBCellData::new_builder()
-            .status(Byte::new(self.status))
-            .lot_size(Byte::new(self.lot_size))
-            .user_lockscript(self.user_lockscript.build_basic_script(context, outpoints))
-            .x_lock_address(str_to_molecule_bytes(self.x_lock_address.as_str()))
-            .signer_lockscript(
-                self.signer_lockscript
-                    .build_basic_script(context, outpoints),
-            )
-            .x_unlock_address(str_to_molecule_bytes(self.x_unlock_address.as_str()))
-            .redeemer_lockscript(
-                self.redeemer_lockscript
-                    .build_basic_script(context, outpoints),
-            )
-            .liquidation_trigger_lockscript(
-                self.liquidation_trigger_lockscript
-                    .build_basic_script(context, outpoints),
-            )
-            .x_extra(to_molecule_xextra(&self.x_extra))
-            .build();
-        toCKB_data.as_bytes()
+#[derive(Debug)]
+pub enum XExtraView {
+    Btc(BtcExtraView),
+    Eth(EthExtraView),
+}
+
+impl Default for XExtraView {
+    fn default() -> Self {
+        Self::Btc(Default::default())
+    }
+}
+
+impl XExtraView {
+    pub fn as_xextra(&self) -> XExtra {
+        match self {
+            XExtraView::Btc(btc_extra) => {
+                let lock_tx_hash = hex::decode(btc_extra.lock_tx_hash.as_str())
+                    .expect("decode lock_tx_hash hex")
+                    .iter()
+                    .map(|v| Byte::new(*v))
+                    .collect::<Vec<_>>();
+                let lock_tx_hash = if lock_tx_hash.is_empty() {
+                    basic::Byte32::new_builder().build()
+                } else {
+                    let lock_tx_hash: Box<[Byte; 32]> = lock_tx_hash
+                        .into_boxed_slice()
+                        .try_into()
+                        .expect("convert lock_tx_hash");
+                    basic::Byte32::new_builder().set(*lock_tx_hash).build()
+                };
+                let lock_vout_index = Vec::<u8>::from(&btc_extra.lock_vout_index.to_le_bytes()[..]);
+                let lock_vout_index: Box<[Byte; 4]> = lock_vout_index
+                    .iter()
+                    .map(|v| Byte::new(*v))
+                    .collect::<Vec<_>>()
+                    .into_boxed_slice()
+                    .try_into()
+                    .expect("convert lock_vout_index");
+                let lock_vout_index = basic::Uint32::new_builder().set(*lock_vout_index).build();
+                let btc_extra = BtcExtra::new_builder()
+                    .lock_tx_hash(lock_tx_hash)
+                    .lock_vout_index(lock_vout_index)
+                    .build();
+                let x_extra = XExtraUnion::BtcExtra(btc_extra);
+                XExtra::new_builder().set(x_extra).build()
+            }
+            XExtraView::Eth(eth_extra) => {
+                let eth_extra = EthExtra::new_builder()
+                    .dummy(basic::Bytes::new_unchecked(eth_extra.dummy.clone()))
+                    .build();
+                let x_extra = XExtraUnion::EthExtra(eth_extra);
+                XExtra::new_builder().set(x_extra).build()
+            }
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct BtcExtraView {
+    pub lock_tx_hash: String,
+    pub lock_vout_index: u32,
+}
+
+#[derive(Debug)]
+pub struct EthExtraView {
+    pub dummy: Bytes,
+}
+
+impl Default for EthExtraView {
+    fn default() -> Self {
+        Self {
+            dummy: basic::Bytes::new_builder().build().as_bytes(),
+        }
     }
 }
 
 pub struct ToCKBTypeArgsView {
     pub xchain_kind: u8,
     pub cell_id: Option<Bytes>,
+}
+
+impl ToCKBTypeArgsView {
+    pub fn default_cell_id() -> Option<Bytes> {
+        Some(basic::OutPoint::new_builder().build().as_bytes())
+    }
 }
 
 impl ToCKBTypeArgsView {
@@ -230,10 +336,27 @@ pub struct SudtCell {
     pub capacity: u64,
     pub amount: u128,
     pub lockscript: ScriptView,
+    pub owner_script: ScriptView,
     pub index: usize,
 }
 
-impl BuildCell for SudtCell {
+impl SudtCell {
+    pub fn build_typescript(&self, context: &mut Context, outpoints: &OutpointsContext) -> Script {
+        let owner_script = context
+            .build_script(
+                &outpoints[self.owner_script.outpoint_key],
+                self.owner_script.args.clone(),
+            )
+            .expect("build owner script");
+        let args: [u8; 32] = owner_script.calc_script_hash().unpack();
+        let args: Bytes = args.to_vec().into();
+        context
+            .build_script(&outpoints[SUDT_TYPESCRIPT_OUTPOINT_KEY], args)
+            .expect("build sudt typescript succ")
+    }
+}
+
+impl CellBuilder for SudtCell {
     fn build_output_cell(
         &self,
         context: &mut Context,
@@ -241,6 +364,7 @@ impl BuildCell for SudtCell {
     ) -> (Bytes, CellOutput) {
         let output_cell = CellOutput::new_builder()
             .capacity(self.capacity.pack())
+            .type_(Some(self.build_typescript(context, outpoints)).pack())
             .lock(self.lockscript.build_script(context, outpoints))
             .build();
         let output_data = self.amount.to_le_bytes().to_vec().into();
@@ -252,18 +376,20 @@ impl BuildCell for SudtCell {
     }
 }
 
+#[derive(Default)]
 pub struct CapacityCells {
     pub inputs: Vec<CapacityCell>,
     pub outputs: Vec<CapacityCell>,
 }
 
+#[derive(Default)]
 pub struct CapacityCell {
     pub capacity: u64,
     pub lockscript: ScriptView,
     pub index: usize,
 }
 
-impl BuildCell for CapacityCell {
+impl CellBuilder for CapacityCell {
     fn build_output_cell(
         &self,
         context: &mut Context,
@@ -281,6 +407,7 @@ impl BuildCell for CapacityCell {
     }
 }
 
+#[derive(Clone)]
 pub enum Witness {
     Btc(BtcWitness),
 }
@@ -288,11 +415,12 @@ pub enum Witness {
 impl Witness {
     pub fn as_bytes(&self) -> Bytes {
         match self {
-            Witness::Btc(btc_witness) => btc_witness.as_bytes()
+            Witness::Btc(btc_witness) => btc_witness.as_bytes(),
         }
     }
 }
 
+#[derive(Clone)]
 pub struct BtcWitness {
     pub cell_dep_index_list: Vec<u8>,
     pub spv_proof: BTCSPVProofJson,
@@ -300,7 +428,11 @@ pub struct BtcWitness {
 
 impl BtcWitness {
     pub fn as_bytes(&self) -> Bytes {
-        let spv_proof: mint_xt_witness::BTCSPVProof = self.spv_proof.clone().try_into().expect("try into mint_xt_witness::BTCSPVProof succ");
+        let spv_proof: mint_xt_witness::BTCSPVProof = self
+            .spv_proof
+            .clone()
+            .try_into()
+            .expect("try into mint_xt_witness::BTCSPVProof succ");
         let spv_proof = spv_proof.as_slice().to_vec();
         let witness_data = mint_xt_witness::MintXTWitness::new_builder()
             .spv_proof(spv_proof.into())
@@ -336,7 +468,7 @@ impl TryFrom<BTCSPVProofJson> for mint_xt_witness::BTCSPVProof {
             .vin(hex::decode(clear_0x(&proof.vin))?.into())
             .vout(hex::decode(clear_0x(&proof.vout))?.into())
             .locktime(proof.locktime.into())
-            .tx_id(hex::decode(clear_0x(&proof.tx_id))?.into())
+            .tx_id(hex::decode(clear_0x(&proof.tx_id))?.try_into()?)
             .index(proof.index.into())
             .headers(hex::decode(clear_0x(&proof.headers))?.into())
             .intermediate_nodes(hex::decode(clear_0x(&proof.intermediate_nodes))?.into())
@@ -369,27 +501,4 @@ fn str_to_molecule_bytes(s: &str) -> basic::Bytes {
                 .into(),
         )
         .build()
-}
-
-fn to_molecule_xextra(extra_view: &XExtraView) -> XExtra {
-    match extra_view {
-        XExtraView::Btc(btc_extra) => {
-            let lock_tx_hash = basic::Byte32::new_unchecked(btc_extra.lock_tx_hash.clone());
-            let lock_vout_index = Vec::<u8>::from(&btc_extra.lock_vout_index.to_le_bytes()[..]);
-            let lock_vout_index = basic::Uint32::new_unchecked(Bytes::from(lock_vout_index));
-            let btc_extra = BtcExtra::new_builder()
-                .lock_tx_hash(lock_tx_hash)
-                .lock_vout_index(lock_vout_index)
-                .build();
-            let x_extra = XExtraUnion::BtcExtra(btc_extra);
-            XExtra::new_builder().set(x_extra).build()
-        }
-        XExtraView::Eth(eth_extra) => {
-            let eth_extra = EthExtra::new_builder()
-                .dummy(basic::Bytes::new_unchecked(eth_extra.dummy.clone()))
-                .build();
-            let x_extra = XExtraUnion::EthExtra(eth_extra);
-            XExtra::new_builder().set(x_extra).build()
-        }
-    }
 }

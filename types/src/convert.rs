@@ -7,7 +7,9 @@ use ckb_std::ckb_types::packed;
 #[cfg(feature = "std")]
 use ckb_types::packed;
 
-use crate::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint32Reader, Uint64, Script, OutPoint};
+use crate::generated::basic::{
+    Byte32, Byte4, Bytes, OutPoint, Script, Uint32, Uint32Reader, Uint64,
+};
 use core::convert::TryFrom;
 use molecule::{
     error::VerificationError,
