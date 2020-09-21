@@ -129,20 +129,20 @@ pub fn verify_btc_witness(
     let tx_hash = verify_btc_spv(proof_reader, difficulty_reader)?;
 
     // verify transfer amount, to matches
-    let funding_output_index = {
-        let mut buf = [0u8; 4];
-        buf.copy_from_slice(proof_reader.funding_output_index().raw_data());
-        u32::from_le_bytes(buf)
-    };
+    let funding_output_index = proof_reader.funding_output_index().into();
 
     let vout = Vout::new(proof_reader.vout().raw_data())?;
     let tx_out = vout.index(funding_output_index as usize)?;
     let script_pubkey = tx_out.script_pubkey();
     debug!("script_pubkey payload: {:?}", script_pubkey.payload()?);
     match script_pubkey.payload()? {
-        PayloadType::WPKH(_) => {
-            let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32())
-                .expect("bech32 encode should not return error");
+        PayloadType::WPKH(pkh) => {
+            let mut addr_u5 = Vec::with_capacity(33);
+            addr_u5.push(bech32::u5::try_from_u8(0).unwrap());
+            addr_u5.extend(pkh.to_base32());
+            debug!("addr_u5: {:?}", &addr_u5);
+            let addr =
+                bech32::encode("bc", addr_u5).expect("bech32 encode should not return error");
             debug!(
                 "hex format: addr: {}, expect_address: {}",
                 hex::encode(addr.as_bytes().to_vec()),
@@ -166,11 +166,7 @@ pub fn verify_btc_witness(
         return Err(Error::FundingNotEnough);
     }
     if is_return_vin {
-        let funding_input_index = {
-            let mut buf = [0u8; 4];
-            buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
-            u32::from_le_bytes(buf)
-        };
+        let funding_input_index: u32 = proof_reader.funding_input_index().into();
         let vin = Vin::new(proof_reader.vin().raw_data())?;
         let tx_in = vin.index(funding_input_index as usize)?;
         debug!(
@@ -222,11 +218,8 @@ pub fn verify_btc_faulty_witness(
     verify_btc_spv(proof_reader, difficulty_reader)?;
 
     // get tx in
-    let funding_input_index = {
-        let mut buf = [0u8; 4];
-        buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
-        u32::from_le_bytes(buf)
-    };
+    let funding_input_index: u32 = proof_reader.funding_input_index().into();
+
     let vin = Vin::new(proof_reader.vin().raw_data())?;
     let tx_in = vin.index(funding_input_index as usize)?;
 
@@ -279,8 +272,12 @@ pub fn verify_btc_faulty_witness(
 
             let script_pubkey = tx_out.script_pubkey();
             match script_pubkey.payload()? {
-                PayloadType::WPKH(_) => {
-                    let addr = bech32::encode("bc", (&script_pubkey[1..]).to_base32())
+                PayloadType::WPKH(pkh) => {
+                    let mut addr_u5 = Vec::with_capacity(33);
+                    addr_u5.push(bech32::u5::try_from_u8(0).unwrap());
+                    addr_u5.extend(pkh.to_base32());
+                    debug!("addr_u5: {:?}", &addr_u5);
+                    let addr = bech32::encode("bc", addr_u5)
                         .expect("bech32 encode should not return error");
                     debug!(
                         "hex format: addr: {}, x_lock_address: {}",
@@ -389,4 +386,20 @@ pub fn verify_btc_spv(
     debug!("finish merkle proof verify");
 
     Ok(Bytes::from(&tx_id.as_ref()[..]))
+}
+
+pub fn verify_btc_address(addr: &[u8]) -> Result<(), Error> {
+    let (hrp, data) =
+        bech32::decode(core::str::from_utf8(addr).map_err(|_| Error::XChainAddressInvalid)?)
+            .map_err(|_| Error::XChainAddressInvalid)?;
+    if hrp != "bc" {
+        return Err(Error::XChainAddressInvalid);
+    }
+    if data.len() != 33 {
+        return Err(Error::XChainAddressInvalid);
+    }
+    if data[0].to_u8() != 0 {
+        return Err(Error::XChainAddressInvalid);
+    }
+    Ok(())
 }

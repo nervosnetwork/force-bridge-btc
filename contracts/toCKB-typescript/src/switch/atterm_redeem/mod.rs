@@ -1,13 +1,11 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::SINCE_AT_TERM_REDEEM;
-use crate::utils::tools::{check_capacity, is_XT_typescript, XChainKind};
+use crate::utils::tools::{check_capacity, is_XT_typescript, verify_btc_address, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
-use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
 use ckb_std::error::SysError;
 use ckb_std::high_level::{load_cell_data, load_cell_lock_hash, load_cell_type, load_input_since};
 use core::result::Result;
-use molecule::prelude::*;
 
 fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
@@ -18,22 +16,7 @@ fn verify_data(
             if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
                 return Err(Error::InvariantDataMutated);
             }
-            let (hrp, data) = bech32::decode(
-                core::str::from_utf8(out_toCKB_data.x_unlock_address.as_ref()).unwrap(),
-            )
-            .map_err(|_| Error::XChainAddressInvalid)?;
-            if hrp != "bc" {
-                return Err(Error::XChainAddressInvalid);
-            }
-
-            let raw_data = Vec::<u8>::from_base32(&data).unwrap();
-            if raw_data.len() != 22 {
-                return Err(Error::XChainAddressInvalid);
-            }
-            if &raw_data[..2] != &[0x00, 0x14] {
-                return Err(Error::XChainAddressInvalid);
-            }
-
+            verify_btc_address(out_toCKB_data.x_unlock_address.as_ref())?;
             out_toCKB_data.get_btc_lot_size()?.get_sudt_amount()
         }
         XChainKind::Eth => {

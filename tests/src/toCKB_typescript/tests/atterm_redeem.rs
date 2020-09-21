@@ -50,7 +50,7 @@ fn test_correct_tx_eth() {
 fn test_correct_tx_btc() {
     let correct_btc_address = basic::Bytes::new_builder()
         .set(
-            "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t"
+            "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah"
                 .as_bytes()
                 .iter()
                 .map(|c| Byte::new(*c))
@@ -119,7 +119,7 @@ fn test_wrong_tx_eth_address_invalid() {
 fn test_wrong_tx_btc_address_invalid() {
     let correct_btc_address = basic::Bytes::new_builder()
         .set(
-            "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t"
+            "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah"
                 .as_bytes()
                 .iter()
                 .map(|c| Byte::new(*c))
@@ -522,7 +522,7 @@ fn build_test_context(
     let lock_address = match kind {
         1 => basic::Bytes::new_builder()
             .set(
-                "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz0t"
+                "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah"
                     .as_bytes()
                     .iter()
                     .map(|c| Byte::new(*c))

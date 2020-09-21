@@ -1,8 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::SIGNER_FEE_RATE;
-use crate::utils::tools::{check_capacity, is_XT_typescript, XChainKind};
+use crate::utils::tools::{check_capacity, is_XT_typescript, verify_btc_address, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
-use bech32::{self, FromBase32};
 use ckb_std::ckb_constants::Source;
 use ckb_std::debug;
 use ckb_std::error::SysError;
@@ -19,22 +18,7 @@ fn verify_data(
             if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
                 return Err(Error::InvariantDataMutated);
             }
-            let (hrp, data) = bech32::decode(
-                core::str::from_utf8(out_toCKB_data.x_unlock_address.as_ref()).unwrap(),
-            )
-            .map_err(|_| Error::XChainAddressInvalid)?;
-            if hrp != "bc" {
-                return Err(Error::XChainAddressInvalid);
-            }
-
-            let raw_data = Vec::<u8>::from_base32(&data).unwrap();
-            if raw_data.len() != 22 {
-                return Err(Error::XChainAddressInvalid);
-            }
-            if &raw_data[..2] != &[0x00, 0x14] {
-                return Err(Error::XChainAddressInvalid);
-            }
-
+            verify_btc_address(out_toCKB_data.x_unlock_address.as_ref())?;
             out_toCKB_data.get_btc_lot_size()?.get_sudt_amount()
         }
         XChainKind::Eth => {
