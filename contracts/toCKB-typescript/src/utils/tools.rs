@@ -129,11 +129,7 @@ pub fn verify_btc_witness(
     let tx_hash = verify_btc_spv(proof_reader, difficulty_reader)?;
 
     // verify transfer amount, to matches
-    let funding_output_index = {
-        let mut buf = [0u8; 4];
-        buf.copy_from_slice(proof_reader.funding_output_index().raw_data());
-        u32::from_le_bytes(buf)
-    };
+    let funding_output_index = proof_reader.funding_output_index().into();
 
     let vout = Vout::new(proof_reader.vout().raw_data())?;
     let tx_out = vout.index(funding_output_index as usize)?;
@@ -170,11 +166,7 @@ pub fn verify_btc_witness(
         return Err(Error::FundingNotEnough);
     }
     if is_return_vin {
-        let funding_input_index = {
-            let mut buf = [0u8; 4];
-            buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
-            u32::from_le_bytes(buf)
-        };
+        let funding_input_index: u32 = proof_reader.funding_input_index().into();
         let vin = Vin::new(proof_reader.vin().raw_data())?;
         let tx_in = vin.index(funding_input_index as usize)?;
         debug!(
@@ -226,11 +218,8 @@ pub fn verify_btc_faulty_witness(
     verify_btc_spv(proof_reader, difficulty_reader)?;
 
     // get tx in
-    let funding_input_index = {
-        let mut buf = [0u8; 4];
-        buf.copy_from_slice(proof_reader.funding_input_index().raw_data());
-        u32::from_le_bytes(buf)
-    };
+    let funding_input_index: u32 = proof_reader.funding_input_index().into();
+
     let vin = Vin::new(proof_reader.vin().raw_data())?;
     let tx_in = vin.index(funding_input_index as usize)?;
 
