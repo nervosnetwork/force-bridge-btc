@@ -22,7 +22,7 @@ pub const BTC_UNIT: u128 = 100_000_000;
 pub const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Debug, Clone, Copy, IntEnum)]
 pub enum XChainKind {
     Btc = 1,
     Eth = 2,
@@ -60,26 +60,14 @@ pub struct EthExtraView {
 
 impl ToCKBCellDataView {
     pub fn new(data: &[u8], x_kind: XChainKind) -> Result<ToCKBCellDataView, Error> {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "std")] {
-                dbg!("before verify toCKB data format");
-            } else {
-                debug!("before verify toCKB data format");
-            }
-        }
-
-        let result = ToCKBCellDataReader::verify(data, false);
-
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "std")] {
-                dbg!("verify toCKB data format succ: {:?}", result);
-            } else {
-                debug!("verify toCKB data format succ: {:?}", result);
-            }
-        }
-
         ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
-
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "std")] {
+                dbg!("molecule verify toCKB data format success");
+            } else {
+                debug!("molecule verify toCKB data format success");
+            }
+        }
         let data_reader = ToCKBCellDataReader::new_unchecked(data);
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];

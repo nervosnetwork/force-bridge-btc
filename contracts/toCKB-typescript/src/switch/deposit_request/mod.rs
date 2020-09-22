@@ -19,8 +19,9 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .as_ref()
         .expect("outputs contain toCKB cell");
     verify_capacity()?;
-    debug!("verify capacity succ");
+    debug!("verify capacity success");
     verify_lot_size(toCKB_data)?;
+    debug!("verify lot size success");
     verify_cell_id()
 }
 

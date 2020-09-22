@@ -1,4 +1,3 @@
-#[allow(irrefutable_let_patterns)]
 mod atterm_redeem;
 mod auction_faulty_redeeming;
 mod auction_faulty_warranty;

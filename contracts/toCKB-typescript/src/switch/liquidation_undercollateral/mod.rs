@@ -17,11 +17,10 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .expect("outputs should contain toCKB cell");
 
     let asset_collateral = verify_capacity()? - XT_CELL_CAPACITY;
-    debug!("verify capacity succ");
+    debug!("verify capacity success");
     verify_data(input_data, output_data)?;
-    debug!("verify data succ");
+    debug!("verify data success");
     verify_undercollateral(asset_collateral as u128, input_data)?;
-
     Ok(())
 }
 
@@ -61,6 +60,5 @@ fn verify_undercollateral(
     {
         return Err(Error::UndercollateralInvalid);
     }
-
     Ok(())
 }

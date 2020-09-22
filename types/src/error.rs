@@ -24,7 +24,7 @@ pub enum Error {
     InvalidMintOutput,
     WrongFundingAddr,
     InvalidXTInInputOrOutput,
-    InvalidXTMint, // 23
+    InvalidXTMint,
     CapacityInvalid,
     InvariantDataMutated,
     InputSinceInvalid,

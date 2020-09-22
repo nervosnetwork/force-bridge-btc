@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(irrefutable_let_patterns)]
 #![allow(dead_code)]
 
 mod toCKB_lockscript;

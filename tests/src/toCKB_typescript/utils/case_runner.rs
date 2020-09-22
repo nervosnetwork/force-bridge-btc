@@ -31,29 +31,15 @@ pub fn run_test(case: TestCase) {
     }
 
     // Cells
-    // let mut inputs = vec![];
-    // let mut outputs = vec![];
-    // let mut outputs_data = vec![];
-
     let inputs_len = case.toCKB_cells.inputs.len()
         + case.sudt_cells.inputs.len()
         + case.capacity_cells.inputs.len();
     let outputs_len = case.toCKB_cells.outputs.len()
         + case.sudt_cells.outputs.len()
         + case.capacity_cells.outputs.len();
-
     let mut inputs = vec![CellInput::default(); inputs_len];
     let mut outputs = vec![CellOutput::default(); outputs_len];
     let mut outputs_data = vec![Bytes::default(); outputs_len];
-
-    // let mut inputs = Vec::<CellInput>::with_capacity(inputs_len);
-    // let mut outputs = Vec::<CellOutput>::with_capacity(outputs_len);
-    // let mut outputs_data = Vec::<Bytes>::with_capacity(outputs_len);
-    // unsafe {
-    //     inputs.set_len(inputs_len);
-    //     outputs.set_len(outputs_len);
-    //     outputs_data.set_len(outputs_len);
-    // }
 
     build_input_cell(
         case.toCKB_cells.inputs.into_iter(),
@@ -113,7 +99,6 @@ pub fn run_test(case: TestCase) {
         .outputs_data(outputs_data.pack())
         .witnesses(witnesses)
         .build();
-
     let tx = context.complete_tx(tx);
     dbg!(&tx);
 
@@ -162,8 +147,7 @@ fn build_input_cell<I, B>(
     for input in iterator {
         let index = input.get_index();
         let (input_outpoint, input_cell) = input.build_input_cell(context, outpoints_context);
-        // inputs.insert(index, input_cell);
-        replace(&mut inputs[index], input_cell);
+        let _old_value = replace(&mut inputs[index], input_cell);
         if 0 == index {
             outpoints_context.insert(FIRST_INPUT_OUTPOINT_KEY, input_outpoint);
         }
@@ -183,10 +167,8 @@ fn build_output_cell<I, B>(
     for output in iterator {
         let index = output.get_index();
         let (output_data, output_cell) = output.build_output_cell(context, outpoints_context);
-        // outputs.insert(index, output_cell);
-        // outputs_data.insert(index, output_data);
-        replace(&mut outputs[index], output_cell);
-        replace(&mut outputs_data[index], output_data);
+        let _old_value = replace(&mut outputs[index], output_cell);
+        let _old_value = replace(&mut outputs_data[index], output_data);
     }
 }
 

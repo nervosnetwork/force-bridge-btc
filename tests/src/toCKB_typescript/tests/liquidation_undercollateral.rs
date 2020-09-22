@@ -23,6 +23,44 @@ fn test_wrong_price_condition() {
     case_runner::run_test(case)
 }
 
+#[test]
+fn test_wrong_mint_xt() {
+    let mut case = get_correct_btc_case();
+    case.sudt_cells.outputs.push(SudtCell {
+        capacity: 200 * CKB_UNITS,
+        amount: 100,
+        lockscript: Default::default(),
+        owner_script: Default::default(),
+        index: 1,
+    });
+    case.expect_return_code = Error::TxInvalid as i8;
+    case_runner::run_test(case)
+}
+
+#[test]
+fn test_wrong_xchain_mismatch() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.x_extra = XExtraView::Eth(Default::default());
+    case.expect_return_code = Error::XChainMismatch as i8;
+    case_runner::run_test(case)
+}
+
+#[test]
+fn test_wrong_modified_lot_size() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.lot_size = 3;
+    case.expect_return_code = Error::InvariantDataMutated as i8;
+    case_runner::run_test(case)
+}
+
+#[test]
+fn test_wrong_modified_x_lock_address() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.x_lock_address = "".to_string();
+    case.expect_return_code = Error::InvariantDataMutated as i8;
+    case_runner::run_test(case)
+}
+
 fn get_correct_btc_case() -> TestCase {
     TestCase {
         cell_deps: vec![CellDepView::PriceOracle(PRICE)],

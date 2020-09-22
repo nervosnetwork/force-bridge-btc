@@ -4,14 +4,44 @@ use tockb_types::{
     Error,
 };
 
-const BTC_BURN: u128 = 25_000_000;
-
+const BTC_BURN_AMOUNT: u128 = 25_000_000;
 const TOCKB_CAPACITY: u64 = 3_750_000 * CKB_UNITS;
 const SINCE: u64 = LOCK_TYPE_FLAG | SINCE_TYPE_TIMESTAMP | AUCTION_MAX_TIME;
 
 #[test]
 fn test_correct_btc_tx() {
     let case = get_correct_btc_case();
+    case_runner::run_test(case)
+}
+
+#[test]
+fn test_correct_btc_tx_with_xt_change_back() {
+    let mut case = get_correct_btc_case();
+    const CHANGE: u128 = 100;
+    case.sudt_cells.inputs[0].amount += CHANGE;
+    case.sudt_cells.outputs.push(SudtCell {
+        capacity: CKB_UNITS,
+        amount: CHANGE,
+        lockscript: Default::default(),
+        owner_script: Default::default(),
+        index: 2,
+    });
+    case_runner::run_test(case)
+}
+
+#[test]
+fn test_wrong_btc_tx_with_xt_change_back() {
+    let mut case = get_correct_btc_case();
+    const CHANGE: u128 = 100;
+    case.sudt_cells.inputs[0].amount += CHANGE;
+    case.sudt_cells.outputs.push(SudtCell {
+        capacity: CKB_UNITS,
+        amount: CHANGE + 1,
+        lockscript: Default::default(),
+        owner_script: Default::default(),
+        index: 2,
+    });
+    case.expect_return_code = Error::XTAmountInvalid as i8;
     case_runner::run_test(case)
 }
 
@@ -92,7 +122,7 @@ fn get_correct_btc_case() -> TestCase {
         sudt_cells: SudtCells {
             inputs: vec![SudtCell {
                 capacity: 210 * CKB_UNITS,
-                amount: BTC_BURN,
+                amount: BTC_BURN_AMOUNT,
                 lockscript: Default::default(),
                 owner_script: Default::default(),
                 index: 1,
