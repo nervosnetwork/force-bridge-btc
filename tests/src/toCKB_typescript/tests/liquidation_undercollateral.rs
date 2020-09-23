@@ -1,192 +1,124 @@
-use super::ToCKBCellData;
-use crate::toCKB_typescript::utils::{
-    config::*,
-    types::{Error, ToCKBStatus},
+use crate::toCKB_typescript::utils::{case_builder::*, case_runner};
+use tockb_types::{
+    config::{CKB_UNITS, XT_CELL_CAPACITY},
+    Error,
 };
-use crate::*;
-use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
-use ckb_tool::ckb_types::{
-    bytes::Bytes,
-    core::{TransactionBuilder, TransactionView},
-    packed::*,
-    prelude::*,
-};
-use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
-use molecule::prelude::*;
 
-const MAX_CYCLES: u64 = 10_000_000;
+const PRICE: u128 = 1;
+const TOCKB_CELL_CAPACITY: u64 = 3_750_000u64 * CKB_UNITS + XT_CELL_CAPACITY;
 
 #[test]
 fn test_correct_tx() {
-    let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Warranty as u8))
-        .lot_size(Byte::new(1u8))
-        .build();
-
-    let output_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Undercollateral as u8))
-        .lot_size(Byte::new(1u8))
-        .build();
-
-    let (context, tx) = build_test_context(
-        1,
-        0,
-        1,
-        input_toCKB_data.as_bytes(),
-        output_toCKB_data.as_bytes(),
-    );
-
-    let cycles = context
-        .verify_tx(&tx, MAX_CYCLES)
-        .expect("pass verification");
-    println!("consume cycles: {}", cycles);
+    let case = get_correct_btc_case();
+    case_runner::run_test(case)
 }
 
 #[test]
-fn test_wrong_undercollateral() {
-    let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Warranty as u8))
-        .lot_size(Byte::new(1u8))
-        .build();
-
-    let output_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Undercollateral as u8))
-        .lot_size(Byte::new(1u8))
-        .build();
-
-    let (context, tx) = build_test_context(
-        1,
-        0,
-        10,
-        input_toCKB_data.as_bytes(),
-        output_toCKB_data.as_bytes(),
-    );
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(Error::UndercollateralInvalid as i8)
-    );
+fn test_wrong_price_condition() {
+    let mut case = get_correct_btc_case();
+    if let CellDepView::PriceOracle(price) = &mut case.cell_deps[0] {
+        *price = 10 * PRICE;
+    }
+    case.expect_return_code = Error::UndercollateralInvalid as i8;
+    case_runner::run_test(case)
 }
 
 #[test]
-fn test_wrong_lot_size() {
-    let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Warranty as u8))
-        .lot_size(Byte::new(1u8))
-        .build();
-
-    let output_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Undercollateral as u8))
-        .lot_size(Byte::new(2u8))
-        .build();
-
-    let (context, tx) = build_test_context(
-        1,
-        0,
-        1,
-        input_toCKB_data.as_bytes(),
-        output_toCKB_data.as_bytes(),
-    );
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
-    );
+fn test_wrong_mint_xt() {
+    let mut case = get_correct_btc_case();
+    case.sudt_cells.outputs.push(SudtCell {
+        capacity: 200 * CKB_UNITS,
+        amount: 100,
+        lockscript: Default::default(),
+        owner_script: Default::default(),
+        index: 1,
+    });
+    case.expect_return_code = Error::TxInvalid as i8;
+    case_runner::run_test(case)
 }
 
 #[test]
-fn test_wrong_status() {
-    let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Undercollateral as u8))
-        .lot_size(Byte::new(1u8))
-        .build();
-
-    let output_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(ToCKBStatus::Undercollateral as u8))
-        .lot_size(Byte::new(1u8))
-        .build();
-
-    let (context, tx) = build_test_context(
-        1,
-        0,
-        1,
-        input_toCKB_data.as_bytes(),
-        output_toCKB_data.as_bytes(),
-    );
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
+fn test_wrong_xchain_mismatch() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.x_extra = XExtraView::Eth(Default::default());
+    case.expect_return_code = Error::XChainMismatch as i8;
+    case_runner::run_test(case)
 }
 
-fn build_test_context(
-    kind: u8,
-    since: u64,
-    price: u128,
-    input_toCKB_data: Bytes,
-    output_toCKB_data: Bytes,
-) -> (Context, TransactionView) {
-    // deploy contract
-    let mut context = Context::default();
-    let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
-    let toCKB_typescript_out_point = context.deploy_cell(toCKB_typescript_bin);
-    let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
+#[test]
+fn test_wrong_modified_lot_size() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.lot_size = 3;
+    case.expect_return_code = Error::InvariantDataMutated as i8;
+    case_runner::run_test(case)
+}
 
-    // prepare scripts
-    let toCKB_typescript = context
-        .build_script(&toCKB_typescript_out_point, [kind; 1].to_vec().into())
-        .expect("script");
-    let toCKB_typescript_dep = CellDep::new_builder()
-        .out_point(toCKB_typescript_out_point)
-        .build();
-    let always_success_lockscript = context
-        .build_script(&always_success_out_point, Default::default())
-        .expect("script");
-    let always_success_lockscript_dep = CellDep::new_builder()
-        .out_point(always_success_out_point)
-        .build();
+#[test]
+fn test_wrong_modified_x_lock_address() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.x_lock_address = "".to_string();
+    case.expect_return_code = Error::InvariantDataMutated as i8;
+    case_runner::run_test(case)
+}
 
-    let capacity = 3_750_000u64 * CKB_UNITS + XT_CELL_CAPACITY;
-
-    // prepare inputs
-    let input_out_point = context.create_cell(
-        CellOutput::new_builder()
-            .capacity(capacity.pack())
-            .lock(always_success_lockscript.clone())
-            .type_(Some(toCKB_typescript.clone()).pack())
-            .build(),
-        input_toCKB_data,
-    );
-    let input = CellInput::new_builder()
-        .previous_output(input_out_point)
-        .since(since.pack())
-        .build();
-
-    // prepare outputs
-    let outputs = vec![CellOutput::new_builder()
-        .capacity(capacity.pack())
-        .type_(Some(toCKB_typescript.clone()).pack())
-        .lock(always_success_lockscript)
-        .build()];
-    let outputs_data = vec![output_toCKB_data; 1];
-
-    // witness
-    let data: [u8; 16] = price.to_le_bytes();
-    let witness = WitnessArgs::new_builder()
-        .input_type(Some(Bytes::copy_from_slice(data.as_ref())).pack())
-        .build();
-
-    // build transaction
-    let tx = TransactionBuilder::default()
-        .input(input)
-        .outputs(outputs)
-        .witness(witness.as_bytes().pack())
-        .outputs_data(outputs_data.pack())
-        .cell_dep(toCKB_typescript_dep)
-        .cell_dep(always_success_lockscript_dep)
-        .build();
-    let tx = context.complete_tx(tx);
-
-    (context, tx)
+fn get_correct_btc_case() -> TestCase {
+    TestCase {
+        cell_deps: vec![CellDepView::PriceOracle(PRICE)],
+        toCKB_cells: ToCKBCells {
+            inputs: vec![ToCKBCell {
+                capacity: TOCKB_CELL_CAPACITY,
+                data: ToCKBCellDataView {
+                    status: 3,
+                    lot_size: 1,
+                    user_lockscript: Default::default(),
+                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    signer_lockscript: Default::default(),
+                    x_unlock_address: Default::default(),
+                    redeemer_lockscript: Default::default(),
+                    liquidation_trigger_lockscript: Default::default(),
+                    x_extra: XExtraView::Btc(BtcExtraView {
+                        lock_tx_hash:
+                            "5227c5fbad9d9202ade7f02452cf880dac1ed270255ebfe6716e8b3e8956571d"
+                                .to_string(),
+                        lock_vout_index: 1,
+                    }),
+                },
+                type_args: ToCKBTypeArgsView {
+                    xchain_kind: 1,
+                    cell_id: ToCKBTypeArgsView::default_cell_id(),
+                },
+                since: 0,
+                index: 0,
+            }],
+            outputs: vec![ToCKBCell {
+                capacity: TOCKB_CELL_CAPACITY,
+                data: ToCKBCellDataView {
+                    status: 6,
+                    lot_size: 1,
+                    user_lockscript: Default::default(),
+                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    signer_lockscript: Default::default(),
+                    x_unlock_address: Default::default(),
+                    redeemer_lockscript: Default::default(),
+                    liquidation_trigger_lockscript: Default::default(),
+                    x_extra: XExtraView::Btc(BtcExtraView {
+                        lock_tx_hash:
+                            "5227c5fbad9d9202ade7f02452cf880dac1ed270255ebfe6716e8b3e8956571d"
+                                .to_string(),
+                        lock_vout_index: 1,
+                    }),
+                },
+                type_args: ToCKBTypeArgsView {
+                    xchain_kind: 1,
+                    cell_id: ToCKBTypeArgsView::default_cell_id(),
+                },
+                since: 0,
+                index: 0,
+            }],
+        },
+        sudt_cells: Default::default(),
+        capacity_cells: Default::default(),
+        witnesses: vec![],
+        expect_return_code: 0,
+    }
 }
