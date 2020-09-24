@@ -9,3 +9,8 @@ table Script {
     hash_type:      byte,
     args:           Bytes,
 }
+
+struct OutPoint {
+    tx_hash:        Byte32,
+    index:          Uint32,
+}

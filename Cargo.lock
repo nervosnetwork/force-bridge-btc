@@ -3346,6 +3346,7 @@ dependencies = [
  "bitcoin-spv 5.0.0",
  "cfg-if",
  "ckb-std",
+ "ckb-types",
  "int-enum",
  "molecule",
 ]
