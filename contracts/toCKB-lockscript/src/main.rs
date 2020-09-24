@@ -5,13 +5,13 @@
 #![feature(panic_info_message)]
 #![allow(non_snake_case)]
 
-use ckb_std::high_level::load_script;
+use ckb_std::high_level::{load_cell_type, load_script};
 use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
-    default_alloc, entry,
+    debug, default_alloc, entry,
     error::SysError,
-    high_level::{load_cell_lock_hash, load_cell_type_hash, load_script_hash},
+    high_level::{load_cell_lock_hash, load_script_hash},
 };
 use core::result::Result;
 entry!(entry);
@@ -66,9 +66,12 @@ fn verify() -> Result<(), Error> {
 
 fn verify_toCKB_cells(source: Source, script_hash: &[u8; 32], args: &[u8]) -> Result<(), Error> {
     for i in 0.. {
-        match load_cell_type_hash(i, source) {
-            Ok(type_hash_opt) => {
-                if type_hash_opt.is_none() || type_hash_opt.unwrap()[..] != args[..] {
+        match load_cell_type(i, source) {
+            Ok(type_script_opt) => {
+                if type_script_opt.is_none()
+                    || type_script_opt.unwrap().as_slice()[0..54] != args[..]
+                {
+                    debug!("lock_script: the cell is not toCKB type");
                     continue;
                 }
             }
@@ -79,8 +82,10 @@ fn verify_toCKB_cells(source: Source, script_hash: &[u8; 32], args: &[u8]) -> Re
         let lock_hash = load_cell_lock_hash(i, source)?;
 
         if lock_hash[..] != script_hash[..] {
+            debug!("lock_script: the cell is invalid toCKB cell");
             return Err(Error::InvalidToCKBCell);
         }
+        debug!("lock_script: the cell is valid toCKB cell");
     }
     Ok(())
 }

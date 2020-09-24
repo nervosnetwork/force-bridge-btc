@@ -8,13 +8,15 @@ use ckb_tool::ckb_types::{
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 
 use crate::Loader;
+use tockb_types::basic;
+use tockb_types::generated::tockb_cell_data::ToCKBTypeArgs;
 
 const MAX_CYCLES: u64 = 10_000_000;
 
 #[derive(Clone, Copy)]
-struct CellCase {
-    is_toCKB_typescript_hash: bool,
-    is_toCKB_lockscript: bool,
+struct IsValidToCKBCell {
+    is_toCKB_cell_type: bool,
+    is_toCKB_cell_valid: bool,
 }
 
 #[repr(i8)]
@@ -41,21 +43,25 @@ fn load_context_and_out_points() -> (Context, OutPoint, OutPoint) {
     );
 }
 
-fn build_cell(cell_case: CellCase) -> CellOutput {
+fn build_cell(is_valid_cell: IsValidToCKBCell) -> CellOutput {
     let (mut context, toCKB_lockscript_out_point, always_success_out_point) =
         load_context_and_out_points();
 
+    let args = ToCKBTypeArgs::new_builder()
+        .cell_id(basic::OutPoint::from(always_success_out_point.clone()))
+        .xchain_kind(Byte::new(1))
+        .build();
+
     // prepare scripts
     let mock_toCKB_typescript = context
-        .build_script(&always_success_out_point, [3; 1].to_vec().into())
+        .build_script(&always_success_out_point, args.as_bytes())
         .expect("script");
 
-    let lock_script = if cell_case.is_toCKB_lockscript {
-        let lockscript_args = if cell_case.is_toCKB_typescript_hash {
-            let type_hash: [u8; 32] = mock_toCKB_typescript.calc_script_hash().unpack();
-            type_hash.to_vec().into()
+    let lock_script = if is_valid_cell.is_toCKB_cell_valid {
+        let lockscript_args = if is_valid_cell.is_toCKB_cell_type {
+            mock_toCKB_typescript.as_bytes()[0..54].to_vec().into()
         } else {
-            [0u8; 32].to_vec().into()
+            mock_toCKB_typescript.as_bytes().to_vec().into()
         };
 
         context
@@ -75,8 +81,8 @@ fn build_cell(cell_case: CellCase) -> CellOutput {
 }
 
 fn build_test_context(
-    input_valid: Vec<CellCase>,
-    output_valid: Vec<CellCase>,
+    is_valid_inputs: Vec<IsValidToCKBCell>,
+    is_valid_outputs: Vec<IsValidToCKBCell>,
 ) -> (Context, TransactionView) {
     let (mut context, toCKB_lockscript_out_point, always_success_out_point) =
         load_context_and_out_points();
@@ -93,8 +99,8 @@ fn build_test_context(
     let mut outputs_data = vec![];
 
     //prepare input cell
-    for &cell_case in input_valid.iter() {
-        let cell = build_cell(cell_case);
+    for &is_valid_cell in is_valid_inputs.iter() {
+        let cell = build_cell(is_valid_cell);
 
         let input_out_point = context.create_cell(cell, Bytes::new());
 
@@ -106,8 +112,8 @@ fn build_test_context(
     }
 
     //prepare output cells
-    for &cell_case in output_valid.iter() {
-        let cell = build_cell(cell_case);
+    for &is_valid_cell in is_valid_outputs.iter() {
+        let cell = build_cell(is_valid_cell);
 
         outputs.push(cell);
         outputs_data.push(Bytes::new());
@@ -127,11 +133,11 @@ fn build_test_context(
 }
 
 #[test]
-fn test_lock_basic_all_valid() {
+fn test_valid_toCKB_cell() {
     // two input_cell and two output_cell are all valid toCKBCell
-    let valid_cell = CellCase {
-        is_toCKB_typescript_hash: true,
-        is_toCKB_lockscript: true,
+    let valid_cell = IsValidToCKBCell {
+        is_toCKB_cell_type: true,
+        is_toCKB_cell_valid: true,
     };
 
     let (mut context, tx) =
@@ -145,19 +151,19 @@ fn test_lock_basic_all_valid() {
 }
 
 #[test]
-fn test_lock_no_toCKB_cell() {
-    let not_ckb_cell_type = CellCase {
-        is_toCKB_typescript_hash: false,
-        is_toCKB_lockscript: false,
+fn test_none_toCKB_cell() {
+    let not_toCKB_cell_type1 = IsValidToCKBCell {
+        is_toCKB_cell_type: false,
+        is_toCKB_cell_valid: false,
     };
-    let valid_cell = CellCase {
-        is_toCKB_typescript_hash: false,
-        is_toCKB_lockscript: true,
+    let not_toCKB_cell_type2 = IsValidToCKBCell {
+        is_toCKB_cell_type: false,
+        is_toCKB_cell_valid: true,
     };
     // all the input_cell and output_cell are not toCKBCell
     let (mut context, tx) = build_test_context(
-        vec![not_ckb_cell_type, valid_cell],
-        vec![not_ckb_cell_type, not_ckb_cell_type],
+        vec![not_toCKB_cell_type1, not_toCKB_cell_type2],
+        vec![not_toCKB_cell_type2, not_toCKB_cell_type1],
     );
     let tx = context.complete_tx(tx);
 
@@ -167,14 +173,14 @@ fn test_lock_no_toCKB_cell() {
 }
 
 #[test]
-fn test_lock_simple_invalid() {
-    let invalid_cell = CellCase {
-        is_toCKB_typescript_hash: true,
-        is_toCKB_lockscript: false,
+fn test_invalid_toCKB_cell() {
+    let invalid_cell = IsValidToCKBCell {
+        is_toCKB_cell_type: true,
+        is_toCKB_cell_valid: false,
     };
-    let valid_cell = CellCase {
-        is_toCKB_typescript_hash: true,
-        is_toCKB_lockscript: true,
+    let valid_cell = IsValidToCKBCell {
+        is_toCKB_cell_type: true,
+        is_toCKB_cell_valid: true,
     };
     // one input_cell and one output_cell is valid toCKBCell, the others are not invalid
     let (mut context, tx) = build_test_context(
