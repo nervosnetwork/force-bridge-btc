@@ -56,8 +56,10 @@ fn main() -> Result<(), Error> {
 fn verify() -> Result<(), Error> {
     let args: Bytes = load_script()?.args().unpack();
     let count = QueryIter::new(load_cell_type, Source::GroupInput)
-        .filter(|type_script_opt| type_script_opt.is_some())
-        .filter(|type_script_opt| (type_script_opt.as_ref().unwrap().as_slice()[0..54] != args[..]))
+        .filter(|type_script_opt| {
+            type_script_opt.is_none()
+                || (type_script_opt.as_ref().unwrap().as_slice()[0..54] != args[..])
+        })
         .count();
     if 0 != count {
         return Err(Error::InvalidToCKBCell);
