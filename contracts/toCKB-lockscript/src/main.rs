@@ -5,7 +5,7 @@
 #![feature(panic_info_message)]
 #![allow(non_snake_case)]
 
-use ckb_std::high_level::{load_cell_type, load_script};
+use ckb_std::high_level::{load_cell_type, load_script, QueryIter};
 use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
@@ -55,26 +55,10 @@ fn main() -> Result<(), Error> {
 
 fn verify() -> Result<(), Error> {
     let args: Bytes = load_script()?.args().unpack();
-    verify_toCKB_cells(Source::GroupInput, args.as_ref())?;
-    Ok(())
-}
-
-fn verify_toCKB_cells(source: Source, args: &[u8]) -> Result<(), Error> {
-    for i in 0.. {
-        match load_cell_type(i, source) {
-            Ok(type_script_opt) => {
-                if type_script_opt.is_none()
-                    || type_script_opt.unwrap().as_slice()[0..54] != args[..]
-                {
-                    debug!("{:?}-{}: the cell is not toCKB type", source, i);
-                    continue;
-                }
-            }
-            Err(SysError::IndexOutOfBound) => return Ok(()),
-            Err(err) => return Err(err.into()),
-        };
-        debug!("{:?}-{}: the cell is valid toCKB cell", source, i);
-    }
+    let count = QueryIter::new(load_cell_type, Source::GroupInput)
+        .filter(|type_script_opt| (type_script_opt.clone().unwrap().as_slice()[0..54] != args[..]))
+        .count();
+    debug!("the count of cell which is not toCKB type is {:?}", count);
 
     Ok(())
 }
