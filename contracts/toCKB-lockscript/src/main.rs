@@ -9,7 +9,7 @@ use ckb_std::high_level::{load_cell_type, load_script, QueryIter};
 use ckb_std::{
     ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
-    debug, default_alloc, entry,
+    default_alloc, entry,
     error::SysError,
 };
 use core::result::Result;
@@ -56,9 +56,11 @@ fn main() -> Result<(), Error> {
 fn verify() -> Result<(), Error> {
     let args: Bytes = load_script()?.args().unpack();
     let count = QueryIter::new(load_cell_type, Source::GroupInput)
-        .filter(|type_script_opt| (type_script_opt.clone().unwrap().as_slice()[0..54] != args[..]))
+        .filter(|type_script_opt| type_script_opt.is_some())
+        .filter(|type_script_opt| (type_script_opt.as_ref().unwrap().as_slice()[0..54] != args[..]))
         .count();
-    debug!("the count of cell which is not toCKB type is {:?}", count);
-
+    if 0 != count {
+        return Err(Error::InvalidToCKBCell);
+    }
     Ok(())
 }

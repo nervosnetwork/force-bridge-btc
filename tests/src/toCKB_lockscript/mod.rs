@@ -7,16 +7,11 @@ use ckb_tool::ckb_types::{
 };
 
 use crate::Loader;
+use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use tockb_types::basic;
 use tockb_types::generated::tockb_cell_data::ToCKBTypeArgs;
 
 const MAX_CYCLES: u64 = 10_000_000;
-
-#[derive(Clone, Copy)]
-struct IsValidToCKBCell {
-    is_toCKB_cell_type: bool,
-    is_toCKB_cell_valid: bool,
-}
 
 #[repr(i8)]
 pub enum Error {
@@ -26,6 +21,33 @@ pub enum Error {
     Encoding,
     // Add customized errors here...
     InvalidToCKBCell,
+}
+
+#[test]
+fn test_invalid_toCKB_cell() {
+    let invalid_cell = build_cell(1, basic::OutPoint::default());
+    let toCKB_cell = build_cell(54, basic::OutPoint::new_unchecked(vec![1].into()));
+
+    let (mut context, tx) = build_test_context(vec![&toCKB_cell, &invalid_cell], vec![&toCKB_cell]);
+    let tx = context.complete_tx(tx);
+
+    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
+    assert_error_eq!(
+        err,
+        ScriptError::ValidationFailure(Error::InvalidToCKBCell as i8)
+    );
+}
+#[test]
+fn test_valid_toCKB_cell() {
+    let valid_cell_1 = build_cell(54, basic::OutPoint::new_unchecked(vec![1].into()));
+    let valid_cell_2 = build_cell(54, basic::OutPoint::new_unchecked(vec![0].into()));
+    let (mut context, tx) =
+        build_test_context(vec![&valid_cell_1, &valid_cell_2], vec![&valid_cell_2]);
+    let tx = context.complete_tx(tx);
+
+    context
+        .verify_tx(&tx, MAX_CYCLES)
+        .expect("pass verification");
 }
 
 fn load_context_and_out_points() -> (Context, OutPoint, OutPoint) {
@@ -42,12 +64,12 @@ fn load_context_and_out_points() -> (Context, OutPoint, OutPoint) {
     );
 }
 
-fn build_cell(is_valid_cell: IsValidToCKBCell) -> CellOutput {
+fn build_cell(size: usize, cell_id: basic::OutPoint) -> CellOutput {
     let (mut context, toCKB_lockscript_out_point, always_success_out_point) =
         load_context_and_out_points();
 
     let args = ToCKBTypeArgs::new_builder()
-        .cell_id(basic::OutPoint::from(always_success_out_point.clone()))
+        .cell_id(cell_id)
         .xchain_kind(Byte::new(1))
         .build();
 
@@ -56,21 +78,12 @@ fn build_cell(is_valid_cell: IsValidToCKBCell) -> CellOutput {
         .build_script(&always_success_out_point, args.as_bytes())
         .expect("script");
 
-    let lock_script = if is_valid_cell.is_toCKB_cell_valid {
-        let lockscript_args = if is_valid_cell.is_toCKB_cell_type {
-            mock_toCKB_typescript.as_bytes()[0..54].to_vec().into()
-        } else {
-            mock_toCKB_typescript.as_bytes().to_vec().into()
-        };
+    let lock_args = mock_toCKB_typescript.as_bytes()[0..size].to_vec().into();
 
-        context
-            .build_script(&toCKB_lockscript_out_point, lockscript_args)
-            .expect("script")
-    } else {
-        context
-            .build_script(&always_success_out_point, Bytes::new())
-            .expect("script")
-    };
+    let lock_script = context
+        .build_script(&toCKB_lockscript_out_point, lock_args)
+        .expect("script");
+
     // build cell output
     CellOutput::new_builder()
         .capacity(11000u64.pack())
@@ -80,8 +93,8 @@ fn build_cell(is_valid_cell: IsValidToCKBCell) -> CellOutput {
 }
 
 fn build_test_context(
-    is_valid_inputs: Vec<IsValidToCKBCell>,
-    is_valid_outputs: Vec<IsValidToCKBCell>,
+    input_cells: Vec<&CellOutput>,
+    output_cells: Vec<&CellOutput>,
 ) -> (Context, TransactionView) {
     let (mut context, toCKB_lockscript_out_point, always_success_out_point) =
         load_context_and_out_points();
@@ -98,11 +111,8 @@ fn build_test_context(
     let mut outputs_data = vec![];
 
     //prepare input cell
-    for &is_valid_cell in is_valid_inputs.iter() {
-        let cell = build_cell(is_valid_cell);
-
-        let input_out_point = context.create_cell(cell, Bytes::new());
-
+    for &cell in input_cells.iter() {
+        let input_out_point = context.create_cell(cell.clone(), Bytes::new());
         let input = CellInput::new_builder()
             .previous_output(input_out_point)
             .build();
@@ -111,10 +121,8 @@ fn build_test_context(
     }
 
     //prepare output cells
-    for &is_valid_cell in is_valid_outputs.iter() {
-        let cell = build_cell(is_valid_cell);
-
-        outputs.push(cell);
+    for &cell in output_cells.iter() {
+        outputs.push(cell.clone());
         outputs_data.push(Bytes::new());
     }
 
@@ -129,26 +137,4 @@ fn build_test_context(
     let tx = context.complete_tx(tx);
 
     (context, tx)
-}
-
-#[test]
-fn test_invalid_toCKB_cell() {
-    let invalid_cell = IsValidToCKBCell {
-        is_toCKB_cell_type: false,
-        is_toCKB_cell_valid: true,
-    };
-    let valid_cell = IsValidToCKBCell {
-        is_toCKB_cell_type: true,
-        is_toCKB_cell_valid: true,
-    };
-    // one input_cell and one output_cell is valid toCKBCell, the others are not invalid
-    let (mut context, tx) = build_test_context(
-        vec![valid_cell, invalid_cell],
-        vec![valid_cell, invalid_cell],
-    );
-    let tx = context.complete_tx(tx);
-
-    context
-        .verify_tx(&tx, MAX_CYCLES)
-        .expect("pass verification");
 }
