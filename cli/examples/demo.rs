@@ -166,7 +166,11 @@ fn main() -> Result<()> {
     ensure_indexer_sync(&mut rpc_client, &mut indexer_client, 60).unwrap();
     let unlock_address = "bc1qy90wlm8mujjuud6qs665gjp7hvn67ekef62aer".to_owned();
     let redeemer_address = "ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37";
-    let redeemer_lockscript = Script::from(Address::from_str(redeemer_address.clone()).unwrap().payload());
+    let redeemer_lockscript = Script::from(
+        Address::from_str(redeemer_address.clone())
+            .unwrap()
+            .payload(),
+    );
     let unsigned_tx = generator
         .pre_term_redeem(
             from_lockscript.clone(),

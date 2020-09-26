@@ -11,7 +11,7 @@ use ckb_types::{
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 
-use crate::cell_collector::{get_live_cells_by_lock_and_capacity, collect_sudt_cells_by_amout};
+use crate::cell_collector::{collect_sudt_cells_by_amout, get_live_cells_by_lock_and_capacity};
 use crate::indexer::IndexerRpcClient;
 use crate::util::{ensure_indexer_sync, get_live_cell_with_cache, get_privkey_signer};
 use ckb_sdk::constants::{
@@ -407,7 +407,12 @@ impl TxHelper {
             get_live_cell_with_cache(&mut live_cell_cache, rpc_client, out_point, with_data)
                 .map(|(output, _)| output)
         };
-        let cells = collect_sudt_cells_by_amout(indexer_client, lockscript, sudt_typescript, need_sudt_amount)?;
+        let cells = collect_sudt_cells_by_amout(
+            indexer_client,
+            lockscript,
+            sudt_typescript,
+            need_sudt_amount,
+        )?;
         for cell in cells {
             self.add_input(
                 OutPoint::from(cell.out_point),

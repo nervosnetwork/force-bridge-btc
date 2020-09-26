@@ -454,8 +454,8 @@ impl Generator {
             .map_err(|_| "get lot_amount from tockb cell data error".to_owned())?;
         let from_capacity: u64 = from_cell.capacity().unpack();
 
-        let sudt_typescript_code_hash = hex::decode(&self.settings.sudt.code_hash)
-            .expect("wrong sudt_script code hash config");
+        let sudt_typescript_code_hash =
+            hex::decode(&self.settings.sudt.code_hash).expect("wrong sudt_script code hash config");
         let sudt_typescript = Script::new_builder()
             .code_hash(Byte32::from_slice(&sudt_typescript_code_hash).unwrap())
             .hash_type(DepType::Code.into())
@@ -474,10 +474,7 @@ impl Generator {
             let to_capacity = from_capacity;
             let mut output_data_view = data_view.clone();
             output_data_view.status = ToCKBStatus::Redeeming;
-            output_data_view.x_unlock_address = x_unlock_address
-                .as_bytes()
-                .to_vec()
-                .into();
+            output_data_view.x_unlock_address = x_unlock_address.as_bytes().to_vec().into();
             output_data_view.redeemer_lockscript = redeemer_lockscript.as_bytes();
 
             let tockb_data = output_data_view
@@ -535,5 +532,4 @@ impl Generator {
         )?;
         Ok(tx)
     }
-
 }
