@@ -95,13 +95,14 @@ fn main() -> Result<()> {
     let user_address = "ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37";
     let user_lockscript = Script::from(Address::from_str(user_address).unwrap().payload());
 
+    let timeout = 60;
     let tx_fee = 1000_0000;
     let mut generator = Generator::new(rpc_url, indexer_url, settings).unwrap();
     let unsigned_tx = generator
         .deposit_request(from_lockscript, tx_fee, user_lockscript, 10000, 1, 1)
         .unwrap();
     let tx = sign(unsigned_tx, &mut rpc_client, &private_key).unwrap();
-    send_tx_sync(&mut rpc_client, tx.clone(), 60).unwrap();
+    send_tx_sync(&mut rpc_client, tx.clone(), timeout).unwrap();
 
     Ok(())
 }
