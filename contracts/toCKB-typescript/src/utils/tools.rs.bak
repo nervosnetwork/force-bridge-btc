@@ -194,15 +194,15 @@ pub fn verify_btc_witness(
     }
 }
 
-pub fn verify_header_is_on_main_chain(header: &BlockHeader, cell_dep_index_list: &[u8]) -> Result<(), Error> {
+pub fn verify_header_main_chain(header: &BlockHeader, cell_dep_index_list: &[u8]) -> Result<(), Error> {
     let dep_data = load_cell_data(cell_dep_index_list[0].into(), Source::CellDep)?;
     debug!("dep data is {:?}", &dep_data);
     if EthCellDataReader::verify(&dep_data, false).is_err() {
-        return Err(Error::InvalidWitness);
+        return Err(Error::EthHeadersDataInvalid);
     }
     let eth_cell_data_reader = EthCellDataReader::new_unchecked(&dep_data);
     debug!("eth_cell_data_reader: {:?}", eth_cell_data_reader);
-    let tail_raw = eth_cell_data_reader.headers().main().get_unchecked(eth_cell_data_reader.headers().main().len()-1).raw_data();
+    let tail_raw = eth_cell_data_reader.headers().main().get_unchecked(0).raw_data();
     if HeaderInfoReader::verify(&tail_raw, false).is_err() {
         return Err(Error::EthHeadersDataInvalid);
     }
@@ -210,14 +210,13 @@ pub fn verify_header_is_on_main_chain(header: &BlockHeader, cell_dep_index_list:
     let tail_info_raw = tail_info_reader.header().raw_data();
     let tail: BlockHeader = rlp::decode(tail_info_raw.to_vec().as_slice()).unwrap();
     if header.number > tail.number {
-        return Err(Error::HeaderIsNotOnMainChain);
+        return Err(Error::EthHeadersDataInvalid);
     }
     let offset = (tail.number - header.number) as usize;
-    if offset > eth_cell_data_reader.headers().main().len()-1 {
-        return Err(Error::HeaderIsNotOnMainChain);
-    }
     let target_raw = eth_cell_data_reader.headers().main().get_unchecked(eth_cell_data_reader.headers().main().len()-1-offset).raw_data();
     let target_info_reader = HeaderInfoReader::new_unchecked(target_raw);
+    // let main_chain_hash = target_info_reader.hash().raw_data();
+    // let witness_hash = header.hash.expect("invalid hash").0.as_bytes();
     debug!("main chain hash: {:?}, witness header hash: {:?}", hex::encode(target_info_reader.hash().raw_data()), hex::encode(header.hash.expect("invalid hash").0.as_bytes()));
     if target_info_reader.hash().raw_data() != header.hash.expect("invalid hash").0.as_bytes() {
         return Err(Error::HeaderIsNotOnMainChain);
@@ -230,22 +229,43 @@ pub fn verify_eth_witness(
     proof: &[u8],
     cell_dep_index_list: &[u8],
 ) -> Result<EthExtraView, Error> {
+    debug!(
+        "proof: {:?}, cell_dep_index_list: {:?}",
+        proof, cell_dep_index_list
+    );
     if ETHSPVProofReader::verify(proof, false).is_err() {
         return Err(Error::InvalidWitness);
     }
     let proof_reader = ETHSPVProofReader::new_unchecked(proof);
+    debug!("proof_reader: {:?}", proof_reader);
     let header_data = proof_reader.header_data().raw_data().to_vec();
     let header: BlockHeader = rlp::decode(header_data.as_slice()).expect("invalid header data");
     //verify the header is on main chain.
-    verify_header_is_on_main_chain(&header, cell_dep_index_list)?;
-
+    // verify_header_main_chain(&header, cell_dep_index_list)?;
+    let dep_data = load_cell_data(cell_dep_index_list[0].into(), Source::CellDep)?;
+    debug!("dep data is {:?}", &dep_data);
+    if EthCellDataReader::verify(&dep_data, false).is_err() {
+        return Err(Error::EthHeadersDataInvalid);
+    }
+    let eth_cell_data_reader = EthCellDataReader::new_unchecked(&dep_data);
+    debug!("eth_cell_data_reader: {:?}", eth_cell_data_reader);
+    let tail_raw = eth_cell_data_reader.headers().main().get_unchecked(0).raw_data();
+    if HeaderInfoReader::verify(&tail_raw, false).is_err() {
+        return Err(Error::EthHeadersDataInvalid);
+    }
+    let tail_info_reader = HeaderInfoReader::new_unchecked(tail_raw);
+    let tail_info_raw = tail_info_reader.header().raw_data();
+    let tail: BlockHeader = rlp::decode(tail_info_raw.to_vec().as_slice()).unwrap();
+    if &tail.hash != &header.hash {
+        return Err(Error::HeaderIsNotOnMainChain);
+    }
     let mut log_index = [0u8; 8];
     log_index.copy_from_slice(proof_reader.log_index().raw_data());
     debug!("log_index is {:?}", &log_index);
     let log_entry_data = proof_reader.log_entry_data().raw_data().to_vec();
-    debug!("log_entry_data is {:?}", hex::encode(&log_entry_data.as_slice()));
+    debug!("log_entry_data is {:?}", &log_entry_data);
     let receipt_data = proof_reader.receipt_data().raw_data().to_vec();
-    debug!("receipt_data is {:?}", hex::encode(&receipt_data.as_slice()));
+    debug!("receipt_data is {:?}", &receipt_data);
     let mut receipt_index = [0u8; 8];
     receipt_index.copy_from_slice(proof_reader.receipt_index().raw_data());
     debug!("receipt_index is {:?}", &receipt_index);
@@ -253,6 +273,7 @@ pub fn verify_eth_witness(
     for i in 0..proof_reader.proof().len() {
         proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
     }
+    debug!("proof is {:?}", &proof);
     let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).unwrap();
     debug!("log_entry is {:?}", &log_entry);
     let receipt: Receipt = rlp::decode(receipt_data.as_slice()).unwrap();
@@ -277,7 +298,7 @@ pub fn verify_eth_witness(
         return Err(Error::BadMerkleProof);
     }
     Ok(EthExtraView {
-        // dummy: Default::default(),
+        dummy: Default::default(),
     })
 }
 

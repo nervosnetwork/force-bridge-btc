@@ -1,8 +1,20 @@
 #[cfg(not(feature = "std"))]
+use alloc::borrow::ToOwned;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+#[cfg(not(feature = "std"))]
+use ckb_std::ckb_types::packed;
+#[cfg(feature = "std")]
+use ckb_types::packed;
 
-use crate::generated::basic::{Byte32, Byte4, Bytes, Uint32, Uint64};
-use molecule::prelude::{Builder, Byte, Entity};
+use crate::generated::basic::{
+    Byte32, Byte4, Bytes, OutPoint, Script, Uint32, Uint32Reader, Uint64,
+};
+use core::convert::TryFrom;
+use molecule::{
+    error::VerificationError,
+    prelude::{Builder, Byte, Entity},
+};
 
 impl From<Vec<u8>> for Bytes {
     fn from(v: Vec<u8>) -> Self {
@@ -12,27 +24,37 @@ impl From<Vec<u8>> for Bytes {
     }
 }
 
-impl From<Vec<u8>> for Byte4 {
-    fn from(v: Vec<u8>) -> Self {
+impl TryFrom<Vec<u8>> for Byte4 {
+    type Error = VerificationError;
+    fn try_from(v: Vec<u8>) -> Result<Self, VerificationError> {
         if v.len() != 4 {
-            panic!("length for Byte4 should be 4")
+            return Err(VerificationError::TotalSizeNotMatch(
+                "Byte4".to_owned(),
+                4,
+                v.len(),
+            ));
         }
         let mut inner = [Byte::new(0); 4];
         let v = v.into_iter().map(Byte::new).collect::<Vec<_>>();
         inner.copy_from_slice(&v);
-        Self::new_builder().set(inner).build()
+        Ok(Self::new_builder().set(inner).build())
     }
 }
 
-impl From<Vec<u8>> for Byte32 {
-    fn from(v: Vec<u8>) -> Self {
+impl TryFrom<Vec<u8>> for Byte32 {
+    type Error = VerificationError;
+    fn try_from(v: Vec<u8>) -> Result<Self, VerificationError> {
         if v.len() != 32 {
-            panic!("length for Byte32 should be 32")
+            return Err(VerificationError::TotalSizeNotMatch(
+                "Byte32".to_owned(),
+                32,
+                v.len(),
+            ));
         }
         let mut inner = [Byte::new(0); 32];
         let v = v.into_iter().map(Byte::new).collect::<Vec<_>>();
         inner.copy_from_slice(&v);
-        Self::new_builder().set(inner).build()
+        Ok(Self::new_builder().set(inner).build())
     }
 }
 
@@ -50,6 +72,22 @@ impl From<u32> for Uint32 {
     }
 }
 
+impl From<Uint32> for u32 {
+    fn from(v: Uint32) -> Self {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(v.raw_data().as_ref());
+        u32::from_le_bytes(buf)
+    }
+}
+
+impl From<Uint32Reader<'_>> for u32 {
+    fn from(v: Uint32Reader<'_>) -> Self {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(v.raw_data());
+        u32::from_le_bytes(buf)
+    }
+}
+
 impl From<u64> for Uint64 {
     fn from(v: u64) -> Self {
         let mut inner = [Byte::new(0); 8];
@@ -61,5 +99,17 @@ impl From<u64> for Uint64 {
             .collect::<Vec<_>>();
         inner.copy_from_slice(&v);
         Self::new_builder().set(inner).build()
+    }
+}
+
+impl From<packed::Script> for Script {
+    fn from(v: packed::Script) -> Self {
+        Self::new_unchecked(v.as_bytes())
+    }
+}
+
+impl From<packed::OutPoint> for OutPoint {
+    fn from(v: packed::OutPoint) -> Self {
+        Self::new_unchecked(v.as_bytes())
     }
 }

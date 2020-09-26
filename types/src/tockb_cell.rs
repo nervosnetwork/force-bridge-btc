@@ -1,23 +1,34 @@
+#[cfg(not(feature = "std"))]
+use ckb_std::debug;
+
 use crate::error::Error;
-use crate::generated::tockb_cell_data::{ToCKBCellDataReader, XExtraUnionReader};
+use crate::generated::{
+    basic,
+    tockb_cell_data::{
+        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, ToCKBTypeArgsReader, XExtra,
+        XExtraUnion, XExtraUnionReader,
+    },
+};
+use core::convert::TryInto;
 use core::result::Result;
 use int_enum::IntEnum;
 use molecule::{
     bytes::Bytes,
-    prelude::{Entity, Reader},
+    error::VerificationError,
+    prelude::{Builder, Entity, Reader},
 };
 
 pub const BTC_UNIT: u128 = 100_000_000;
 pub const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Debug, Clone, Copy, IntEnum)]
 pub enum XChainKind {
     Btc = 1,
     Eth = 2,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ToCKBCellDataView {
     pub status: ToCKBStatus,
     lot_size: u8,
@@ -30,26 +41,33 @@ pub struct ToCKBCellDataView {
     pub x_extra: XExtraView,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum XExtraView {
     Btc(BtcExtraView),
     Eth(EthExtraView),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BtcExtraView {
     pub lock_tx_hash: Bytes,
     pub lock_vout_index: u32,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct EthExtraView {
-    pub dummy: Bytes,
+    // pub dummy: Bytes,
 }
 
 impl ToCKBCellDataView {
     pub fn new(data: &[u8], x_kind: XChainKind) -> Result<ToCKBCellDataView, Error> {
         ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "std")] {
+                dbg!("molecule verify toCKB data format success");
+            } else {
+                debug!("molecule verify toCKB data format success");
+            }
+        }
         let data_reader = ToCKBCellDataReader::new_unchecked(data);
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];
@@ -77,9 +95,9 @@ impl ToCKBCellDataView {
                     lock_vout_index,
                 })
             }
-            (Eth, EthExtra(eth_extra)) => {
-                let dummy = eth_extra.dummy().to_entity().raw_data();
-                XExtraView::Eth(EthExtraView { dummy })
+            (Eth, EthExtra(_)) => {
+                // let dummy = eth_extra.dummy().to_entity().raw_data();
+                XExtraView::Eth(EthExtraView {})
             }
             _ => return Err(Error::XChainMismatch),
         };
@@ -94,6 +112,40 @@ impl ToCKBCellDataView {
             liquidation_trigger_lockscript,
             x_extra,
         })
+    }
+
+    pub fn as_molecule_data(&self) -> Result<Bytes, VerificationError> {
+        let x_extra_union = match &self.x_extra {
+            XExtraView::Btc(btc_extra) => {
+                let btc_extra_mol = BtcExtra::new_builder()
+                    .lock_tx_hash(btc_extra.lock_tx_hash.to_vec().try_into()?)
+                    .lock_vout_index(btc_extra.lock_vout_index.into())
+                    .build();
+                XExtraUnion::BtcExtra(btc_extra_mol)
+            }
+            XExtraView::Eth(_) => {
+                let eth_extra_mol = EthExtra::new_builder()
+                    // .dummy(eth_extra.dummy.to_vec().into())
+                    .build();
+                XExtraUnion::EthExtra(eth_extra_mol)
+            }
+        };
+        let x_extra = XExtra::new_builder().set(x_extra_union).build();
+        let mol_obj = ToCKBCellData::new_builder()
+            .status(self.status.int_value().into())
+            .lot_size(self.lot_size.into())
+            .user_lockscript(basic::Script::from_slice(&self.user_lockscript)?)
+            .x_lock_address(self.x_lock_address.to_vec().into())
+            .signer_lockscript(basic::Script::from_slice(&self.signer_lockscript)?)
+            .x_unlock_address(self.x_unlock_address.to_vec().into())
+            .redeemer_lockscript(basic::Script::from_slice(&self.redeemer_lockscript)?)
+            .liquidation_trigger_lockscript(basic::Script::from_slice(
+                &self.liquidation_trigger_lockscript,
+            )?)
+            .x_extra(x_extra)
+            .build();
+
+        Ok(mol_obj.as_bytes())
     }
 
     pub fn get_raw_lot_size(&self) -> u8 {
@@ -185,5 +237,24 @@ impl EthLotSize {
             Three => ETH_UNIT * 3,
             Four => ETH_UNIT * 4,
         }
+    }
+}
+
+pub struct ToCKBTypeArgsView {
+    pub xchain_kind: XChainKind,
+    pub cell_id: basic::OutPoint,
+}
+
+impl ToCKBTypeArgsView {
+    pub fn from_slice(slice: &[u8]) -> Result<ToCKBTypeArgsView, Error> {
+        ToCKBTypeArgsReader::verify(slice, false).map_err(|_| Error::Encoding)?;
+        let args_reader = ToCKBTypeArgsReader::new_unchecked(slice);
+        let xchain_kind = args_reader.xchain_kind().as_slice()[0];
+        let xchain_kind = XChainKind::from_int(xchain_kind)?;
+        let cell_id = args_reader.cell_id().to_entity();
+        Ok(ToCKBTypeArgsView {
+            xchain_kind,
+            cell_id,
+        })
     }
 }

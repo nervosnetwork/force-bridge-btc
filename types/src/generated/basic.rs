@@ -2104,3 +2104,169 @@ impl molecule::prelude::Builder for ScriptBuilder {
         Script::new_unchecked(inner.into())
     }
 }
+#[derive(Clone)]
+pub struct OutPoint(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for OutPoint {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for OutPoint {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for OutPoint {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "tx_hash", self.tx_hash())?;
+        write!(f, ", {}: {}", "index", self.index())?;
+        write!(f, " }}")
+    }
+}
+impl ::core::default::Default for OutPoint {
+    fn default() -> Self {
+        let v: Vec<u8> = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0,
+        ];
+        OutPoint::new_unchecked(v.into())
+    }
+}
+impl OutPoint {
+    pub const TOTAL_SIZE: usize = 36;
+    pub const FIELD_SIZES: [usize; 2] = [32, 4];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn tx_hash(&self) -> Byte32 {
+        Byte32::new_unchecked(self.0.slice(0..32))
+    }
+    pub fn index(&self) -> Uint32 {
+        Uint32::new_unchecked(self.0.slice(32..36))
+    }
+    pub fn as_reader<'r>(&'r self) -> OutPointReader<'r> {
+        OutPointReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for OutPoint {
+    type Builder = OutPointBuilder;
+    const NAME: &'static str = "OutPoint";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        OutPoint(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        OutPointReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        OutPointReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder()
+            .tx_hash(self.tx_hash())
+            .index(self.index())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct OutPointReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for OutPointReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for OutPointReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for OutPointReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "tx_hash", self.tx_hash())?;
+        write!(f, ", {}: {}", "index", self.index())?;
+        write!(f, " }}")
+    }
+}
+impl<'r> OutPointReader<'r> {
+    pub const TOTAL_SIZE: usize = 36;
+    pub const FIELD_SIZES: [usize; 2] = [32, 4];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn tx_hash(&self) -> Byte32Reader<'r> {
+        Byte32Reader::new_unchecked(&self.as_slice()[0..32])
+    }
+    pub fn index(&self) -> Uint32Reader<'r> {
+        Uint32Reader::new_unchecked(&self.as_slice()[32..36])
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for OutPointReader<'r> {
+    type Entity = OutPoint;
+    const NAME: &'static str = "OutPointReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        OutPointReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], _compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len != Self::TOTAL_SIZE {
+            return ve!(Self, TotalSizeNotMatch, Self::TOTAL_SIZE, slice_len);
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Default)]
+pub struct OutPointBuilder {
+    pub(crate) tx_hash: Byte32,
+    pub(crate) index: Uint32,
+}
+impl OutPointBuilder {
+    pub const TOTAL_SIZE: usize = 36;
+    pub const FIELD_SIZES: [usize; 2] = [32, 4];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn tx_hash(mut self, v: Byte32) -> Self {
+        self.tx_hash = v;
+        self
+    }
+    pub fn index(mut self, v: Uint32) -> Self {
+        self.index = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for OutPointBuilder {
+    type Entity = OutPoint;
+    const NAME: &'static str = "OutPointBuilder";
+    fn expected_length(&self) -> usize {
+        Self::TOTAL_SIZE
+    }
+    fn write<W: ::molecule::io::Write>(&self, writer: &mut W) -> ::molecule::io::Result<()> {
+        writer.write_all(self.tx_hash.as_slice())?;
+        writer.write_all(self.index.as_slice())?;
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        OutPoint::new_unchecked(inner.into())
+    }
+}

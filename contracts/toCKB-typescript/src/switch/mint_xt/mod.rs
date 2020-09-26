@@ -1,22 +1,13 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{
-        PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, XT_CELL_CAPACITY,
+        PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, XT_CELL_CAPACITY,
     },
-    tools::{get_xchain_kind, is_XT_typescript, verify_btc_witness, XChainKind},
+    tools::{get_xchain_kind, is_XT_typescript, verify_btc_witness, verify_eth_witness, XChainKind},
     types::{
-        btc_difficulty::BTCDifficultyReader,
-        mint_xt_witness::{BTCSPVProofReader, ETHSPVProofReader, MintXTWitnessReader},
+        mint_xt_witness::MintXTWitnessReader,
         Error, ToCKBCellDataView, XExtraView
     },
-};
-use alloc::string::String;
-use alloc::vec;
-use bech32::ToBase32;
-use bitcoin_spv::{
-    btcspv,
-    types::{HeaderArray, MerkleArray, PayloadType, Vin, Vout},
-    validatespv,
 };
 use ckb_std::{
     ckb_constants::Source,
@@ -27,11 +18,7 @@ use ckb_std::{
     },
 };
 use core::result::Result;
-use eth_spv_lib::{eth_types::*, ethspv};
 use molecule::prelude::{Entity, Reader};
-use primitive_types::U256;
-use rlp;
-use crate::utils::types::EthExtraView;
 
 fn verify_data(
     input_data: &ToCKBCellDataView,
@@ -81,71 +68,6 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
             let eth_extra = verify_eth_witness(data, proof, cell_dep_index_list)?;
         Ok(XExtraView::Eth(eth_extra))},
     }
-}
-
-fn verify_eth_witness(
-    data: &ToCKBCellDataView,
-    proof: &[u8],
-    cell_dep_index_list: &[u8],
-) -> Result<EthExtraView, Error> {
-    debug!(
-        "proof: {:?}, cell_dep_index_list: {:?}",
-        proof, cell_dep_index_list
-    );
-    if ETHSPVProofReader::verify(proof, false).is_err() {
-        return Err(Error::InvalidWitness);
-    }
-    let proof_reader = ETHSPVProofReader::new_unchecked(proof);
-    debug!("proof_reader: {:?}", proof_reader);
-    //TODO: verify header with client
-    // hash = calc(header_data)
-    // hash.compare(client.getHashByNumber(header.number))
-    // verify eth spv
-    let mut log_index = [0u8; 8];
-    log_index.copy_from_slice(proof_reader.log_index().raw_data());
-    debug!("log_index is {:?}", &log_index);
-    let log_entry_data = proof_reader.log_entry_data().raw_data().to_vec();
-    debug!("log_entry_data is {:?}", &log_entry_data);
-    let receipt_data = proof_reader.receipt_data().raw_data().to_vec();
-    debug!("receipt_data is {:?}", &receipt_data);
-    let mut receipt_index = [0u8; 8];
-    receipt_index.copy_from_slice(proof_reader.receipt_index().raw_data());
-    debug!("receipt_index is {:?}", &receipt_index);
-    let mut receipts_root = [0u8; 32];
-    receipts_root.copy_from_slice(proof_reader.receipts_root().raw_data());
-    debug!("receipts_root is {:?}", &receipts_root);
-    let mut proof = vec![];
-    for i in 0..proof_reader.proof().len() {
-        proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
-    }
-    debug!("proof is {:?}", &proof);
-    let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).unwrap();
-    debug!("log_entry is {:?}", &log_entry);
-    let receipt: Receipt = rlp::decode(receipt_data.as_slice()).unwrap();
-    debug!("receipt_data is {:?}", &receipt);
-    let locker_address = (log_entry.address.clone().0).0;
-    debug!(
-        "addr: {:?}, x_lock_address: {}",
-        hex::encode(locker_address.to_vec()),
-        String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
-    );
-    // assert_eq!(hex::encode(locker_address.to_vec()),
-    //            String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap(),
-    //            "the x lock address should be equal with the address from data.");
-    if hex::encode(locker_address.to_vec()) != String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap() {
-        return Err(Error::WrongFundingAddr)
-    }
-    assert_eq!(ethspv::verify_log_entry(
-        u64::from_le_bytes(log_index),
-        log_entry_data,
-        u64::from_le_bytes(receipt_index),
-        receipt_data,
-        H256(receipts_root.into()),
-        proof,
-    ), true, "invalid eth spv proof.");
-    Ok(EthExtraView {
-        dummy: Default::default(),
-    })
 }
 
 fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {

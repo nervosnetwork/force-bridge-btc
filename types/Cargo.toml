@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 default = ["std"]
-std = ["molecule/std", "int-enum/std"]
+std = ["molecule/std", "int-enum/std", "ckb-types"]
 contract = ["ckb-std", "bitcoin-spv"]
 
 [dependencies]
@@ -16,4 +16,6 @@ int-enum = { version = "0.4", default-features = false }
 cfg-if = "0.1"
 #ckb-std = { version = "0.6", optional = true }
 ckb-std = { git = "https://github.com/LeonLi000/ckb-std.git", optional = true }
+#ckb-std = { version = "0.6", optional = true }
+ckb-types = { git = "https://github.com/nervosnetwork/ckb", tag = "v0.34.1", optional = true }
 bitcoin-spv = { git = "https://github.com/summa-tx/bitcoin-spv.git", branch = "rust/dep-change", default-features = false, optional = true }

@@ -23,7 +23,6 @@ table ETHSPVProof {
     log_entry_data: Bytes,
     receipt_index: Uint64,
     receipt_data: Bytes,
-    receipts_root: Bytes,
     header_data: Bytes,
     proof: Bytes2,
 }

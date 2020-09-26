@@ -19,13 +19,16 @@ mod withdraw_pledge_collateral;
 use crate::utils::tools::get_xchain_kind;
 use crate::utils::{
     config::SUDT_CODE_HASH,
-    types::{Error, ToCKBCellDataView, ToCKBStatus},
+    types::{Error, ToCKBCellDataView, ToCKBStatus, XChainKind},
 };
 use alloc::vec::Vec;
 use ckb_std::{
     ckb_constants::Source,
     debug,
-    high_level::{load_cell_data, load_cell_type, load_input_since, QueryIter},
+    high_level::{
+        load_cell_data, load_cell_type, load_cell_type_hash, load_input_since, load_script_hash,
+        QueryIter,
+    },
 };
 
 #[derive(Debug)]
@@ -53,8 +56,10 @@ enum TxType {
 pub struct ToCKBCellDataTuple(Option<ToCKBCellDataView>, Option<ToCKBCellDataView>);
 
 pub fn verify() -> Result<(), Error> {
-    debug!("start to verify");
-    let toCKB_data_tuple = get_toCKB_data_tuple()?;
+    debug!("begin verify");
+    let xchain_kind = get_xchain_kind()?;
+    debug!("xchain kind {:?}", &xchain_kind);
+    let toCKB_data_tuple = get_toCKB_data_tuple(xchain_kind)?;
     debug!("toCKB_data_tuple: {:?}", toCKB_data_tuple);
     let tx_type = get_tx_type(&toCKB_data_tuple)?;
     verify_xt(&tx_type)?;
@@ -63,20 +68,20 @@ pub fn verify() -> Result<(), Error> {
     Ok(())
 }
 
-fn get_toCKB_data_tuple() -> Result<ToCKBCellDataTuple, Error> {
-    let input_toCKB_data = get_toCKB_data(Source::GroupInput)?;
-    let output_toCKB_data = get_toCKB_data(Source::GroupOutput)?;
+fn get_toCKB_data_tuple(kind: XChainKind) -> Result<ToCKBCellDataTuple, Error> {
+    let input_toCKB_data = get_toCKB_data(Source::GroupInput, kind)?;
+    let output_toCKB_data = get_toCKB_data(Source::GroupOutput, kind)?;
     let tuple = ToCKBCellDataTuple(input_toCKB_data, output_toCKB_data);
     Ok(tuple)
 }
 
-fn get_toCKB_data(source: Source) -> Result<Option<ToCKBCellDataView>, Error> {
+fn get_toCKB_data(source: Source, kind: XChainKind) -> Result<Option<ToCKBCellDataView>, Error> {
     let toCKB_data_list = QueryIter::new(load_cell_data, source).collect::<Vec<Vec<u8>>>();
     match toCKB_data_list.len() {
         0 => Ok(None),
         1 => Ok(Some(ToCKBCellDataView::new(
             toCKB_data_list[0].as_slice(),
-            get_xchain_kind()?,
+            kind,
         )?)),
         _ => Err(Error::TxInvalid),
     }
@@ -94,6 +99,7 @@ fn get_tx_type(data_tuple: &ToCKBCellDataTuple) -> Result<TxType, Error> {
 }
 
 fn get_generation_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
+    verify_unique(Source::Output)?;
     if let ToCKBStatus::Initial = data.status {
         Ok(TxType::DepositRequest)
     } else {
@@ -105,6 +111,8 @@ fn get_transformation_tx_type(
     input_data: &ToCKBCellDataView,
     output_data: &ToCKBCellDataView,
 ) -> Result<TxType, Error> {
+    verify_unique(Source::Input)?;
+    verify_unique(Source::Output)?;
     use ToCKBStatus::*;
     use TxType::*;
     let status_transformation = (input_data.status, output_data.status);
@@ -127,6 +135,7 @@ fn get_transformation_tx_type(
 }
 
 fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
+    verify_unique(Source::Input)?;
     use ToCKBStatus::*;
     use TxType::*;
     match data.status {
@@ -139,6 +148,15 @@ fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
         FaultyWhenWarranty => Ok(AuctionFaultyWhenWarranty),
         FaultyWhenRedeeming => Ok(AuctionFaultyWhenRedeeming),
     }
+}
+
+fn verify_unique(source: Source) -> Result<(), Error> {
+    let type_hash = load_cell_type_hash(0, source)?;
+    let self_type_hash = load_script_hash()?;
+    if type_hash.is_none() || type_hash.unwrap() != self_type_hash {
+        return Err(Error::TxInvalid);
+    }
+    Ok(())
 }
 
 fn verify_xt(tx_type: &TxType) -> Result<(), Error> {
