@@ -1,9 +1,12 @@
+#[cfg(not(feature = "std"))]
+use ckb_std::debug;
+
 use crate::error::Error;
-use crate::generated::tockb_cell_data::XExtra;
 use crate::generated::{
     basic,
     tockb_cell_data::{
-        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, XExtraUnion, XExtraUnionReader,
+        BtcExtra, EthExtra, ToCKBCellData, ToCKBCellDataReader, ToCKBTypeArgsReader, XExtra,
+        XExtraUnion, XExtraUnionReader,
     },
 };
 use core::convert::TryInto;
@@ -19,7 +22,7 @@ pub const BTC_UNIT: u128 = 100_000_000;
 pub const ETH_UNIT: u128 = 1_000_000_000_000_000_000;
 
 #[repr(u8)]
-#[derive(Clone, Copy, IntEnum)]
+#[derive(Debug, Clone, Copy, IntEnum)]
 pub enum XChainKind {
     Btc = 1,
     Eth = 2,
@@ -58,6 +61,13 @@ pub struct EthExtraView {
 impl ToCKBCellDataView {
     pub fn new(data: &[u8], x_kind: XChainKind) -> Result<ToCKBCellDataView, Error> {
         ToCKBCellDataReader::verify(data, false).map_err(|_| Error::Encoding)?;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "std")] {
+                dbg!("molecule verify toCKB data format success");
+            } else {
+                debug!("molecule verify toCKB data format success");
+            }
+        }
         let data_reader = ToCKBCellDataReader::new_unchecked(data);
         let status = ToCKBStatus::from_int(data_reader.status().to_entity().into())?;
         let lot_size = data_reader.lot_size().as_slice()[0];
@@ -227,5 +237,24 @@ impl EthLotSize {
             Three => ETH_UNIT * 3,
             Four => ETH_UNIT * 4,
         }
+    }
+}
+
+pub struct ToCKBTypeArgsView {
+    pub xchain_kind: XChainKind,
+    pub cell_id: basic::OutPoint,
+}
+
+impl ToCKBTypeArgsView {
+    pub fn from_slice(slice: &[u8]) -> Result<ToCKBTypeArgsView, Error> {
+        ToCKBTypeArgsReader::verify(slice, false).map_err(|_| Error::Encoding)?;
+        let args_reader = ToCKBTypeArgsReader::new_unchecked(slice);
+        let xchain_kind = args_reader.xchain_kind().as_slice()[0];
+        let xchain_kind = XChainKind::from_int(xchain_kind)?;
+        let cell_id = args_reader.cell_id().to_entity();
+        Ok(ToCKBTypeArgsView {
+            xchain_kind,
+            cell_id,
+        })
     }
 }

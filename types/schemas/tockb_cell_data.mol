@@ -25,3 +25,8 @@ table BtcExtra {
 table EthExtra {
 	dummy: Bytes,
 }
+
+struct ToCKBTypeArgs {
+	xchain_kind: byte,
+	cell_id: OutPoint,
+}

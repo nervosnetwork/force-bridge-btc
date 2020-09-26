@@ -1,347 +1,133 @@
-use super::{Error, Script, ToCKBCellData};
-use crate::toCKB_typescript::utils::config::CKB_UNITS;
-use crate::*;
-use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
-use ckb_tool::ckb_types::{
-    bytes::Bytes,
-    core::{TransactionBuilder, TransactionView},
-    packed::*,
-    prelude::*,
+use crate::toCKB_typescript::utils::{case_builder::*, case_runner};
+use tockb_types::{
+    config::{CKB_UNITS, COLLATERAL_PERCENT, XT_CELL_CAPACITY},
+    tockb_cell::BTC_UNIT,
+    Error, ETH_UNIT,
 };
-use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
-use molecule::prelude::*;
-use tockb_types::{generated::*, tockb_cell_data::*};
-
-const MAX_CYCLES: u64 = 10_000_000;
 
 const ETH_PRICE: u128 = 100_000_000_000_000;
 const BTC_PRICE: u128 = 100_000;
-
-const ETH_COLLATERAL_WEI: u64 = 1_000_000_000_000_000_000 / (4 * 100) * 150;
-const BTC_COLLATERAL_SAT: u64 = 100_000_000 / (4 * 100) * 150;
+const BRIDGE_ETH_AMOUNT_IN_WEI: u64 = ETH_UNIT as u64 / (4 * 100) * COLLATERAL_PERCENT as u64;
+const BRIDGE_BTC_AMOUNT_IN_SAT: u64 = BTC_UNIT as u64 / (4 * 100) * COLLATERAL_PERCENT as u64;
+const INPUT_TOCKB_CELL_CAPACITY: u64 = 11000 * CKB_UNITS;
+const OUTPUT_TOCKB_CELL_CAPACITY_IF_BTC: u64 = INPUT_TOCKB_CELL_CAPACITY
+    + 2 * XT_CELL_CAPACITY
+    + (BRIDGE_BTC_AMOUNT_IN_SAT / BTC_PRICE as u64) * CKB_UNITS;
+const OUTPUT_TOCKB_CELL_CAPACITY_IF_ETH: u64 = INPUT_TOCKB_CELL_CAPACITY
+    + 2 * XT_CELL_CAPACITY
+    + (BRIDGE_ETH_AMOUNT_IN_WEI / ETH_PRICE as u64) * CKB_UNITS;
 
 #[test]
-fn test_correct_tx_eth() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
-                .build(),
-        )
-        .x_extra(build_extra(2))
-        .build();
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
-    let cycles = context
-        .verify_tx(&tx, MAX_CYCLES)
-        .expect("pass verification");
-    println!("consume cycles: {}", cycles);
+fn test_correct_tx() {
+    let btc_case = get_correct_btc_case();
+    case_runner::run_test(btc_case);
+
+    let eth_case = get_correct_eth_case();
+    case_runner::run_test(eth_case)
 }
 
 #[test]
-fn test_correct_tx_btc() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set(
-                    "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah"
-                        .as_bytes()
-                        .iter()
-                        .map(|c| Byte::new(*c))
-                        .collect::<Vec<_>>()
-                        .into(),
-                )
-                .build(),
-        )
-        .x_extra(build_extra(1))
-        .build();
-    let (context, tx) = build_test_context(1, BTC_COLLATERAL_SAT, toCKB_data.as_bytes());
-    let cycles = context
-        .verify_tx(&tx, MAX_CYCLES)
-        .expect("pass verification");
-    println!("consume cycles: {}", cycles);
+fn test_wrong_address() {
+    let mut btc_case = get_correct_btc_case();
+    btc_case.toCKB_cells.outputs[0].data.x_lock_address =
+        "wrong2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00".to_owned();
+    btc_case.expect_return_code = Error::XChainAddressInvalid as i8;
+    case_runner::run_test(btc_case);
+
+    let mut eth_case = get_correct_eth_case();
+    eth_case.toCKB_cells.outputs[0].data.x_lock_address =
+        "wrong2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00".to_owned();
+    eth_case.expect_return_code = Error::XChainAddressInvalid as i8;
+    case_runner::run_test(eth_case)
 }
 
 #[test]
-fn test_wrong_tx_btc_address_invalid() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set(
-                    "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00"
-                        .as_bytes()
-                        .iter()
-                        .map(|c| Byte::new(*c))
-                        .collect::<Vec<_>>()
-                        .into(),
-                )
-                .build(),
-        )
-        .x_extra(build_extra(1))
-        .build();
-
-    let (context, tx) = build_test_context(1, BTC_COLLATERAL_SAT, toCKB_data.as_bytes());
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(Error::XChainAddressInvalid as i8)
-    );
+fn test_wrong_xchain_mismatch() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.x_extra = XExtraView::Eth(Default::default());
+    case.expect_return_code = Error::XChainMismatch as i8;
+    case_runner::run_test(case)
 }
 
 #[test]
-fn test_wrong_tx_eth_address_invalid() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 21].to_vec())
-                .build(),
-        )
-        .x_extra(build_extra(2))
-        .build();
-
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(Error::XChainAddressInvalid as i8)
-    );
+fn test_wrong_modified_lot_size() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].data.lot_size = 3;
+    case.expect_return_code = Error::InvariantDataMutated as i8;
+    case_runner::run_test(case)
 }
 
 #[test]
-fn test_wrong_tx_status_mismatch() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(1u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
-                .build(),
-        )
-        .x_extra(build_extra(2))
-        .build();
-
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(Error::TxInvalid as i8));
+fn test_wrong_collateral_bond() {
+    let mut case = get_correct_btc_case();
+    case.toCKB_cells.outputs[0].capacity = 3;
+    case.expect_return_code = Error::CollateralInvalid as i8;
+    case_runner::run_test(case)
 }
 
-#[test]
-fn test_wrong_tx_kind_invalid() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
-                .build(),
-        )
-        .x_extra(build_extra(3))
-        .build();
-
-    let (context, tx) = build_test_context(3, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(err, ScriptError::ValidationFailure(Error::Encoding as i8));
+fn get_correct_btc_case() -> TestCase {
+    TestCase {
+        cell_deps: vec![CellDepView::PriceOracle(BTC_PRICE)],
+        toCKB_cells: ToCKBCells {
+            inputs: vec![ToCKBCell {
+                capacity: INPUT_TOCKB_CELL_CAPACITY,
+                data: ToCKBCellDataView {
+                    status: 1,
+                    lot_size: 1,
+                    user_lockscript: Default::default(),
+                    x_lock_address: Default::default(),
+                    signer_lockscript: Default::default(),
+                    x_unlock_address: Default::default(),
+                    redeemer_lockscript: Default::default(),
+                    liquidation_trigger_lockscript: Default::default(),
+                    x_extra: Default::default(),
+                },
+                type_args: ToCKBTypeArgsView {
+                    xchain_kind: 1,
+                    cell_id: ToCKBTypeArgsView::default_cell_id(),
+                },
+                since: 0,
+                index: 0,
+            }],
+            outputs: vec![ToCKBCell {
+                capacity: OUTPUT_TOCKB_CELL_CAPACITY_IF_BTC,
+                data: ToCKBCellDataView {
+                    status: 2,
+                    lot_size: 1,
+                    user_lockscript: Default::default(),
+                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    signer_lockscript: Default::default(),
+                    x_unlock_address: Default::default(),
+                    redeemer_lockscript: Default::default(),
+                    liquidation_trigger_lockscript: Default::default(),
+                    x_extra: Default::default(),
+                },
+                type_args: ToCKBTypeArgsView {
+                    xchain_kind: 1,
+                    cell_id: ToCKBTypeArgsView::default_cell_id(),
+                },
+                since: 0,
+                index: 0,
+            }],
+        },
+        sudt_cells: Default::default(),
+        capacity_cells: Default::default(),
+        witnesses: vec![],
+        expect_return_code: 0,
+    }
 }
 
-#[test]
-fn test_wrong_tx_lot_size_mismatch() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(2u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
-                .build(),
-        )
-        .x_extra(build_extra(2))
-        .build();
-
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI, toCKB_data.as_bytes());
-
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
-    );
-}
-
-#[test]
-fn test_wrong_tx_collateral_wrong() {
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
-                .build(),
-        )
-        .x_extra(build_extra(2))
-        .build();
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI * 10, toCKB_data.as_bytes());
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(Error::CollateralInvalid as i8)
-    );
-}
-
-#[test]
-fn test_wrong_tx_extra_mismatch() {
-    let eth_extra = EthExtra::new_builder()
-        .dummy(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
-                .build(),
-        )
-        .build();
-    let x_extra = XExtraUnion::EthExtra(eth_extra);
-    let extra = XExtra::new_builder().set(x_extra).build();
-
-    let toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(2u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_lock_address(
-            basic::Bytes::new_builder()
-                .set([Byte::new(1u8); 20].to_vec())
-                .build(),
-        )
-        .x_extra(extra)
-        .build();
-    let (context, tx) = build_test_context(2, ETH_COLLATERAL_WEI * 10, toCKB_data.as_bytes());
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(Error::InvariantDataMutated as i8)
-    );
-}
-
-fn build_extra(kind: u8) -> XExtra {
-    let extra = match kind {
-        1 => {
-            let btc_extra = BtcExtra::new_builder().build();
-            let x_extra = XExtraUnion::BtcExtra(btc_extra);
-            XExtra::new_builder().set(x_extra).build()
-        }
-        2 => {
-            let eth_extra = EthExtra::new_builder().build();
-            let x_extra = XExtraUnion::EthExtra(eth_extra);
-            XExtra::new_builder().set(x_extra).build()
-        }
-        _ => {
-            let btc_extra = BtcExtra::new_builder().build();
-            let x_extra = XExtraUnion::BtcExtra(btc_extra);
-            XExtra::new_builder().set(x_extra).build()
-        }
-    };
-    extra
-}
-
-fn build_test_context(
-    kind: u8,
-    collateral: u64,
-    output_toCKB_data: Bytes,
-) -> (Context, TransactionView) {
-    // deploy contract
-    let mut context = Context::default();
-    let toCKB_typescript_bin: Bytes = Loader::default().load_binary("toCKB-typescript");
-    let toCKB_typescript_out_point = context.deploy_cell(toCKB_typescript_bin);
-    let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
-
-    // prepare scripts
-    let toCKB_typescript = context
-        .build_script(&toCKB_typescript_out_point, [kind; 1].to_vec().into())
-        .expect("script");
-    let toCKB_typescript_dep = CellDep::new_builder()
-        .out_point(toCKB_typescript_out_point)
-        .build();
-    let always_success_lockscript = context
-        .build_script(&always_success_out_point, Default::default())
-        .expect("script");
-    let always_success_lockscript_dep = CellDep::new_builder()
-        .out_point(always_success_out_point)
-        .build();
-
-    let price = match kind {
-        1 => BTC_PRICE,
-        2 => ETH_PRICE,
-        _ => ETH_PRICE,
-    };
-
-    let value = (11000 + 2 * 200) * CKB_UNITS + (collateral / price as u64) * CKB_UNITS;
-    // prepare cells
-    let input_out_point = context.create_cell(
-        CellOutput::new_builder()
-            .capacity(value.pack())
-            .lock(always_success_lockscript.clone())
-            .build(),
-        Bytes::new(),
-    );
-    let input = CellInput::new_builder()
-        .previous_output(input_out_point)
-        .build();
-
-    let input_toCKB_data = ToCKBCellData::new_builder()
-        .status(Byte::new(1u8))
-        .lot_size(Byte::new(1u8))
-        .user_lockscript(Script::new_builder().build())
-        .x_extra(build_extra(kind))
-        .build();
-
-    let input_ckb_cell_out_point = context.create_cell(
-        CellOutput::new_builder()
-            .capacity((11000 * CKB_UNITS).pack())
-            .lock(always_success_lockscript.clone())
-            .type_(Some(toCKB_typescript.clone()).pack())
-            .build(),
-        input_toCKB_data.as_bytes(),
-    );
-    let input_ckb_cell = CellInput::new_builder()
-        .previous_output(input_ckb_cell_out_point)
-        .build();
-
-    let inputs = vec![input_ckb_cell, input];
-
-    let outputs = vec![CellOutput::new_builder()
-        .capacity(value.pack())
-        .type_(Some(toCKB_typescript.clone()).pack())
-        .lock(always_success_lockscript)
-        .build()];
-    let outputs_data = vec![output_toCKB_data; 1];
-
-    let price_data: [u8; 16] = price.to_le_bytes();
-    let dep_data = Bytes::copy_from_slice(&price_data);
-    let data_out_point = context.deploy_cell(dep_data);
-    let data_dep = CellDep::new_builder().out_point(data_out_point).build();
-
-    let tx = TransactionBuilder::default()
-        .inputs(inputs)
-        .outputs(outputs)
-        .outputs_data(outputs_data.pack())
-        .cell_dep(data_dep)
-        .cell_dep(toCKB_typescript_dep)
-        .cell_dep(always_success_lockscript_dep)
-        .build();
-    let tx = context.complete_tx(tx);
-
-    (context, tx)
+fn get_correct_eth_case() -> TestCase {
+    let mut case = get_correct_btc_case();
+    if let CellDepView::PriceOracle(price) = &mut case.cell_deps[0] {
+        *price = ETH_PRICE;
+    }
+    case.toCKB_cells.outputs[0].capacity = OUTPUT_TOCKB_CELL_CAPACITY_IF_ETH;
+    case.toCKB_cells.inputs[0].type_args.xchain_kind = 2;
+    case.toCKB_cells.inputs[0].data.x_extra = XExtraView::Eth(Default::default());
+    case.toCKB_cells.outputs[0].type_args.xchain_kind = 2;
+    case.toCKB_cells.outputs[0].data.x_extra = XExtraView::Eth(Default::default());
+    // TODO fix eth address codec
+    case.toCKB_cells.outputs[0].data.x_lock_address = "5eE3b766D487d7d1A2eF".to_owned();
+    case
 }
