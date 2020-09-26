@@ -226,7 +226,9 @@ pub fn send_tx_sync(
             .map(|t| t.tx_status.status);
         log::info!(
             "waiting for tx {} to be committed, loop index: {}, status: {:?}",
-            &tx_hash, i, status
+            &tx_hash,
+            i,
+            status
         );
         if status == Some(ckb_jsonrpc_types::Status::Committed) {
             return Ok(tx_hash);
@@ -243,10 +245,13 @@ pub fn ensure_indexer_sync(
 ) -> Result<(), String> {
     let rpc_tip = rpc_client.get_tip_block_number()?;
     for _ in 0..timeout {
-       let indexer_tip = indexer_client.get_tip()?.map(|t| t.block_number.value()).unwrap_or(0);
+        let indexer_tip = indexer_client
+            .get_tip()?
+            .map(|t| t.block_number.value())
+            .unwrap_or(0);
         log::info!("rpc_tip: {}, indexer_tip: {}", rpc_tip, indexer_tip);
         if indexer_tip >= rpc_tip {
-           return Ok(());
+            return Ok(());
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
     }

@@ -8,7 +8,7 @@ use molecule::prelude::{Builder, Entity};
 use std::str::FromStr;
 use tockb_sdk::settings::{BtcDifficulty, OutpointConf, PriceOracle, ScriptConf};
 use tockb_sdk::tx_helper::{deploy, sign};
-use tockb_sdk::util::send_tx_sync;
+use tockb_sdk::util::{ensure_indexer_sync, send_tx_sync};
 use tockb_sdk::{generator::Generator, indexer::IndexerRpcClient, settings::Settings};
 use tockb_types::generated::btc_difficulty::BTCDifficulty;
 
@@ -95,15 +95,50 @@ fn main() -> Result<()> {
     // dbg!(&settings);
 
     let user_address = "ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37";
-    let user_lockscript = Script::from(Address::from_str(user_address).unwrap().payload());
+    let user_lockscript = Script::from(Address::from_str(user_address.clone()).unwrap().payload());
 
+    // deposit request
+    log::info!("deposit_request start");
+    ensure_indexer_sync(&mut rpc_client, &mut indexer_client, 60).unwrap();
     let timeout = 60;
     let tx_fee = 1000_0000;
     let mut generator = Generator::new(rpc_url, indexer_url, settings).unwrap();
     let unsigned_tx = generator
-        .deposit_request(from_lockscript, tx_fee, user_lockscript, 10000, 1, 1)
+        .deposit_request(
+            from_lockscript.clone(),
+            tx_fee,
+            user_lockscript.clone(),
+            10000,
+            1,
+            1,
+        )
         .unwrap();
     let tx = sign(unsigned_tx, &mut rpc_client, &private_key).unwrap();
+    send_tx_sync(&mut rpc_client, tx.clone(), timeout).unwrap();
+    let cell_typescript = tx.output(0).unwrap().type_().to_opt().unwrap();
+    let cell_typescript_hash = cell_typescript.calc_script_hash();
+    log::info!("cell_typescript_hash: {}", cell_typescript_hash);
+
+    // bonding
+    log::info!("bonding start");
+    ensure_indexer_sync(&mut rpc_client, &mut indexer_client, 60).unwrap();
+    let signer_lockscript = user_lockscript.clone();
+    let lock_address = "bc1qdekmlav7pglh3k2xm6l7s49c8d0lt5cjxgf52j".to_owned();
+    let unsigned_tx = generator
+        .bonding(
+            from_lockscript,
+            tx_fee,
+            cell_typescript.clone(),
+            signer_lockscript,
+            lock_address,
+        )
+        .unwrap();
+    let tx = sign(unsigned_tx, &mut rpc_client, &private_key).unwrap();
+    log::info!(
+        "tx: {}",
+        serde_json::to_string_pretty(&ckb_jsonrpc_types::TransactionView::from(tx.clone()))
+            .unwrap()
+    );
     send_tx_sync(&mut rpc_client, tx.clone(), timeout).unwrap();
 
     Ok(())

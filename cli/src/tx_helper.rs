@@ -13,7 +13,7 @@ use std::convert::TryInto;
 
 use crate::cell_collector::get_live_cells_by_lock_and_capacity;
 use crate::indexer::IndexerRpcClient;
-use crate::util::{get_live_cell_with_cache, get_privkey_signer, ensure_indexer_sync};
+use crate::util::{ensure_indexer_sync, get_live_cell_with_cache, get_privkey_signer};
 use ckb_sdk::constants::{
     MIN_SECP_CELL_CAPACITY, MULTISIG_TYPE_HASH, ONE_CKB, SECP_SIGNATURE_SIZE, SIGHASH_TYPE_HASH,
 };
@@ -462,7 +462,7 @@ impl TxHelper {
                 None,
                 &mut get_live_cell_fn,
                 genesis_info,
-                false,
+                true,
             )?;
         }
         if rest_capacity >= MIN_SECP_CELL_CAPACITY {
@@ -472,15 +472,6 @@ impl TxHelper {
                 .build();
             self.add_output(change_output, Bytes::default());
         }
-        //
-        // // sign
-        // if sign {
-        //     let signer = get_privkey_signer(*privkey);
-        //     for (lock_arg, signature) in self.sign_inputs(signer, &mut get_live_cell_fn, false)? {
-        //         self.add_signature(lock_arg, signature)?;
-        //     }
-        // }
-        // self.build_tx(&mut get_live_cell_fn, false)
         Ok(self.transaction.clone())
     }
 
@@ -490,45 +481,10 @@ impl TxHelper {
         privkey: &SecretKey,
     ) -> Result<TransactionView, String> {
         let signer = get_privkey_signer(*privkey);
-        for (lock_arg, signature) in self.sign_inputs(signer, &mut get_live_cell_fn, false)? {
+        for (lock_arg, signature) in self.sign_inputs(signer, &mut get_live_cell_fn, true)? {
             self.add_signature(lock_arg, signature)?;
         }
-        self.build_tx(&mut get_live_cell_fn, false)
-    }
-
-    pub fn check_tx<F: FnMut(OutPoint, bool) -> Result<CellOutput, String>>(
-        &self,
-        mut get_live_cell: F,
-    ) -> Result<(u64, u64), String> {
-        // Check inputs
-        let mut previous_outputs: HashSet<OutPoint> = HashSet::default();
-        let mut input_total: u64 = 0;
-        for (i, input) in self.transaction.inputs().into_iter().enumerate() {
-            let out_point = input.previous_output();
-            if previous_outputs.contains(&out_point) {
-                return Err(format!("Already have input: {}", out_point));
-            } else {
-                previous_outputs.insert(out_point.clone());
-            }
-            let output = get_live_cell(out_point, false)?;
-            let capacity: u64 = output.capacity().unpack();
-            input_total += capacity;
-
-            check_lock_script(&output.lock(), false)
-                .map_err(|err| format!("Input(no.{}) {}", i + 1, err))?;
-        }
-
-        // Check output
-        let mut output_total: u64 = 0;
-        for (i, output) in self.transaction.outputs().into_iter().enumerate() {
-            let capacity: u64 = output.capacity().unpack();
-            output_total += capacity;
-
-            check_lock_script(&output.lock(), false)
-                .map_err(|err| format!("Output(no.{}) {}", i + 1, err))?;
-        }
-
-        Ok((input_total, output_total))
+        self.build_tx(&mut get_live_cell_fn, true)
     }
 }
 
