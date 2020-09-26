@@ -1,6 +1,7 @@
 use super::types::{ContractArgs, ContractSubCommand};
 use anyhow::{anyhow, Result};
 use ckb_sdk::{Address, AddressPayload, HttpRpcClient, HumanCapacity, SECP256K1};
+use ckb_types::core::TransactionView;
 use ckb_types::packed::{Script, ScriptReader};
 use ckb_types::prelude::Entity;
 use molecule::prelude::Reader;
@@ -18,22 +19,25 @@ pub fn parse_cell(cell: &str) -> Result<Script> {
     Ok(cell_typescript)
 }
 
-pub fn contract_handler(args: ContractArgs) -> Result<()> {
-    let mut rpc_client = HttpRpcClient::new(args.rpc_url.clone());
-    let mut indexer_client = IndexerRpcClient::new(args.indexer_url.clone());
+pub fn contract_tx_generator(
+    config_path: String,
+    rpc_url: String,
+    indexer_url: String,
+    tx_fee: String,
+    from_lockscript: Script,
+    subcmd: ContractSubCommand,
+) -> Result<TransactionView> {
+    let mut rpc_client = HttpRpcClient::new(rpc_url.clone());
+    let mut indexer_client = IndexerRpcClient::new(indexer_url.clone());
     ensure_indexer_sync(&mut rpc_client, &mut indexer_client, 60).unwrap();
-    let settings = Settings::new(&args.config_path)?;
-    let mut generator = Generator::new(args.rpc_url.clone(), args.indexer_url.clone(), settings)
+    let settings = Settings::new(&config_path)?;
+    let mut generator = Generator::new(rpc_url.clone(), indexer_url.clone(), settings)
         .map_err(|e| anyhow::anyhow!(e))?;
-    let from_privkey = parse_privkey_path(&args.private_key_path)?;
-    let from_public_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &from_privkey);
-    let address_payload = AddressPayload::from_pubkey(&from_public_key);
-    let from_lockscript = Script::from(&address_payload);
-    let tx_fee: u64 = HumanCapacity::from_str(&args.tx_fee)
+    let tx_fee: u64 = HumanCapacity::from_str(&tx_fee)
         .map_err(|e| anyhow!(e))?
         .into();
 
-    let unsigned_tx = match args.subcmd {
+    let unsigned_tx = match subcmd {
         ContractSubCommand::DepositRequest(args) => {
             let user_lockscript = Script::from(
                 Address::from_str(&args.user_lockscript_addr)
@@ -93,6 +97,23 @@ pub fn contract_handler(args: ContractArgs) -> Result<()> {
                 .unwrap()
         }
     };
+    Ok(unsigned_tx)
+}
+
+pub fn contract_handler(args: ContractArgs) -> Result<()> {
+    let mut rpc_client = HttpRpcClient::new(args.rpc_url.clone());
+    let from_privkey = parse_privkey_path(&args.private_key_path)?;
+    let from_public_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &from_privkey);
+    let address_payload = AddressPayload::from_pubkey(&from_public_key);
+    let from_lockscript = Script::from(&address_payload);
+    let unsigned_tx = contract_tx_generator(
+        args.config_path.clone(),
+        args.rpc_url.clone(),
+        args.indexer_url.clone(),
+        args.tx_fee.clone(),
+        from_lockscript,
+        args.subcmd,
+    )?;
     let tx = sign(unsigned_tx, &mut rpc_client, &from_privkey).unwrap();
     log::info!(
         "tx: \n{}",
