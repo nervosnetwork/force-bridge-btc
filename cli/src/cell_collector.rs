@@ -1,5 +1,5 @@
 use crate::indexer::{Cell, IndexerRpcClient, Order, Pagination, ScriptType, SearchKey};
-use crate::util::is_mature;
+use crate::util::{is_mature, get_live_cell_with_cache};
 use anyhow::{anyhow, Result};
 use ckb_hash::blake2b_256;
 use ckb_jsonrpc_types::{
@@ -25,6 +25,7 @@ use secp256k1::SecretKey;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use tockb_types::config::UDT_LEN;
 
 /// get live cell by typescript
 /// it assumes there is at most 1 cell found
@@ -108,4 +109,36 @@ pub fn get_live_cells<F: FnMut(usize, &Cell) -> (bool, bool)>(
     }
 
     Ok(infos)
+}
+
+pub fn collect_sudt_cells_by_amout(
+    indexer_client: &mut IndexerRpcClient,
+    lockscript: Script,
+    sudt_typescript: Script,
+    need_sudt_amount: u128,
+) -> Result<Vec<Cell>, String> {
+    let mut collected_amount = 0u128;
+    let terminator = |_, cell: &Cell| {
+        if collected_amount >= need_sudt_amount {
+            (true, false)
+        } else if cell.output.type_.is_some()
+            && packed::Script::from(cell.output.type_.clone().unwrap()) == sudt_typescript
+            && cell.output_data.len() >= UDT_LEN
+        {
+            collected_amount += {
+                let mut buf = [0u8; UDT_LEN];
+                buf.copy_from_slice(cell.output_data.as_bytes());
+                u128::from_le_bytes(buf)
+            };
+            (collected_amount > need_sudt_amount, true)
+        } else {
+            (false, false)
+        }
+    };
+    let search_key = SearchKey {
+        script: lockscript.into(),
+        script_type: ScriptType::Lock,
+        args_len: None,
+    };
+    get_live_cells(indexer_client, search_key, terminator)
 }

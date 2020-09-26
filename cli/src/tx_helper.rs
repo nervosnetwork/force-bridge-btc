@@ -11,7 +11,7 @@ use ckb_types::{
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 
-use crate::cell_collector::get_live_cells_by_lock_and_capacity;
+use crate::cell_collector::{get_live_cells_by_lock_and_capacity, collect_sudt_cells_by_amout};
 use crate::indexer::IndexerRpcClient;
 use crate::util::{ensure_indexer_sync, get_live_cell_with_cache, get_privkey_signer};
 use ckb_sdk::constants::{
@@ -392,6 +392,34 @@ impl TxHelper {
             .build())
     }
 
+    pub fn supply_sudt(
+        &mut self,
+        rpc_client: &mut HttpRpcClient,
+        indexer_client: &mut IndexerRpcClient,
+        lockscript: Script,
+        genesis_info: &GenesisInfo,
+        need_sudt_amount: u128,
+        sudt_typescript: Script,
+    ) -> Result<TransactionView, String> {
+        let mut live_cell_cache: HashMap<(OutPoint, bool), (CellOutput, Bytes)> =
+            Default::default();
+        let mut get_live_cell_fn = |out_point: OutPoint, with_data: bool| {
+            get_live_cell_with_cache(&mut live_cell_cache, rpc_client, out_point, with_data)
+                .map(|(output, _)| output)
+        };
+        let cells = collect_sudt_cells_by_amout(indexer_client, lockscript, sudt_typescript, need_sudt_amount)?;
+        for cell in cells {
+            self.add_input(
+                OutPoint::from(cell.out_point),
+                None,
+                &mut get_live_cell_fn,
+                genesis_info,
+                true,
+            )?;
+        }
+        Ok(self.transaction.clone())
+    }
+
     pub fn supply_capacity(
         &mut self,
         rpc_client: &mut HttpRpcClient,
@@ -400,7 +428,6 @@ impl TxHelper {
         genesis_info: &GenesisInfo,
         tx_fee: u64,
     ) -> Result<TransactionView, String> {
-        ensure_indexer_sync(rpc_client, indexer_client, 60)?;
         if tx_fee > ONE_CKB {
             return Err("Transaction fee can not be more than 1.0 CKB".to_string());
         }
