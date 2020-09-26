@@ -1,5 +1,5 @@
 use crate::indexer::{Cell, IndexerRpcClient, Order, Pagination, ScriptType, SearchKey};
-use crate::util::{is_mature, get_live_cell_with_cache};
+use crate::util::{get_live_cell_with_cache, is_mature};
 use anyhow::{anyhow, Result};
 use ckb_hash::blake2b_256;
 use ckb_jsonrpc_types::{
