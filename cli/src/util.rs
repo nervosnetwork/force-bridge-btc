@@ -211,7 +211,11 @@ pub fn check_capacity(capacity: u64, to_data_len: usize) -> Result<(), String> {
     Ok(())
 }
 
-pub fn send_tx_sync(rpc_client: &mut HttpRpcClient, tx: TransactionView, timeout: u64) -> Result<H256, String> {
+pub fn send_tx_sync(
+    rpc_client: &mut HttpRpcClient,
+    tx: TransactionView,
+    timeout: u64,
+) -> Result<H256, String> {
     let tx_hash = rpc_client
         .send_transaction(tx.data())
         .map_err(|err| format!("Send transaction error: {}", err))?;

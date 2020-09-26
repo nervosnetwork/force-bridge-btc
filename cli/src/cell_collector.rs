@@ -91,7 +91,7 @@ pub fn get_live_cells<F: FnMut(usize, &Cell) -> (bool, bool)>(
     let mut cursor = None;
     loop {
         let live_cells: Pagination<Cell> =
-            indexer_client.get_cells(search_key.clone(), Order::Asc, limit, None)?;
+            indexer_client.get_cells(search_key.clone(), Order::Asc, limit, cursor)?;
         if live_cells.objects.len() == 0 {
             break;
         }
