@@ -1,16 +1,21 @@
 use crate::toCKB_typescript::utils::types::generated::{
-    basic, btc_difficulty, mint_xt_witness, basic::Bytes2,
-    tockb_cell_data::{BtcExtra, EthExtra, ToCKBCellData, ToCKBTypeArgs, XExtra, XExtraUnion, EthCellData, HeaderInfo, Chain},
+    basic,
+    basic::Bytes2,
+    btc_difficulty, mint_xt_witness,
+    tockb_cell_data::{
+        BtcExtra, Chain, EthCellData, EthExtra, HeaderInfo, ToCKBCellData, ToCKBTypeArgs, XExtra,
+        XExtraUnion,
+    },
 };
 use anyhow::Result;
 use ckb_testtool::context::Context;
 pub use ckb_tool::ckb_types::bytes::Bytes;
 use ckb_tool::ckb_types::{packed::*, prelude::*};
+use eth_spv_lib::eth_types::BlockHeader;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::vec::Vec;
-use eth_spv_lib::eth_types::BlockHeader;
 
 pub const USER_LOCKSCRIPT_OUTPOINT_KEY: &str = "user_lockscript_outpoint_key";
 pub const TOCKB_TYPESCRIPT_OUTPOINT_KEY: &str = "toCKB_typescript_outpoint_key";
@@ -80,17 +85,32 @@ impl CellDepView {
                 let headers_data = &headersOracle.headers;
                 let mut headers: Vec<basic::Bytes> = vec![];
                 for header_str in headers_data {
-                    let header: BlockHeader = rlp::decode(hex::decode(&header_str).expect("invalid header rlp string.").as_slice()).expect("invalid header rlp string.");
-                    let header_info = HeaderInfo::new_builder().header(hex::decode(&header_str).expect("invalid header rlp string.").as_slice().to_vec().into())
+                    let header: BlockHeader = rlp::decode(
+                        hex::decode(&header_str)
+                            .expect("invalid header rlp string.")
+                            .as_slice(),
+                    )
+                    .expect("invalid header rlp string.");
+                    let header_info = HeaderInfo::new_builder()
+                        .header(
+                            hex::decode(&header_str)
+                                .expect("invalid header rlp string.")
+                                .as_slice()
+                                .to_vec()
+                                .into(),
+                        )
                         // .total_difficulty(header.difficulty.0.as_u64().into())
-                        .hash(basic::Byte32::from_slice(header.hash.unwrap().0.as_bytes()).unwrap() )
+                        .hash(basic::Byte32::from_slice(header.hash.unwrap().0.as_bytes()).unwrap())
                         .build();
                     headers.push(header_info.as_slice().to_vec().into());
                 }
                 let eth_cell_data = EthCellData::new_builder()
-                    .headers(Chain::new_builder()
-                        .main(Bytes2::new_builder().set(headers).build())
-                    .build()).build();
+                    .headers(
+                        Chain::new_builder()
+                            .main(Bytes2::new_builder().set(headers).build())
+                            .build(),
+                    )
+                    .build();
                 let headers_outpoint = context.deploy_cell(eth_cell_data.as_bytes());
                 CellDep::new_builder().out_point(headers_outpoint).build()
             }

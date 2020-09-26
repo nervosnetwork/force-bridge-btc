@@ -1,13 +1,10 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
-    config::{
-        PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, XT_CELL_CAPACITY,
+    config::{PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, XT_CELL_CAPACITY},
+    tools::{
+        get_xchain_kind, is_XT_typescript, verify_btc_witness, verify_eth_witness, XChainKind,
     },
-    tools::{get_xchain_kind, is_XT_typescript, verify_btc_witness, verify_eth_witness, XChainKind},
-    types::{
-        mint_xt_witness::MintXTWitnessReader,
-        Error, ToCKBCellDataView, XExtraView
-    },
+    types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView, XExtraView},
 };
 use ckb_std::{
     ckb_constants::Source,
@@ -66,7 +63,8 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
         }
         XChainKind::Eth => {
             let eth_extra = verify_eth_witness(data, proof, cell_dep_index_list)?;
-        Ok(XExtraView::Eth(eth_extra))},
+            Ok(XExtraView::Eth(eth_extra))
+        }
     }
 }
 

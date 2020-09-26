@@ -1,8 +1,9 @@
 use crate::utils::{
     config::{SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, UDT_LEN},
     types::{
-        btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader, mint_xt_witness::ETHSPVProofReader, BtcExtraView, EthExtraView,
-        Error, ToCKBCellDataView, XExtraView,
+        btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader,
+        mint_xt_witness::ETHSPVProofReader, BtcExtraView, Error, EthExtraView, ToCKBCellDataView,
+        XExtraView,
     },
 };
 use alloc::{string::String, vec, vec::Vec};
@@ -20,13 +21,13 @@ use ckb_std::{
     high_level::{load_cell_capacity, load_cell_data, load_cell_type, load_script},
 };
 use core::{convert::From, result::Result};
+use eth_spv_lib::{eth_types::*, ethspv};
+use hex;
 use molecule::prelude::Reader;
 use primitive_types::U256;
 use tockb_types::generated::basic::OutPoint;
-pub use tockb_types::tockb_cell::{ToCKBTypeArgsView, XChainKind};
-use eth_spv_lib::{eth_types::*, ethspv};
 use tockb_types::generated::tockb_cell_data::{EthCellDataReader, HeaderInfoReader};
-use hex;
+pub use tockb_types::tockb_cell::{ToCKBTypeArgsView, XChainKind};
 
 pub fn get_toCKB_type_args() -> Result<ToCKBTypeArgsView, Error> {
     let toCKB_type_args = load_script()?.args().raw_data();
@@ -194,7 +195,10 @@ pub fn verify_btc_witness(
     }
 }
 
-pub fn verify_header_is_on_main_chain(header: &BlockHeader, cell_dep_index_list: &[u8]) -> Result<(), Error> {
+pub fn verify_header_is_on_main_chain(
+    header: &BlockHeader,
+    cell_dep_index_list: &[u8],
+) -> Result<(), Error> {
     let dep_data = load_cell_data(cell_dep_index_list[0].into(), Source::CellDep)?;
     debug!("dep data is {:?}", &dep_data);
     if EthCellDataReader::verify(&dep_data, false).is_err() {
@@ -202,7 +206,11 @@ pub fn verify_header_is_on_main_chain(header: &BlockHeader, cell_dep_index_list:
     }
     let eth_cell_data_reader = EthCellDataReader::new_unchecked(&dep_data);
     debug!("eth_cell_data_reader: {:?}", eth_cell_data_reader);
-    let tail_raw = eth_cell_data_reader.headers().main().get_unchecked(eth_cell_data_reader.headers().main().len()-1).raw_data();
+    let tail_raw = eth_cell_data_reader
+        .headers()
+        .main()
+        .get_unchecked(eth_cell_data_reader.headers().main().len() - 1)
+        .raw_data();
     if HeaderInfoReader::verify(&tail_raw, false).is_err() {
         return Err(Error::EthHeadersDataInvalid);
     }
@@ -213,12 +221,20 @@ pub fn verify_header_is_on_main_chain(header: &BlockHeader, cell_dep_index_list:
         return Err(Error::HeaderIsNotOnMainChain);
     }
     let offset = (tail.number - header.number) as usize;
-    if offset > eth_cell_data_reader.headers().main().len()-1 {
+    if offset > eth_cell_data_reader.headers().main().len() - 1 {
         return Err(Error::HeaderIsNotOnMainChain);
     }
-    let target_raw = eth_cell_data_reader.headers().main().get_unchecked(eth_cell_data_reader.headers().main().len()-1-offset).raw_data();
+    let target_raw = eth_cell_data_reader
+        .headers()
+        .main()
+        .get_unchecked(eth_cell_data_reader.headers().main().len() - 1 - offset)
+        .raw_data();
     let target_info_reader = HeaderInfoReader::new_unchecked(target_raw);
-    debug!("main chain hash: {:?}, witness header hash: {:?}", hex::encode(target_info_reader.hash().raw_data()), hex::encode(header.hash.expect("invalid hash").0.as_bytes()));
+    debug!(
+        "main chain hash: {:?}, witness header hash: {:?}",
+        hex::encode(target_info_reader.hash().raw_data()),
+        hex::encode(header.hash.expect("invalid hash").0.as_bytes())
+    );
     if target_info_reader.hash().raw_data() != header.hash.expect("invalid hash").0.as_bytes() {
         return Err(Error::HeaderIsNotOnMainChain);
     }
@@ -243,9 +259,15 @@ pub fn verify_eth_witness(
     log_index.copy_from_slice(proof_reader.log_index().raw_data());
     debug!("log_index is {:?}", &log_index);
     let log_entry_data = proof_reader.log_entry_data().raw_data().to_vec();
-    debug!("log_entry_data is {:?}", hex::encode(&log_entry_data.as_slice()));
+    debug!(
+        "log_entry_data is {:?}",
+        hex::encode(&log_entry_data.as_slice())
+    );
     let receipt_data = proof_reader.receipt_data().raw_data().to_vec();
-    debug!("receipt_data is {:?}", hex::encode(&receipt_data.as_slice()));
+    debug!(
+        "receipt_data is {:?}",
+        hex::encode(&receipt_data.as_slice())
+    );
     let mut receipt_index = [0u8; 8];
     receipt_index.copy_from_slice(proof_reader.receipt_index().raw_data());
     debug!("receipt_index is {:?}", &receipt_index);
@@ -263,8 +285,10 @@ pub fn verify_eth_witness(
         hex::encode(locker_address.to_vec()),
         String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
     );
-    if hex::encode(locker_address.to_vec()) != String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap() {
-        return Err(Error::WrongFundingAddr)
+    if hex::encode(locker_address.to_vec())
+        != String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+    {
+        return Err(Error::WrongFundingAddr);
     }
     if !ethspv::verify_log_entry(
         u64::from_le_bytes(log_index),

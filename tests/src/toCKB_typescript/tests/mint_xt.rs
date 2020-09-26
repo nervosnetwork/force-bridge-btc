@@ -1,11 +1,11 @@
 use crate::toCKB_typescript::utils::{case_builder::*, case_runner};
+use hex::FromHex;
+use rlp;
+use rlp::RlpStream;
 use tockb_types::{
     config::{CKB_UNITS, PLEDGE, XT_CELL_CAPACITY},
     Error::*,
 };
-use hex::FromHex;
-use rlp;
-use rlp::RlpStream;
 
 const COLLATERAL: u64 = 100_000 * CKB_UNITS;
 
@@ -33,7 +33,6 @@ fn test_wrong_lot_size() {
     case.toCKB_cells.outputs[0].data.lot_size = 100;
     case.expect_return_code = LotSizeInvalid as i8;
     case_runner::run_test(case);
-
 }
 
 #[test]
@@ -347,4 +346,3 @@ fn get_correct_eth_case() -> TestCase {
         expect_return_code: 0,
     }
 }
-
