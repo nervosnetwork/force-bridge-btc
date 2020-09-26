@@ -1,14 +1,14 @@
 use crate::commands::contract::contract_tx_generator;
 use crate::commands::types::{ContractSubCommand, ServerArgs};
 use ckb_jsonrpc_types::TransactionView;
+use ckb_sdk::Address;
+use ckb_types::packed::{Script, ScriptReader};
 use jsonrpc_core::Result;
 use jsonrpc_derive::rpc;
 use jsonrpc_http_server::jsonrpc_core::*;
 use jsonrpc_http_server::ServerBuilder;
 use serde::{Deserialize, Serialize};
-use ckb_sdk::Address;
 use std::str::FromStr;
-use ckb_types::packed::{Script, ScriptReader};
 
 // #[rpc]
 // pub trait Rpc {
@@ -46,11 +46,14 @@ pub fn start(args: ServerArgs) {
     let listen_url = args.listen_url.clone();
     let mut io = jsonrpc_core::IoHandler::new();
     // io.extend_with(RpcImpl.to_delegate());
-    io.add_method("contract", move|params: Params| {
+    io.add_method("contract", move |params: Params| {
         dbg!(&params);
-        let rpc_args: JsonrpcContractArgs = params.parse().map_err(|e| jsonrpc_core::Error::parse_error())?;
+        let rpc_args: JsonrpcContractArgs = params
+            .parse()
+            .map_err(|e| jsonrpc_core::Error::parse_error())?;
         let from_lockscript = Script::from(
-            Address::from_str(&rpc_args.from_lockscript_addr).map_err(|e| jsonrpc_core::Error::parse_error())?
+            Address::from_str(&rpc_args.from_lockscript_addr)
+                .map_err(|e| jsonrpc_core::Error::parse_error())?
                 .payload(),
         );
         let tx = contract_tx_generator(
@@ -60,7 +63,8 @@ pub fn start(args: ServerArgs) {
             rpc_args.tx_fee.clone(),
             from_lockscript,
             rpc_args.sub_cmd.clone(),
-        ).map_err(|e| jsonrpc_core::Error::internal_error())?;
+        )
+        .map_err(|e| jsonrpc_core::Error::internal_error())?;
         let rpc_tx = ckb_jsonrpc_types::TransactionView::from(tx);
         Ok(serde_json::to_value(rpc_tx).unwrap())
     });

@@ -17,4 +17,6 @@ test-tockb-cli:
 	${TOCKB_CLI} contract -k ${PRIVATE_KEY} ${WAIT_FOR_COMMITTED} pre-term-redeem -c ${CELL} --unlock-address bc1qy90wlm8mujjuud6qs665gjp7hvn67ekef62aer --redeemer-lockscript-addr ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37
 
 server:
+	mkdir -p /tmp/.tockb-cli
+	${TOCKB_CLI} dev-init -f -p 10000 -d 17345997805929 -k ${PRIVATE_KEY}
 	${TOCKB_CLI} server
