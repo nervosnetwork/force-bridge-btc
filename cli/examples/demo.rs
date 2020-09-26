@@ -54,7 +54,6 @@ fn main() -> Result<()> {
 
     let tx = deploy(&mut rpc_client, &mut indexer_client, &private_key, data).unwrap();
     let tx_hash = send_tx_sync(&mut rpc_client, tx.clone(), TIMEOUT).unwrap();
-    // let tx_hash = tx.hash();
     let tx_hash_hex = hex::encode(tx_hash.as_bytes());
     let settings = Settings {
         typescript: ScriptConf {
@@ -91,17 +90,17 @@ fn main() -> Result<()> {
             },
         },
     };
-    dbg!(&settings);
+    // dbg!(&settings);
 
     let user_address = "ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37";
     let user_lockscript = Script::from(Address::from_str(user_address).unwrap().payload());
 
+    let tx_fee = 1000_0000;
     let mut generator = Generator::new(rpc_url, indexer_url, settings).unwrap();
     let unsigned_tx = generator
-        .deposit_request(from_lockscript, 9999_9999, user_lockscript, 10000, 1, 1)
+        .deposit_request(from_lockscript, tx_fee, user_lockscript, 10000, 1, 1)
         .unwrap();
-    dbg!(&unsigned_tx);
-    let tx = sign(tx, &mut rpc_client, &private_key).unwrap();
+    let tx = sign(unsigned_tx, &mut rpc_client, &private_key).unwrap();
     send_tx_sync(&mut rpc_client, tx.clone(), 60).unwrap();
 
     Ok(())
