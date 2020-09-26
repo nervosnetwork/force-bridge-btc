@@ -1,5 +1,5 @@
 use crate::indexer::{Cell, IndexerRpcClient};
-use crate::settings::Settings;
+use crate::settings::{Settings, OutpointConf};
 use crate::tx_helper::TxHelper;
 use crate::util::{
     check_capacity, get_live_cell, get_live_cell_with_cache, get_max_mature_number, is_mature,
@@ -41,13 +41,40 @@ impl Generator {
             .expect("Can not get genesis block?")
             .into();
         let genesis_info = GenesisInfo::from_block(&genesis_block)?;
-        dbg!(&genesis_info);
         Ok(Self {
             rpc_client,
             indexer_client,
             genesis_info,
             settings,
         })
+    }
+
+    fn add_cell_deps(
+        &mut self,
+        helper: &mut TxHelper,
+        outpoints: Vec<OutpointConf>,
+    ) -> Result<(), String> {
+        let mut builder = helper.transaction.as_advanced_builder();
+        for conf in outpoints {
+            let outpoint = OutPoint::new_builder()
+                .tx_hash(
+                    Byte32::from_slice(
+                        &hex::decode(conf.tx_hash)
+                            .map_err(|e| format!("invalid OutpointConf config. err: {}", e))?,
+                    )
+                        .map_err(|e| format!("invalid OutpointConf config. err: {}", e))?,
+                )
+                .index(conf.index.pack())
+                .build();
+            builder = builder.cell_dep(
+                CellDep::new_builder()
+                    .out_point(outpoint)
+                    .dep_type(DepType::Code.into())
+                    .build(),
+            );
+        }
+        helper.transaction = builder.build();
+        Ok(())
     }
 
     pub fn deposit_request(
@@ -62,40 +89,12 @@ impl Generator {
         let to_capacity = pledge * CKB_UNITS;
         let mut helper = TxHelper::default();
 
-        let lockscript_out_point = OutPoint::new_builder()
-            .tx_hash(
-                Byte32::from_slice(
-                    &hex::decode(&self.settings.lockscript.outpoint.tx_hash)
-                        .map_err(|e| format!("invalid lockscript config. err: {}", e))?,
-                )
-                .map_err(|e| format!("invalid lockscript config. err: {}", e))?,
-            )
-            .index(self.settings.lockscript.outpoint.index.pack())
-            .build();
-        let typescript_out_point = OutPoint::new_builder()
-            .tx_hash(
-                Byte32::from_slice(
-                    &hex::decode(&self.settings.typescript.outpoint.tx_hash)
-                        .map_err(|e| format!("invalid typescript config. err: {}", e))?,
-                )
-                .map_err(|e| format!("invalid typescript config. err: {}", e))?,
-            )
-            .index(self.settings.typescript.outpoint.index.pack())
-            .build();
-        let typescript_cell_dep = CellDep::new_builder()
-            .out_point(typescript_out_point)
-            .dep_type(DepType::Code.into())
-            .build();
-        let lockscript_cell_dep = CellDep::new_builder()
-            .out_point(lockscript_out_point)
-            .dep_type(DepType::Code.into())
-            .build();
-        helper.transaction = helper
-            .transaction
-            .as_advanced_builder()
-            .cell_dep(typescript_cell_dep)
-            .cell_dep(lockscript_cell_dep)
-            .build();
+        let outpoints = vec![
+            self.settings.lockscript.outpoint.clone(),
+            self.settings.typescript.outpoint.clone(),
+        ];
+        self.add_cell_deps(&mut helper, outpoints)?;
+
         let tockb_data = ToCKBCellData::new_builder()
             .status(Byte::new(ToCKBStatus::Initial.int_value()))
             .lot_size(Byte::new(lot_size))
@@ -107,29 +106,44 @@ impl Generator {
             .expect("wrong lockscript code hash config");
         let typescript_code_hash = hex::decode(&self.settings.typescript.code_hash)
             .expect("wrong typescript code hash config");
+        let mut typescript_args = [0u8; 37];
         let typescript = Script::new_builder()
             .code_hash(Byte32::from_slice(&typescript_code_hash).unwrap())
             .hash_type(DepType::Code.into())
-            .args(vec![kind].pack())
+            .args(Bytes::from(typescript_args.to_vec()).pack())
             .build();
         let typescript_hash = typescript.calc_script_hash();
         let lockscript = Script::new_builder()
             .code_hash(Byte32::from_slice(&lockscript_code_hash).unwrap())
             .hash_type(DepType::Code.into())
+            // TODO: should change args to `code_hash + hash_type + kind`
             .args(typescript_hash.as_bytes().pack())
             .build();
         let to_output = CellOutput::new_builder()
             .capacity(Capacity::shannons(to_capacity).pack())
-            .type_(Some(typescript).pack())
+            .type_(Some(typescript.clone()).pack())
             .lock(lockscript)
             .build();
-        helper.add_output(to_output, tockb_data);
-        helper.supply_capacity(
+        helper.add_output(to_output.clone(), tockb_data);
+        // get tx with empty typescript_args
+        let mut tx = helper.supply_capacity(
             &mut self.rpc_client,
             &mut self.indexer_client,
             from_lockscript,
             &self.genesis_info,
             tx_fee,
-        )
+        )?;
+        // fill typescript args with first outpoint
+        let first_outpoint = tx.inputs().get(0).expect("should have input").previous_output().as_bytes();
+        let mut new_typescript_args = Vec::with_capacity(37);
+        new_typescript_args.push(kind);
+        new_typescript_args.extend_from_slice(first_outpoint.as_ref());
+        assert!(new_typescript_args.len() == 37, "typescript_args len should be 37");
+        let new_typescript = typescript.as_builder().args(new_typescript_args.pack()).build();
+        let new_output = to_output.as_builder().type_(Some(new_typescript).pack()).build();
+        let mut new_outputs = tx.outputs().into_iter().collect::<Vec<_>>();
+        new_outputs[0] = new_output;
+        let tx = tx.as_advanced_builder().set_outputs(new_outputs).build();
+        Ok(tx)
     }
 }

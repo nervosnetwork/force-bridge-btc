@@ -13,7 +13,7 @@ use std::convert::TryInto;
 
 use crate::cell_collector::get_live_cells_by_lock_and_capacity;
 use crate::indexer::IndexerRpcClient;
-use crate::util::{get_live_cell_with_cache, get_privkey_signer};
+use crate::util::{get_live_cell_with_cache, get_privkey_signer, ensure_indexer_sync};
 use ckb_sdk::constants::{
     MIN_SECP_CELL_CAPACITY, MULTISIG_TYPE_HASH, ONE_CKB, SECP_SIGNATURE_SIZE, SIGHASH_TYPE_HASH,
 };
@@ -400,6 +400,7 @@ impl TxHelper {
         genesis_info: &GenesisInfo,
         tx_fee: u64,
     ) -> Result<TransactionView, String> {
+        ensure_indexer_sync(rpc_client, indexer_client, 60)?;
         if tx_fee > ONE_CKB {
             return Err("Transaction fee can not be more than 1.0 CKB".to_string());
         }
