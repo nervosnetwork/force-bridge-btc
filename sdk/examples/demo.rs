@@ -27,6 +27,7 @@ fn main() -> Result<()> {
     let public_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &private_key);
     let address_payload = AddressPayload::from_pubkey(&public_key);
     let from_lockscript = Script::from(&address_payload);
+    dbg!(hex::encode(from_lockscript.as_slice()));
 
     // dev deploy
     let typescript_bin = std::fs::read("../build/release/toCKB-typescript")?;
@@ -55,7 +56,7 @@ fn main() -> Result<()> {
     ];
 
     let tx = deploy(&mut rpc_client, &mut indexer_client, &private_key, data).unwrap();
-    let tx_hash = send_tx_sync(&mut rpc_client, tx.clone(), TIMEOUT).unwrap();
+    let tx_hash = send_tx_sync(&mut rpc_client, &tx, TIMEOUT).unwrap();
     let tx_hash_hex = hex::encode(tx_hash.as_bytes());
     let settings = Settings {
         typescript: ScriptConf {
@@ -114,7 +115,7 @@ fn main() -> Result<()> {
         )
         .unwrap();
     let tx = sign(unsigned_tx, &mut rpc_client, &private_key).unwrap();
-    send_tx_sync(&mut rpc_client, tx.clone(), timeout).unwrap();
+    send_tx_sync(&mut rpc_client, &tx, timeout).unwrap();
     let cell_typescript = tx.output(0).unwrap().type_().to_opt().unwrap();
     let cell_typescript_hash = cell_typescript.calc_script_hash();
     log::info!("cell_typescript_hash: {}", cell_typescript_hash);
@@ -139,7 +140,7 @@ fn main() -> Result<()> {
         serde_json::to_string_pretty(&ckb_jsonrpc_types::TransactionView::from(tx.clone()))
             .unwrap()
     );
-    send_tx_sync(&mut rpc_client, tx.clone(), timeout).unwrap();
+    send_tx_sync(&mut rpc_client, &tx, timeout).unwrap();
 
     // mint_xt
     log::info!("mint_xt start");
@@ -159,7 +160,7 @@ fn main() -> Result<()> {
         serde_json::to_string_pretty(&ckb_jsonrpc_types::TransactionView::from(tx.clone()))
             .unwrap()
     );
-    send_tx_sync(&mut rpc_client, tx.clone(), timeout).unwrap();
+    send_tx_sync(&mut rpc_client, &tx, timeout).unwrap();
 
     // pre_term_redeem
     log::info!("pre_term_redeem start");
@@ -181,7 +182,7 @@ fn main() -> Result<()> {
         )
         .unwrap();
     let tx = sign(unsigned_tx, &mut rpc_client, &private_key).unwrap();
-    send_tx_sync(&mut rpc_client, tx.clone(), timeout).unwrap();
+    send_tx_sync(&mut rpc_client, &tx, timeout).unwrap();
 
     Ok(())
 }

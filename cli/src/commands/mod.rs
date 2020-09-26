@@ -1,4 +1,5 @@
 pub mod contract;
+pub mod server;
 pub mod types;
 
 use anyhow::{anyhow, Result};
@@ -8,6 +9,7 @@ use ckb_sdk::{AddressPayload, HttpRpcClient};
 use ckb_types::packed::Script;
 use contract::contract_handler;
 use molecule::prelude::{Builder, Entity};
+use server::server_handler;
 use std::str::FromStr;
 use tockb_sdk::indexer::IndexerRpcClient;
 use tockb_sdk::settings::{BtcDifficulty, OutpointConf, PriceOracle, ScriptConf, Settings};
@@ -21,6 +23,7 @@ pub fn handler(opt: Opts) -> Result<()> {
         SubCommand::Init(args) => init_handler(args),
         SubCommand::DevInit(args) => dev_init_handler(args),
         SubCommand::Contract(args) => contract_handler(args),
+        SubCommand::Server(args) => server_handler(args),
         _ => todo!(),
     }
 }

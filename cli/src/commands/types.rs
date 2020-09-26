@@ -1,4 +1,5 @@
 use clap::Clap;
+use serde::{Deserialize, Serialize};
 
 /// toCKB sdk
 #[derive(Clap, Clone, Debug)]
@@ -14,6 +15,21 @@ pub enum SubCommand {
     DevInit(DevInitArgs),
     Utils(UtilsArgs),
     Contract(ContractArgs),
+    Server(ServerArgs),
+}
+
+#[derive(Clap, Clone, Debug)]
+pub struct ServerArgs {
+    #[clap(long, default_value = "/tmp/.tockb-cli/config.toml")]
+    pub config_path: String,
+    #[clap(long, default_value = "http://127.0.0.1:8114")]
+    pub rpc_url: String,
+    #[clap(long, default_value = "http://127.0.0.1:8116")]
+    pub indexer_url: String,
+    #[clap(short, long, default_value = "127.0.0.1:3030")]
+    pub listen_url: String,
+    #[clap(short, long, default_value = "3")]
+    pub threads_num: usize,
 }
 
 /// init tockb sdk config
@@ -70,7 +86,7 @@ pub struct ContractArgs {
     pub subcmd: ContractSubCommand,
 }
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
 pub enum ContractSubCommand {
     DepositRequest(DepositRequestArgs),
     Bonding(BondingArgs),
@@ -78,7 +94,7 @@ pub enum ContractSubCommand {
     PreTermRedeem(PreTermRedeemArgs),
 }
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
 pub struct DepositRequestArgs {
     #[clap(short, long)]
     pub user_lockscript_addr: String,
@@ -90,7 +106,7 @@ pub struct DepositRequestArgs {
     pub lot_size: u8,
 }
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
 pub struct BondingArgs {
     /// cell typescript hex
     #[clap(short, long)]
@@ -101,7 +117,7 @@ pub struct BondingArgs {
     pub lock_address: String,
 }
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
 pub struct MintXTArgs {
     #[clap(short, long)]
     pub cell: String,
@@ -109,7 +125,7 @@ pub struct MintXTArgs {
     pub spv_proof: String,
 }
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
 pub struct PreTermRedeemArgs {
     #[clap(short, long)]
     pub cell: String,
