@@ -11,6 +11,7 @@ use ckb_tool::ckb_types::{
 use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use tockb_types::basic;
 use tockb_types::generated::tockb_cell_data::ToCKBTypeArgs;
+
 const MAX_CYCLES: u64 = 10_000_000;
 
 #[repr(i8)]
@@ -25,10 +26,15 @@ pub enum Error {
 
 #[test]
 fn test_invalid_toCKB_cell() {
-    let invalid_cell = build_cell(true, basic::OutPoint::default());
-    let toCKB_cell = build_cell(false, basic::OutPoint::default());
+    let valid_args = Bytes::from(
+        &b"\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"[..],
+    );
+    let invalid_args: Bytes = [3; 1].to_vec().into();
 
-    let (mut context, tx) = build_test_context(vec![&toCKB_cell, &invalid_cell], vec![&toCKB_cell]);
+    let valid_cell = build_cell(valid_args, basic::OutPoint::default());
+    let invalid_cell = build_cell(invalid_args, basic::OutPoint::default());
+
+    let (mut context, tx) = build_test_context(vec![&valid_cell, &invalid_cell], vec![&valid_cell]);
     let tx = context.complete_tx(tx);
 
     let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
@@ -37,14 +43,18 @@ fn test_invalid_toCKB_cell() {
         ScriptError::ValidationFailure(Error::InvalidToCKBCell as i8)
     );
 }
+
 #[test]
 fn test_valid_toCKB_cell() {
+    let valid_args = Bytes::from(
+        &b"\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"[..],
+    );
     let valid_cell_1 = build_cell(
-        false,
+        valid_args.clone(),
         basic::OutPoint::from(OutPoint::new(h256!("0x12345").pack(), 0)),
     );
     let valid_cell_2 = build_cell(
-        false,
+        valid_args,
         basic::OutPoint::from(OutPoint::new(h256!("0x67890").pack(), 1)),
     );
     let (mut context, tx) =
@@ -70,33 +80,29 @@ fn load_context_and_out_points() -> (Context, OutPoint, OutPoint) {
     );
 }
 
-fn build_cell(is_fake_typescript: bool, cell_id: basic::OutPoint) -> CellOutput {
+fn build_cell(type_script_args: Bytes, cell_id: basic::OutPoint) -> CellOutput {
     let (mut context, toCKB_lockscript_out_point, always_success_out_point) =
         load_context_and_out_points();
 
+    // prepare lock_script args
     let args = ToCKBTypeArgs::new_builder()
         .cell_id(cell_id)
         .xchain_kind(Byte::new(1))
         .build();
-
-    // prepare scripts
-    let toCKB_typescript = context
+    let mock_toCKB_typescript = context
         .build_script(&always_success_out_point, args.as_bytes())
         .expect("script");
 
-    let lock_script_args = toCKB_typescript.as_bytes()[0..54].to_vec().into();
+    let lock_script_args = mock_toCKB_typescript.as_bytes()[0..54].to_vec().into();
 
+    // prepare scripts
     let lock_script = context
         .build_script(&toCKB_lockscript_out_point, lock_script_args)
         .expect("script");
 
-    let type_script = if is_fake_typescript {
-        context
-            .build_script(&always_success_out_point, [3; 1].to_vec().into())
-            .expect("script")
-    } else {
-        toCKB_typescript
-    };
+    let type_script = context
+        .build_script(&always_success_out_point, type_script_args)
+        .expect("script");
 
     // build cell output
     CellOutput::new_builder()
