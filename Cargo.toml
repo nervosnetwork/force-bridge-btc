@@ -4,6 +4,7 @@ members = [
     "tools/btc-proof-generator",
     "types",
     "sdk",
+    "cli",
 ]
 exclude = [
     "contracts",
