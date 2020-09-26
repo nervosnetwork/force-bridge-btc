@@ -1,6 +1,6 @@
 use clap::Clap;
 
-/// toCKB cli
+/// toCKB sdk
 #[derive(Clap, Clone, Debug)]
 #[clap(version = "0.1", author = "Wenchao Hu <me@huwenchao.com>")]
 pub struct Opts {
@@ -15,7 +15,7 @@ pub enum SubCommand {
     Contract(ContractArgs),
 }
 
-/// init tockb cli config
+/// init tockb sdk config
 #[derive(Clap, Clone, Debug)]
 pub struct InitArgs {
     #[clap(short = 'f', long)]
