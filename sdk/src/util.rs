@@ -213,7 +213,7 @@ pub fn check_capacity(capacity: u64, to_data_len: usize) -> Result<(), String> {
 
 pub fn send_tx_sync(
     rpc_client: &mut HttpRpcClient,
-    tx: TransactionView,
+    tx: &TransactionView,
     timeout: u64,
 ) -> Result<H256, String> {
     let tx_hash = rpc_client

@@ -1,5 +1,5 @@
 [package]
-name = "tockb-sdk"
+name = "tockb-cli"
 version = "0.1.0"
 authors = ["huwenchao <me@huwenchao.com>"]
 edition = "2018"
@@ -7,6 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tockb-sdk = { path = "../sdk" }
+env_logger = "0.7.1"
+clap = "3.0.0-beta.2"
 int-enum = "0.4"
 toml = "0.5"
 config = "0.10"
@@ -27,18 +30,3 @@ jsonrpc-core = "14.0"
 serde = { version = "1.0", features = ["rc"] }
 serde_derive = "1.0"
 serde_json = "1.0"
-
-[dev-dependencies]
-env_logger = "0.7.1"
-
-[lib]
-name = "tockb_sdk"
-path = "src/lib.rs"
-
-[[bin]]
-name = "tockb-cli"
-path = "../cli/src/main.rs"
-
-[[example]]
-name = "demo"
-path = "examples/demo.rs"
