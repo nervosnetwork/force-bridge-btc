@@ -15,6 +15,8 @@ use tockb_types::generated::btc_difficulty::BTCDifficulty;
 const TIMEOUT: u64 = 60;
 
 fn main() -> Result<()> {
+    env_logger::init();
+
     let rpc_url = "http://127.0.0.1:8114".to_owned();
     let indexer_url = "http://127.0.0.1:8116".to_owned();
     let mut rpc_client = HttpRpcClient::new(rpc_url.clone());
