@@ -59,4 +59,3 @@ pub struct DepositRequestArgs {
     #[clap(short, long)]
     pub lot_size: u8,
 }
-

@@ -8,9 +8,9 @@ use molecule::prelude::{Builder, Entity};
 use std::str::FromStr;
 use tockb_sdk::settings::{BtcDifficulty, OutpointConf, PriceOracle, ScriptConf};
 use tockb_sdk::tx_helper::{deploy, sign};
+use tockb_sdk::util::send_tx_sync;
 use tockb_sdk::{generator::Generator, indexer::IndexerRpcClient, settings::Settings};
 use tockb_types::generated::btc_difficulty::BTCDifficulty;
-use tockb_sdk::util::send_tx_sync;
 
 const TIMEOUT: u64 = 60;
 
