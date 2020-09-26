@@ -22,10 +22,13 @@ use int_enum::IntEnum;
 use molecule::prelude::Byte;
 use secp256k1::SecretKey;
 use std::collections::HashMap;
-use tockb_types::config::{CKB_UNITS, COLLATERAL_PERCENT, UDT_LEN, XT_CELL_CAPACITY};
+use tockb_types::config::{
+    CKB_UNITS, COLLATERAL_PERCENT, PLEDGE, SIGNER_FEE_RATE, UDT_LEN, XT_CELL_CAPACITY,
+};
+use tockb_types::generated::mint_xt_witness::{BTCSPVProof, MintXTWitness};
 use tockb_types::generated::tockb_cell_data::ToCKBCellData;
 use tockb_types::tockb_cell_data::ToCKBTypeArgs;
-use tockb_types::{basic, ToCKBCellDataView, ToCKBStatus, XChainKind};
+use tockb_types::{basic, BtcExtraView, ToCKBCellDataView, ToCKBStatus, XChainKind, XExtraView};
 
 pub struct Generator {
     pub rpc_client: HttpRpcClient,
@@ -255,6 +258,7 @@ impl Generator {
         let mut to_data_view = data_view.clone();
         to_data_view.status = ToCKBStatus::Bonded;
         to_data_view.x_lock_address = Bytes::from(lock_address);
+        to_data_view.signer_lockscript = signer_lockscript.as_bytes();
         let tockb_data = to_data_view
             .as_molecule_data()
             .map_err(|e| format!("serde tockb_data err: {}", e))?;
@@ -276,4 +280,260 @@ impl Generator {
         )?;
         Ok(tx)
     }
+
+    pub fn mint_xt(
+        &mut self,
+        from_lockscript: Script,
+        tx_fee: u64,
+        cell_typescript: Script,
+        spv_proof: Vec<u8>,
+    ) -> Result<TransactionView, String> {
+        let mut helper = TxHelper::default();
+        let (from_cell, ckb_cell_data) = self.get_ckb_cell(&mut helper, cell_typescript, true)?;
+        let from_ckb_cell_data = ToCKBCellData::from_slice(ckb_cell_data.as_ref()).unwrap();
+
+        // add cellDeps
+        let outpoints = vec![
+            self.settings.btc_difficulty_cell.outpoint.clone(),
+            self.settings.lockscript.outpoint.clone(),
+            self.settings.typescript.outpoint.clone(),
+            self.settings.sudt.outpoint.clone(),
+        ];
+        self.add_cell_deps(&mut helper, outpoints)?;
+
+        let (tockb_typescript, kind) = match from_cell.type_().to_opt() {
+            Some(script) => (script.clone(), script.args().raw_data().as_ref()[0]),
+            None => return Err("typescript of tockb cell is none".to_owned()),
+        };
+        let tockb_lockscript = from_cell.lock();
+
+        let data_view =
+            ToCKBCellDataView::new(ckb_cell_data.as_ref(), XChainKind::from_int(kind).unwrap())
+                .map_err(|err| format!("Parse to ToCKBCellDataView error: {}", err as i8))?;
+        let lot_amount = data_view
+            .get_lot_xt_amount()
+            .map_err(|_| "get lot_amount from tockb cell data error".to_owned())?;
+        let from_capacity: u64 = from_cell.capacity().unpack();
+
+        // gen output of tockb cell
+        {
+            let to_capacity = from_capacity - PLEDGE - XT_CELL_CAPACITY;
+
+            // get tx_id and funding_output_index from spv_proof
+            let btc_spv_proof = BTCSPVProof::from_slice(spv_proof.as_slice())
+                .map_err(|err| format!("btc_spv_proof invalid: {}", err))?;
+            let tx_id = btc_spv_proof.tx_id().raw_data();
+            let funding_output_index: u32 = btc_spv_proof.funding_output_index().into();
+
+            let mut output_data_view = data_view.clone();
+            output_data_view.status = ToCKBStatus::Warranty;
+            output_data_view.x_extra = XExtraView::Btc(BtcExtraView {
+                lock_tx_hash: tx_id.into(),
+                lock_vout_index: funding_output_index,
+            });
+            let tockb_data = output_data_view
+                .as_molecule_data()
+                .expect("output_data_view.as_molecule_data error");
+            check_capacity(to_capacity, tockb_data.len())?;
+
+            let to_output = CellOutput::new_builder()
+                .capacity(Capacity::shannons(to_capacity).pack())
+                .type_(Some(tockb_typescript).pack())
+                .lock(tockb_lockscript.clone())
+                .build();
+            helper.add_output(to_output, tockb_data);
+        }
+
+        // 2 xt cells
+        {
+            // mint xt cell to user, amount = lot_size * (1 - signer fee rate)
+            let user_lockscript = Script::from_slice(
+                from_ckb_cell_data.user_lockscript().as_slice(),
+            )
+            .map_err(|e| format!("parse user_lockscript from tockb_cell_data error: {}", e))?;
+
+            let sudt_typescript_code_hash = hex::decode(&self.settings.sudt.code_hash)
+                .expect("wrong sudt_script code hash config");
+            let sudt_typescript = Script::new_builder()
+                .code_hash(Byte32::from_slice(&sudt_typescript_code_hash).unwrap())
+                .hash_type(DepType::Code.into())
+                .args(tockb_lockscript.calc_script_hash().as_bytes().pack())
+                .build();
+
+            let sudt_user_output = CellOutput::new_builder()
+                .capacity(Capacity::shannons(PLEDGE).pack())
+                .type_(Some(sudt_typescript.clone()).pack())
+                .lock(user_lockscript)
+                .build();
+
+            let (to_user, to_signer) = {
+                let signer_fee = lot_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
+                (lot_amount - signer_fee, signer_fee)
+            };
+
+            let to_user_amount_data: Bytes = to_user.to_le_bytes().to_vec().into();
+            helper.add_output(sudt_user_output, to_user_amount_data);
+
+            // xt cell of signer fee
+            let signer_lockscript = Script::from_slice(
+                from_ckb_cell_data.signer_lockscript().as_slice(),
+            )
+            .map_err(|e| format!("parse signer_lockscript from tockb_cell_data error: {}", e))?;
+
+            let sudt_signer_output = CellOutput::new_builder()
+                .capacity(Capacity::shannons(XT_CELL_CAPACITY).pack())
+                .type_(Some(sudt_typescript).pack())
+                .lock(signer_lockscript)
+                .build();
+
+            let to_signer_amount_data = to_signer.to_le_bytes().to_vec().into();
+            helper.add_output(sudt_signer_output, to_signer_amount_data);
+        }
+
+        // add witness
+        {
+            let witness_data = MintXTWitness::new_builder()
+                .spv_proof(spv_proof.into())
+                .cell_dep_index_list(vec![0].into())
+                .build();
+            let witness = WitnessArgs::new_builder()
+                .input_type(Some(witness_data.as_bytes()).pack())
+                .build();
+
+            helper.transaction = helper
+                .transaction
+                .as_advanced_builder()
+                .set_witnesses(vec![witness.as_bytes().pack()])
+                .build();
+        }
+
+        // build tx
+        let tx = helper.supply_capacity(
+            &mut self.rpc_client,
+            &mut self.indexer_client,
+            from_lockscript,
+            &self.genesis_info,
+            tx_fee,
+        )?;
+        Ok(tx)
+    }
+
+    pub fn pre_term_redeem(
+        &mut self,
+        from_lockscript: Script,
+        tx_fee: u64,
+        cell_typescript: Script,
+        x_unlock_address: String,
+        redeemer_lockscript: Script,
+    ) -> Result<TransactionView, String> {
+        let mut helper = TxHelper::default();
+        let (from_cell, ckb_cell_data) = self.get_ckb_cell(&mut helper, cell_typescript, true)?;
+        let from_ckb_cell_data = ToCKBCellData::from_slice(ckb_cell_data.as_ref()).unwrap();
+
+        // add cellDeps
+        {
+            let outpoints = vec![
+                self.settings.lockscript.outpoint.clone(),
+                self.settings.typescript.outpoint.clone(),
+                self.settings.sudt.outpoint.clone(),
+            ];
+            self.add_cell_deps(&mut helper, outpoints)?;
+        }
+
+        // get input tockb cell and basic info
+        let (tockb_typescript, kind) = match from_cell.type_().to_opt() {
+            Some(script) => (script.clone(), script.args().raw_data().as_ref()[0]),
+            None => return Err("typescript of tockb cell is none".to_owned()),
+        };
+        let tockb_lockscript = from_cell.lock();
+        let data_view =
+            ToCKBCellDataView::new(ckb_cell_data.as_ref(), XChainKind::from_int(kind).unwrap())
+                .map_err(|err| format!("Parse to ToCKBCellDataView error: {}", err as i8))?;
+        let lot_amount = data_view
+            .get_lot_xt_amount()
+            .map_err(|_| "get lot_amount from tockb cell data error".to_owned())?;
+        let from_capacity: u64 = from_cell.capacity().unpack();
+
+        let sudt_typescript_code_hash = hex::decode(&self.settings.sudt.code_hash)
+            .expect("wrong sudt_script code hash config");
+        let sudt_typescript = Script::new_builder()
+            .code_hash(Byte32::from_slice(&sudt_typescript_code_hash).unwrap())
+            .hash_type(DepType::Code.into())
+            .args(tockb_lockscript.calc_script_hash().as_bytes().pack())
+            .build();
+
+        let (redeemer_is_depositor, user_lockscript) = {
+            (
+                data_view.user_lockscript == redeemer_lockscript.as_bytes(),
+                data_view.user_lockscript.clone(),
+            )
+        };
+
+        // gen output of tockb cell
+        {
+            let to_capacity = from_capacity;
+            let mut output_data_view = data_view.clone();
+            output_data_view.status = ToCKBStatus::Redeeming;
+            output_data_view.x_unlock_address = x_unlock_address
+                .as_bytes()
+                .to_vec()
+                .into();
+            output_data_view.redeemer_lockscript = redeemer_lockscript.as_bytes();
+
+            let tockb_data = output_data_view
+                .as_molecule_data()
+                .expect("output_data_view.as_molecule_data error");
+            check_capacity(to_capacity, tockb_data.len())?;
+
+            let to_output = CellOutput::new_builder()
+                .capacity(Capacity::shannons(to_capacity).pack())
+                .type_(Some(tockb_typescript).pack())
+                .lock(tockb_lockscript.clone())
+                .build();
+            helper.add_output(to_output, tockb_data);
+        }
+
+        // collect xt cell inputs to burn lot_amount xt
+        {
+            let signer_fee = lot_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
+            let mut need_sudt_amount = lot_amount;
+            if !redeemer_is_depositor {
+                need_sudt_amount += signer_fee;
+            }
+
+            helper.supply_sudt(
+                &mut self.rpc_client,
+                &mut self.indexer_client,
+                from_lockscript.clone(),
+                &self.genesis_info,
+                need_sudt_amount,
+                sudt_typescript.clone(),
+            )?;
+
+            if !redeemer_is_depositor {
+                let to_depositor_xt_cell = CellOutput::new_builder()
+                    .capacity(Capacity::shannons(XT_CELL_CAPACITY).pack())
+                    .type_(Some(sudt_typescript).pack())
+                    .lock(
+                        Script::from_slice(user_lockscript.as_ref())
+                            .expect("user_lockscript decode from input_data error"),
+                    )
+                    .build();
+
+                let data = signer_fee.to_le_bytes().to_vec().into();
+                helper.add_output(to_depositor_xt_cell, data)
+            }
+        }
+
+        // build tx
+        let tx = helper.supply_capacity(
+            &mut self.rpc_client,
+            &mut self.indexer_client,
+            from_lockscript,
+            &self.genesis_info,
+            tx_fee,
+        )?;
+        Ok(tx)
+    }
+
 }
