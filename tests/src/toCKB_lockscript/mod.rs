@@ -25,14 +25,19 @@ pub enum Error {
 }
 
 #[test]
-fn test_invalid_toCKB_cell() {
-    let valid_args = Bytes::from(
-        &b"\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"[..],
+fn test_wrong_xchain_kind() {
+    let valid_cell = build_cell(
+        Byte::new(1),
+        Default::default(),
+        Byte::new(1),
+        Default::default(),
     );
-    let invalid_args: Bytes = [3; 1].to_vec().into();
-
-    let valid_cell = build_cell(valid_args, basic::OutPoint::default());
-    let invalid_cell = build_cell(invalid_args, basic::OutPoint::default());
+    let invalid_cell = build_cell(
+        Byte::new(1),
+        Default::default(),
+        Byte::new(2),
+        Default::default(),
+    );
 
     let (mut context, tx) = build_test_context(vec![&valid_cell, &invalid_cell], vec![&valid_cell]);
     let tx = context.complete_tx(tx);
@@ -45,20 +50,37 @@ fn test_invalid_toCKB_cell() {
 }
 
 #[test]
-fn test_valid_toCKB_cell() {
-    let valid_args = Bytes::from(
-        &b"\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"[..],
-    );
+fn test_different_cell_id() {
     let valid_cell_1 = build_cell(
-        valid_args.clone(),
+        Byte::new(1),
         basic::OutPoint::from(OutPoint::new(h256!("0x12345").pack(), 0)),
+        Byte::new(1),
+        Default::default(),
     );
     let valid_cell_2 = build_cell(
-        valid_args,
-        basic::OutPoint::from(OutPoint::new(h256!("0x67890").pack(), 1)),
+        Byte::new(1),
+        basic::OutPoint::from(OutPoint::new(h256!("0x67890").pack(), 0)),
+        Byte::new(1),
+        Default::default(),
     );
     let (mut context, tx) =
         build_test_context(vec![&valid_cell_1, &valid_cell_2], vec![&valid_cell_2]);
+    let tx = context.complete_tx(tx);
+
+    context
+        .verify_tx(&tx, MAX_CYCLES)
+        .expect("pass verification");
+}
+
+#[test]
+fn test_same_args() {
+    let valid_cell = build_cell(
+        Byte::new(1),
+        Default::default(),
+        Byte::new(1),
+        Default::default(),
+    );
+    let (mut context, tx) = build_test_context(vec![&valid_cell, &valid_cell], vec![&valid_cell]);
     let tx = context.complete_tx(tx);
 
     context
@@ -80,14 +102,19 @@ fn load_context_and_out_points() -> (Context, OutPoint, OutPoint) {
     );
 }
 
-fn build_cell(type_script_args: Bytes, cell_id: basic::OutPoint) -> CellOutput {
+fn build_cell(
+    expect_xchain_kind: Byte,
+    expect_cell_id: basic::OutPoint,
+    actual_xchain_kind: Byte,
+    actual_cell_id: basic::OutPoint,
+) -> CellOutput {
     let (mut context, toCKB_lockscript_out_point, always_success_out_point) =
         load_context_and_out_points();
 
     // prepare lock_script args
     let args = ToCKBTypeArgs::new_builder()
-        .cell_id(cell_id)
-        .xchain_kind(Byte::new(1))
+        .cell_id(expect_cell_id)
+        .xchain_kind(expect_xchain_kind)
         .build();
     let mock_toCKB_typescript = context
         .build_script(&always_success_out_point, args.as_bytes())
@@ -95,13 +122,18 @@ fn build_cell(type_script_args: Bytes, cell_id: basic::OutPoint) -> CellOutput {
 
     let lock_script_args = mock_toCKB_typescript.as_bytes()[0..54].to_vec().into();
 
-    // prepare scripts
+    // prepare lock_script
     let lock_script = context
         .build_script(&toCKB_lockscript_out_point, lock_script_args)
         .expect("script");
 
+    // prepare type_script
+    let type_script_args = ToCKBTypeArgs::new_builder()
+        .cell_id(actual_cell_id)
+        .xchain_kind(actual_xchain_kind)
+        .build();
     let type_script = context
-        .build_script(&always_success_out_point, type_script_args)
+        .build_script(&always_success_out_point, type_script_args.as_bytes())
         .expect("script");
 
     // build cell output
