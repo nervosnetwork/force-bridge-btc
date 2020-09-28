@@ -55,7 +55,7 @@ pub struct BtcExtraView {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct EthExtraView {
-    pub dummy: Bytes,
+    // pub dummy: Bytes,
 }
 
 impl ToCKBCellDataView {
@@ -95,9 +95,9 @@ impl ToCKBCellDataView {
                     lock_vout_index,
                 })
             }
-            (Eth, EthExtra(eth_extra)) => {
-                let dummy = eth_extra.dummy().to_entity().raw_data();
-                XExtraView::Eth(EthExtraView { dummy })
+            (Eth, EthExtra(_)) => {
+                // let dummy = eth_extra.dummy().to_entity().raw_data();
+                XExtraView::Eth(EthExtraView {})
             }
             _ => return Err(Error::XChainMismatch),
         };
@@ -123,9 +123,9 @@ impl ToCKBCellDataView {
                     .build();
                 XExtraUnion::BtcExtra(btc_extra_mol)
             }
-            XExtraView::Eth(eth_extra) => {
+            XExtraView::Eth(_) => {
                 let eth_extra_mol = EthExtra::new_builder()
-                    .dummy(eth_extra.dummy.to_vec().into())
+                    // .dummy(eth_extra.dummy.to_vec().into())
                     .build();
                 XExtraUnion::EthExtra(eth_extra_mol)
             }

@@ -1,11 +1,12 @@
 use crate::utils::{
     config::{SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, UDT_LEN},
     types::{
-        btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader, BtcExtraView,
-        Error, ToCKBCellDataView, XExtraView,
+        btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader,
+        mint_xt_witness::ETHSPVProofReader, BtcExtraView, Error, EthExtraView, ToCKBCellDataView,
+        XExtraView,
     },
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use bech32::ToBase32;
 use bitcoin_spv::{
@@ -20,9 +21,12 @@ use ckb_std::{
     high_level::{load_cell_capacity, load_cell_data, load_cell_type, load_script},
 };
 use core::{convert::From, result::Result};
+use eth_spv_lib::{eth_types::*, ethspv};
+use hex;
 use molecule::prelude::Reader;
 use primitive_types::U256;
 use tockb_types::generated::basic::OutPoint;
+use tockb_types::generated::eth_header_cell_data::{EthCellDataReader, HeaderInfoReader};
 pub use tockb_types::tockb_cell::{ToCKBTypeArgsView, XChainKind};
 
 pub fn get_toCKB_type_args() -> Result<ToCKBTypeArgsView, Error> {
@@ -189,6 +193,126 @@ pub fn verify_btc_witness(
             lock_vout_index: funding_output_index,
         })
     }
+}
+
+/// Verify that the header of the user's cross-chain tx is on the main chain.
+pub fn verify_eth_header_on_main_chain(
+    header: &BlockHeader,
+    cell_dep_index_list: &[u8],
+) -> Result<(), Error> {
+    let dep_data = load_cell_data(cell_dep_index_list[0].into(), Source::CellDep)?;
+    debug!("dep data is {:?}", &dep_data);
+    if EthCellDataReader::verify(&dep_data, false).is_err() {
+        return Err(Error::InvalidWitness);
+    }
+    let eth_cell_data_reader = EthCellDataReader::new_unchecked(&dep_data);
+    debug!("eth_cell_data_reader: {:?}", eth_cell_data_reader);
+    let tail_raw = eth_cell_data_reader
+        .headers()
+        .main()
+        .get_unchecked(eth_cell_data_reader.headers().main().len() - 1)
+        .raw_data();
+    if HeaderInfoReader::verify(&tail_raw, false).is_err() {
+        return Err(Error::EthHeadersDataInvalid);
+    }
+    let tail_info_reader = HeaderInfoReader::new_unchecked(tail_raw);
+    let tail_info_raw = tail_info_reader.header().raw_data();
+    let tail: BlockHeader =
+        rlp::decode(tail_info_raw.to_vec().as_slice()).expect("invalid tail info.");
+    if header.number > tail.number {
+        return Err(Error::HeaderIsNotOnMainChain);
+    }
+    let offset = (tail.number - header.number) as usize;
+    if offset > eth_cell_data_reader.headers().main().len() - 1 {
+        return Err(Error::HeaderIsNotOnMainChain);
+    }
+    let target_raw = eth_cell_data_reader
+        .headers()
+        .main()
+        .get_unchecked(eth_cell_data_reader.headers().main().len() - 1 - offset)
+        .raw_data();
+    let target_info_reader = HeaderInfoReader::new_unchecked(target_raw);
+    debug!(
+        "main chain hash: {:?}, witness header hash: {:?}",
+        hex::encode(target_info_reader.hash().raw_data()),
+        hex::encode(header.hash.expect("invalid hash").0.as_bytes())
+    );
+    if target_info_reader.hash().raw_data() != header.hash.expect("invalid hash").0.as_bytes() {
+        return Err(Error::HeaderIsNotOnMainChain);
+    }
+    Ok(())
+}
+
+/// Verify eth witness data.
+/// 1. Verify that the header of the user's cross-chain tx is on the main chain.
+/// 2. Verify that the user's cross-chain transaction is legal and really exists (based spv proof).
+/// @param data is used to get the real lock address.
+/// @param proof is the spv proof data for cross-chain tx.
+/// @param cell_dep_index_list is used to get the headers oracle information to verify the cross-chain tx is really exists on the main chain.
+///
+pub fn verify_eth_witness(
+    data: &ToCKBCellDataView,
+    proof: &[u8],
+    cell_dep_index_list: &[u8],
+) -> Result<EthExtraView, Error> {
+    if ETHSPVProofReader::verify(proof, false).is_err() {
+        return Err(Error::InvalidWitness);
+    }
+    let proof_reader = ETHSPVProofReader::new_unchecked(proof);
+    let header_data = proof_reader.header_data().raw_data().to_vec();
+    let header: BlockHeader = rlp::decode(header_data.as_slice()).expect("invalid header data");
+    //verify the header is on main chain.
+    verify_eth_header_on_main_chain(&header, cell_dep_index_list)?;
+
+    let mut log_index = [0u8; 8];
+    log_index.copy_from_slice(proof_reader.log_index().raw_data());
+    debug!("log_index is {:?}", &log_index);
+    let log_entry_data = proof_reader.log_entry_data().raw_data().to_vec();
+    debug!(
+        "log_entry_data is {:?}",
+        hex::encode(&log_entry_data.as_slice())
+    );
+    let receipt_data = proof_reader.receipt_data().raw_data().to_vec();
+    debug!(
+        "receipt_data is {:?}",
+        hex::encode(&receipt_data.as_slice())
+    );
+    let mut receipt_index = [0u8; 8];
+    receipt_index.copy_from_slice(proof_reader.receipt_index().raw_data());
+    debug!("receipt_index is {:?}", &receipt_index);
+    let mut proof = vec![];
+    for i in 0..proof_reader.proof().len() {
+        proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
+    }
+    let log_entry: LogEntry =
+        rlp::decode(log_entry_data.as_slice()).map_err(|_e| Error::LogEntryInvalid)?;
+    debug!("log_entry is {:?}", &log_entry);
+    let receipt: Receipt =
+        rlp::decode(receipt_data.as_slice()).map_err(|_e| Error::ReceiptInvalid)?;
+    debug!("receipt_data is {:?}", &receipt);
+    let locker_address = (log_entry.address.clone().0).0;
+    debug!(
+        "addr: {:?}, x_lock_address: {}",
+        hex::encode(locker_address.to_vec()),
+        String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+    );
+    if hex::encode(locker_address.to_vec())
+        != String::from_utf8(data.x_lock_address.as_ref().to_vec()).unwrap()
+    {
+        return Err(Error::WrongFundingAddr);
+    }
+    // verify the spv proof is valid.
+    if !ethspv::verify_log_entry(
+        u64::from_le_bytes(log_index),
+        log_entry_data,
+        u64::from_le_bytes(receipt_index),
+        receipt_data,
+        header.receipts_root,
+        proof,
+    ) {
+        return Err(Error::BadMerkleProof);
+    }
+    Ok(EthExtraView {})
 }
 
 pub fn verify_btc_faulty_witness(

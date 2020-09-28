@@ -3,6 +3,7 @@ array Byte32 [byte; 32];
 vector Bytes <byte>;
 array Uint32 [byte; 4];
 array Uint64 [byte; 8];
+vector Bytes2 <Bytes>;
 
 table Script {
     code_hash:      Byte32,
@@ -14,3 +15,4 @@ struct OutPoint {
     tx_hash:        Byte32,
     index:          Uint32,
 }
+

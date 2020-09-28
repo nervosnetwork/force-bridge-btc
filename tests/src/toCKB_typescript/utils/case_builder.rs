@@ -1,11 +1,16 @@
 use crate::toCKB_typescript::utils::types::generated::{
-    basic, btc_difficulty, mint_xt_witness,
+    basic,
+    basic::Bytes2,
+    btc_difficulty,
+    eth_header_cell_data::{Chain, EthCellData, HeaderInfo},
+    mint_xt_witness,
     tockb_cell_data::{BtcExtra, EthExtra, ToCKBCellData, ToCKBTypeArgs, XExtra, XExtraUnion},
 };
 use anyhow::Result;
 use ckb_testtool::context::Context;
 pub use ckb_tool::ckb_types::bytes::Bytes;
 use ckb_tool::ckb_types::{packed::*, prelude::*};
+use eth_spv_lib::eth_types::BlockHeader;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
@@ -55,6 +60,7 @@ pub struct TestCase {
 pub enum CellDepView {
     DifficultyOracle(DifficultyOracle),
     PriceOracle(u128),
+    HeadersOracle(HeadersOracle),
 }
 
 impl CellDepView {
@@ -74,6 +80,44 @@ impl CellDepView {
                 let price_outpoint = context.deploy_cell(price.to_le_bytes().to_vec().into());
                 CellDep::new_builder().out_point(price_outpoint).build()
             }
+            CellDepView::HeadersOracle(headersOracle) => {
+                let headers_data = &headersOracle.headers;
+                let mut headers: Vec<basic::Bytes> = vec![];
+                for header_str in headers_data {
+                    let header: BlockHeader = rlp::decode(
+                        hex::decode(&header_str)
+                            .expect("invalid header rlp string.")
+                            .as_slice(),
+                    )
+                    .expect("invalid header rlp string.");
+                    let header_info = HeaderInfo::new_builder()
+                        .header(
+                            hex::decode(&header_str)
+                                .expect("invalid header rlp string.")
+                                .as_slice()
+                                .to_vec()
+                                .into(),
+                        )
+                        // .total_difficulty(header.difficulty.0.as_u64().into())
+                        .hash(
+                            basic::Byte32::from_slice(
+                                header.hash.expect("invalid hash.").0.as_bytes(),
+                            )
+                            .expect("invalid hash."),
+                        )
+                        .build();
+                    headers.push(header_info.as_slice().to_vec().into());
+                }
+                let eth_cell_data = EthCellData::new_builder()
+                    .headers(
+                        Chain::new_builder()
+                            .main(Bytes2::new_builder().set(headers).build())
+                            .build(),
+                    )
+                    .build();
+                let headers_outpoint = context.deploy_cell(eth_cell_data.as_bytes());
+                CellDep::new_builder().out_point(headers_outpoint).build()
+            }
         }
     }
 }
@@ -81,6 +125,10 @@ impl CellDepView {
 pub struct DifficultyOracle {
     pub previous: u64,
     pub current: u64,
+}
+
+pub struct HeadersOracle {
+    pub headers: Vec<String>,
 }
 
 pub struct ToCKBCells {
@@ -265,9 +313,9 @@ impl XExtraView {
                 let x_extra = XExtraUnion::BtcExtra(btc_extra);
                 XExtra::new_builder().set(x_extra).build()
             }
-            XExtraView::Eth(eth_extra) => {
+            XExtraView::Eth(_) => {
                 let eth_extra = EthExtra::new_builder()
-                    .dummy(basic::Bytes::new_unchecked(eth_extra.dummy.clone()))
+                    // .dummy(basic::Bytes::new_unchecked(eth_extra.dummy.clone()))
                     .build();
                 let x_extra = XExtraUnion::EthExtra(eth_extra);
                 XExtra::new_builder().set(x_extra).build()
@@ -410,12 +458,14 @@ impl CellBuilder for CapacityCell {
 #[derive(Clone)]
 pub enum Witness {
     Btc(BtcWitness),
+    Eth(EthWitness),
 }
 
 impl Witness {
     pub fn as_bytes(&self) -> Bytes {
         match self {
             Witness::Btc(btc_witness) => btc_witness.as_bytes(),
+            Witness::Eth(eth_witness) => eth_witness.as_bytes(),
         }
     }
 }
@@ -424,6 +474,12 @@ impl Witness {
 pub struct BtcWitness {
     pub cell_dep_index_list: Vec<u8>,
     pub spv_proof: BTCSPVProofJson,
+}
+
+#[derive(Clone)]
+pub struct EthWitness {
+    pub cell_dep_index_list: Vec<u8>,
+    pub spv_proof: ETHSPVProofJson,
 }
 
 impl BtcWitness {
@@ -474,6 +530,54 @@ impl TryFrom<BTCSPVProofJson> for mint_xt_witness::BTCSPVProof {
             .intermediate_nodes(hex::decode(clear_0x(&proof.intermediate_nodes))?.into())
             .funding_output_index(proof.funding_output_index.into())
             .funding_input_index(proof.funding_input_index.into())
+            .build())
+    }
+}
+
+impl EthWitness {
+    pub fn as_bytes(&self) -> Bytes {
+        let spv_proof: mint_xt_witness::ETHSPVProof = self
+            .spv_proof
+            .clone()
+            .try_into()
+            .expect("try into mint_xt_witness::ETHSPVProof success");
+        let spv_proof = spv_proof.as_slice().to_vec();
+        let witness_data = mint_xt_witness::MintXTWitness::new_builder()
+            .spv_proof(spv_proof.into())
+            .cell_dep_index_list(self.cell_dep_index_list.clone().into())
+            .build();
+        let witness = WitnessArgs::new_builder()
+            .input_type(Some(witness_data.as_bytes()).pack())
+            .build();
+        witness.as_bytes()
+    }
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct ETHSPVProofJson {
+    pub log_index: u64,
+    pub log_entry_data: String,
+    pub receipt_index: u64,
+    pub receipt_data: String,
+    pub header_data: String,
+    pub proof: Vec<Vec<u8>>,
+}
+
+impl TryFrom<ETHSPVProofJson> for mint_xt_witness::ETHSPVProof {
+    type Error = anyhow::Error;
+    fn try_from(proof: ETHSPVProofJson) -> Result<Self> {
+        let mut proofVec: Vec<basic::Bytes> = vec![];
+        for i in 0..proof.proof.len() {
+            // proofVec.push(hex::decode(clear_0x(&proof.proof[i]))?.into())
+            proofVec.push(proof.proof[i].to_vec().into())
+        }
+        Ok(mint_xt_witness::ETHSPVProof::new_builder()
+            .log_index(proof.log_index.into())
+            .log_entry_data(hex::decode(clear_0x(&proof.log_entry_data))?.into())
+            .receipt_index(proof.receipt_index.into())
+            .receipt_data(hex::decode(clear_0x(&proof.receipt_data))?.into())
+            .header_data(hex::decode(clear_0x(&proof.header_data))?.into())
+            .proof(Bytes2::new_builder().set(proofVec).build())
             .build())
     }
 }

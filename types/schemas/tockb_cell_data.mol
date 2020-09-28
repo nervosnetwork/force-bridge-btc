@@ -23,7 +23,7 @@ table BtcExtra {
 }
 
 table EthExtra {
-	dummy: Bytes,
+
 }
 
 struct ToCKBTypeArgs {

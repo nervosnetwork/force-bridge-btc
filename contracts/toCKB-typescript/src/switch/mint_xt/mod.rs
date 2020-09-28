@@ -1,7 +1,9 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
     config::{PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, XT_CELL_CAPACITY},
-    tools::{is_XT_typescript, verify_btc_witness, XChainKind},
+    tools::{
+        get_xchain_kind, is_XT_typescript, verify_btc_witness, verify_eth_witness, XChainKind,
+    },
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView, XExtraView},
 };
 use ckb_std::{
@@ -59,18 +61,14 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
             )?;
             Ok(XExtraView::Btc(btc_extra))
         }
-        XChainKind::Eth => todo!(),
+        XChainKind::Eth => {
+            let eth_extra = verify_eth_witness(data, proof, cell_dep_index_list)?;
+            Ok(XExtraView::Eth(eth_extra))
+        }
     }
 }
 
 fn verify_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
-    match data.get_xchain_kind() {
-        XChainKind::Btc => verify_btc_xt_issue(data),
-        XChainKind::Eth => todo!(),
-    }
-}
-
-fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     let lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
     debug!("lockscript hash: {:?}", hex::encode(lock_hash));
     let input_xt_num = QueryIter::new(load_cell_type, Source::Input)
@@ -90,7 +88,11 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     if output_xt_num != 2 {
         return Err(Error::InvalidXTInInputOrOutput);
     }
-    let xt_amount = data.get_btc_lot_size()?.get_sudt_amount();
+    let xt_amount = match get_xchain_kind()? {
+        XChainKind::Btc => data.get_btc_lot_size()?.get_sudt_amount(),
+        XChainKind::Eth => data.get_eth_lot_size()?.get_sudt_amount(),
+    };
+    // data.get_btc_lot_size()?.get_sudt_amount();
     debug!("xt_amount: {}", xt_amount);
     // fixed order of output cells is required
     // user-sudt-cell should be outputs[1]

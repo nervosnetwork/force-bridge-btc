@@ -14,6 +14,8 @@ pub enum Error {
     InvalidDataChange,
     InvalidWitness,
     DifficultyDataInvalid,
+    EthHeadersDataInvalid,
+    HeaderIsNotOnMainChain,
     SpvProofInvalid,
     InsufficientDifficulty,
     BadMerkleProof,
@@ -40,6 +42,8 @@ pub enum Error {
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
     XTAmountInvalid,
+    LogEntryInvalid,
+    ReceiptInvalid,
 }
 
 impl<T: IntEnum> From<IntEnumError<T>> for Error {

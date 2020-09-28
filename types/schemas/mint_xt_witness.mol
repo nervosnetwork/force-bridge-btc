@@ -17,3 +17,13 @@ table BTCSPVProof {
     funding_output_index: Uint32,
     funding_input_index: Uint32,
 }
+
+table ETHSPVProof {
+    log_index: Uint64,
+    log_entry_data: Bytes,
+    receipt_index: Uint64,
+    receipt_data: Bytes,
+    header_data: Bytes,
+    proof: Bytes2,
+}
+

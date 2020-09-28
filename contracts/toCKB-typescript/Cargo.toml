@@ -13,6 +13,8 @@ bitcoin-spv = { git = "https://github.com/summa-tx/bitcoin-spv.git", branch = "r
 bech32 = { git = "https://github.com/reuvenpo/rust-bech32.git", branch = "support-no_std", default-features = false }
 primitive-types = { version = "0.7.2", default-features = false }
 hex = { version = "0.4", default-features = false }
+eth-spv-lib = { git = "https://github.com/LeonLi000/eth-spv-lib.git" }
+rlp = {version = "0.4.5", default-features = false }
 tockb-types = { path = "../../types", default-features = false, features = ["contract"] }
 
 [profile.release]
