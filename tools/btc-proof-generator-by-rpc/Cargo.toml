@@ -1,0 +1,21 @@
+[package]
+name = "btc-proof-generator-by-rpc"
+version = "0.1.0"
+authors = ["jacobdenver007 <jacobdenver@163.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitcoin = "0.23"
+bitcoincore-rpc = "0.11.0"
+hex = "0.4"
+anyhow = "1.0"
+bitcoin-spv = "4.0"
+reqwest = { version = "0.10", features = ["blocking", "json"] }
+clap = "3.0.0-beta.1"
+serde = "1.0"
+serde_json = "1.0"
+tockb-types = { path = "../../types" }
+molecule = "0.6"
+
