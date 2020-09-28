@@ -636,8 +636,8 @@ dependencies = [
 
 [[package]]
 name = "ckb-std"
-version = "0.6.2"
-source = "git+https://github.com/LeonLi000/ckb-std.git#de3b859609462b6ca93bf7cf6ecafc3a0eb44035"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "ckb-allocator 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3181,7 +3181,7 @@ version = "0.1.0"
 dependencies = [
  "bitcoin-spv 5.0.0 (git+https://github.com/summa-tx/bitcoin-spv.git?branch=rust/dep-change)",
  "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "ckb-std 0.6.2 (git+https://github.com/LeonLi000/ckb-std.git)",
+ "ckb-std 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ckb-types 0.34.1 (git+https://github.com/nervosnetwork/ckb?tag=v0.34.1)",
  "int-enum 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "molecule 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3804,7 +3804,7 @@ dependencies = [
 "checksum ckb-script 0.34.1 (git+https://github.com/nervosnetwork/ckb?tag=v0.34.1)" = "<none>"
 "checksum ckb-script-data-loader 0.34.1 (git+https://github.com/nervosnetwork/ckb?tag=v0.34.1)" = "<none>"
 "checksum ckb-standalone-types 0.0.1-pre.1 (registry+https://github.com/rust-lang/crates.io-index)" = "af2cdbdf65ee5b1da71504f5a03d6984bce77d0b4b46daff63f4ba4a3b0eef08"
-"checksum ckb-std 0.6.2 (git+https://github.com/LeonLi000/ckb-std.git)" = "<none>"
+"checksum ckb-std 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)" = "f40fb1a5a0049abb71ff043629517089ef256b8e63c403b9359f73b7040ac9c6"
 "checksum ckb-store 0.34.1 (git+https://github.com/nervosnetwork/ckb?tag=v0.34.1)" = "<none>"
 "checksum ckb-system-scripts 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "261dd95a93c09ea24397c85b4fbca061e1da2d6573189749aeb99fe840aaf0c9"
 "checksum ckb-testtool 0.1.3 (git+https://github.com/jjyr/ckb-tool.git?tag=v0.1.3)" = "<none>"

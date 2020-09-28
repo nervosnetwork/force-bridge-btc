@@ -6,8 +6,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ckb-std = { git = "https://github.com/LeonLi000/ckb-std.git"}
-#ckb-std = "0.6.0"
+ckb-std = "0.6"
 molecule = { version = "0.6.1", default-features = false }
 int-enum = { version = "0.4", default-features = false }
 bitcoin-spv = { git = "https://github.com/summa-tx/bitcoin-spv.git", branch = "rust/dep-change", default-features = false }
