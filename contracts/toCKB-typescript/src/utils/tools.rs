@@ -195,6 +195,7 @@ pub fn verify_btc_witness(
     }
 }
 
+/// Verify that the header of the user's cross-chain tx is on the main chain.
 pub fn verify_header_is_on_main_chain(
     header: &BlockHeader,
     cell_dep_index_list: &[u8],
@@ -241,6 +242,13 @@ pub fn verify_header_is_on_main_chain(
     Ok(())
 }
 
+/// Verify eth witness data.
+/// 1. Verify that the header of the user's cross-chain tx is on the main chain.
+/// 2. Verify that the user's cross-chain transaction is legal and really exists (based spv proof).
+/// @param data is used to get the real lock address.
+/// @param proof is the spv proof data for cross-chain tx.
+/// @param cell_dep_index_list is used to get the headers oracle information to verify the cross-chain tx is really exists on the main chain.
+///
 pub fn verify_eth_witness(
     data: &ToCKBCellDataView,
     proof: &[u8],
@@ -290,6 +298,7 @@ pub fn verify_eth_witness(
     {
         return Err(Error::WrongFundingAddr);
     }
+    // verify the spv proof is valid.
     if !ethspv::verify_log_entry(
         u64::from_le_bytes(log_index),
         log_entry_data,
@@ -300,9 +309,7 @@ pub fn verify_eth_witness(
     ) {
         return Err(Error::BadMerkleProof);
     }
-    Ok(EthExtraView {
-        // dummy: Default::default(),
-    })
+    Ok(EthExtraView {})
 }
 
 pub fn verify_btc_faulty_witness(
