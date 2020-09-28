@@ -26,7 +26,7 @@ use hex;
 use molecule::prelude::Reader;
 use primitive_types::U256;
 use tockb_types::generated::basic::OutPoint;
-use tockb_types::generated::tockb_cell_data::{EthCellDataReader, HeaderInfoReader};
+use tockb_types::generated::eth_header_cell_data::{EthCellDataReader, HeaderInfoReader};
 pub use tockb_types::tockb_cell::{ToCKBTypeArgsView, XChainKind};
 
 pub fn get_toCKB_type_args() -> Result<ToCKBTypeArgsView, Error> {
@@ -196,7 +196,7 @@ pub fn verify_btc_witness(
 }
 
 /// Verify that the header of the user's cross-chain tx is on the main chain.
-pub fn verify_header_is_on_main_chain(
+pub fn verify_eth_header_on_main_chain(
     header: &BlockHeader,
     cell_dep_index_list: &[u8],
 ) -> Result<(), Error> {
@@ -217,7 +217,7 @@ pub fn verify_header_is_on_main_chain(
     }
     let tail_info_reader = HeaderInfoReader::new_unchecked(tail_raw);
     let tail_info_raw = tail_info_reader.header().raw_data();
-    let tail: BlockHeader = rlp::decode(tail_info_raw.to_vec().as_slice()).unwrap();
+    let tail: BlockHeader = rlp::decode(tail_info_raw.to_vec().as_slice()).expect("invalid tail info.");
     if header.number > tail.number {
         return Err(Error::HeaderIsNotOnMainChain);
     }
@@ -261,7 +261,7 @@ pub fn verify_eth_witness(
     let header_data = proof_reader.header_data().raw_data().to_vec();
     let header: BlockHeader = rlp::decode(header_data.as_slice()).expect("invalid header data");
     //verify the header is on main chain.
-    verify_header_is_on_main_chain(&header, cell_dep_index_list)?;
+    verify_eth_header_on_main_chain(&header, cell_dep_index_list)?;
 
     let mut log_index = [0u8; 8];
     log_index.copy_from_slice(proof_reader.log_index().raw_data());
@@ -283,9 +283,9 @@ pub fn verify_eth_witness(
     for i in 0..proof_reader.proof().len() {
         proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
     }
-    let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).unwrap();
+    let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).map_err(|_e| Error::LogEntryInvalid)?;
     debug!("log_entry is {:?}", &log_entry);
-    let receipt: Receipt = rlp::decode(receipt_data.as_slice()).unwrap();
+    let receipt: Receipt = rlp::decode(receipt_data.as_slice()).map_err(|_e| Error::ReceiptInvalid)?;
     debug!("receipt_data is {:?}", &receipt);
     let locker_address = (log_entry.address.clone().0).0;
     debug!(

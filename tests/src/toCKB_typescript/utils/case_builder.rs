@@ -3,9 +3,10 @@ use crate::toCKB_typescript::utils::types::generated::{
     basic::Bytes2,
     btc_difficulty, mint_xt_witness,
     tockb_cell_data::{
-        BtcExtra, Chain, EthCellData, EthExtra, HeaderInfo, ToCKBCellData, ToCKBTypeArgs, XExtra,
+        BtcExtra,  EthExtra, ToCKBCellData, ToCKBTypeArgs, XExtra,
         XExtraUnion,
     },
+    eth_header_cell_data::{Chain, EthCellData, HeaderInfo},
 };
 use anyhow::Result;
 use ckb_testtool::context::Context;
@@ -100,7 +101,7 @@ impl CellDepView {
                                 .into(),
                         )
                         // .total_difficulty(header.difficulty.0.as_u64().into())
-                        .hash(basic::Byte32::from_slice(header.hash.unwrap().0.as_bytes()).unwrap())
+                        .hash(basic::Byte32::from_slice(header.hash.expect("invalid hash.").0.as_bytes()).expect("invalid hash."))
                         .build();
                     headers.push(header_info.as_slice().to_vec().into());
                 }

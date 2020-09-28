@@ -42,6 +42,8 @@ pub enum Error {
     InvalidTriggerOrSignerCell,
     InvalidAuctionXTCell,
     XTAmountInvalid,
+    LogEntryInvalid,
+    ReceiptInvalid,
 }
 
 impl<T: IntEnum> From<IntEnumError<T>> for Error {
