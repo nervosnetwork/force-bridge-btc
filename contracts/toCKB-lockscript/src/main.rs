@@ -5,22 +5,14 @@
 #![feature(panic_info_message)]
 #![allow(non_snake_case)]
 
-// Import from `core` instead of from `std` since we are in no-std mode
-use core::result::Result;
-
-// Import heap related library from `alloc`
-// https://doc.rust-lang.org/alloc/index.html
-use alloc::{vec, vec::Vec};
-
-// Import CKB syscalls and structures
-// https://nervosnetwork.github.io/ckb-std/riscv64imac-unknown-none-elf/doc/ckb_std/index.html
+use ckb_std::high_level::{load_cell_type, load_script, QueryIter};
 use ckb_std::{
+    ckb_constants::Source,
     ckb_types::{bytes::Bytes, prelude::*},
-    debug, default_alloc, entry,
+    default_alloc, entry,
     error::SysError,
-    high_level::{load_script, load_tx_hash},
 };
-
+use core::result::Result;
 entry!(entry);
 default_alloc!();
 
@@ -35,12 +27,13 @@ fn entry() -> i8 {
 
 /// Error
 #[repr(i8)]
-enum Error {
+pub enum Error {
     IndexOutOfBound = 1,
     ItemMissing,
     LengthNotEnough,
     Encoding,
     // Add customized errors here...
+    InvalidToCKBCell,
 }
 
 impl From<SysError> for Error {
@@ -57,16 +50,19 @@ impl From<SysError> for Error {
 }
 
 fn main() -> Result<(), Error> {
-    // remove below examples and write your code here
+    verify()
+}
 
-    let script = load_script()?;
-    let args: Bytes = script.args().unpack();
-    debug!("script args is {:?}", args);
-
-    let tx_hash = load_tx_hash()?;
-    debug!("tx hash is {:?}", tx_hash);
-
-    let _buf: Vec<_> = vec![0u8; 32];
-
+fn verify() -> Result<(), Error> {
+    let args: Bytes = load_script()?.args().unpack();
+    let count = QueryIter::new(load_cell_type, Source::GroupInput)
+        .filter(|type_script_opt| {
+            type_script_opt.is_none()
+                || (type_script_opt.as_ref().unwrap().as_slice()[0..54] != args[..])
+        })
+        .count();
+    if 0 != count {
+        return Err(Error::InvalidToCKBCell);
+    }
     Ok(())
 }
