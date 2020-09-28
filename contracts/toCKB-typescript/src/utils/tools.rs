@@ -217,7 +217,8 @@ pub fn verify_eth_header_on_main_chain(
     }
     let tail_info_reader = HeaderInfoReader::new_unchecked(tail_raw);
     let tail_info_raw = tail_info_reader.header().raw_data();
-    let tail: BlockHeader = rlp::decode(tail_info_raw.to_vec().as_slice()).expect("invalid tail info.");
+    let tail: BlockHeader =
+        rlp::decode(tail_info_raw.to_vec().as_slice()).expect("invalid tail info.");
     if header.number > tail.number {
         return Err(Error::HeaderIsNotOnMainChain);
     }
@@ -283,9 +284,11 @@ pub fn verify_eth_witness(
     for i in 0..proof_reader.proof().len() {
         proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
     }
-    let log_entry: LogEntry = rlp::decode(log_entry_data.as_slice()).map_err(|_e| Error::LogEntryInvalid)?;
+    let log_entry: LogEntry =
+        rlp::decode(log_entry_data.as_slice()).map_err(|_e| Error::LogEntryInvalid)?;
     debug!("log_entry is {:?}", &log_entry);
-    let receipt: Receipt = rlp::decode(receipt_data.as_slice()).map_err(|_e| Error::ReceiptInvalid)?;
+    let receipt: Receipt =
+        rlp::decode(receipt_data.as_slice()).map_err(|_e| Error::ReceiptInvalid)?;
     debug!("receipt_data is {:?}", &receipt);
     let locker_address = (log_entry.address.clone().0).0;
     debug!(
