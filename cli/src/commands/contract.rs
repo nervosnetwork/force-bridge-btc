@@ -96,6 +96,13 @@ pub fn contract_tx_generator(
                 )
                 .unwrap()
         }
+        ContractSubCommand::WithdrawCollateral(args) => {
+            let cell_typescript = parse_cell(&args.cell)?;
+            let spv_proof = hex::decode(&args.spv_proof)?;
+            generator
+                .withdraw_collateral(from_lockscript, tx_fee, cell_typescript, spv_proof)
+                .unwrap()
+        }
     };
     Ok(unsigned_tx)
 }
@@ -123,10 +130,14 @@ pub fn contract_handler(args: ContractArgs) -> Result<()> {
     if args.wait_for_committed {
         send_tx_sync(&mut rpc_client, &tx, 60).map_err(|e| anyhow::anyhow!(e))?;
     }
-    let cell_typescript = tx.output(0).unwrap().type_().to_opt().unwrap();
+    let cell_typescript = tx.output(0).unwrap().type_().to_opt();
+    let cell_script = match cell_typescript {
+        Some(script) => hex::encode(script.as_slice()),
+        None => "".to_owned(),
+    };
     let print_res = serde_json::json!({
         "tx_hash": hex::encode(tx.hash().as_slice()),
-        "cell_typescript": hex::encode(cell_typescript.as_slice()),
+        "cell_typescript": cell_script,
     });
     println!("{}", serde_json::to_string_pretty(&print_res)?);
     Ok(())

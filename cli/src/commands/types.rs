@@ -15,6 +15,7 @@ pub enum SubCommand {
     DevInit(DevInitArgs),
     Utils(UtilsArgs),
     Contract(ContractArgs),
+    Sudt(SudtArgs),
     Server(ServerArgs),
 }
 
@@ -92,6 +93,7 @@ pub enum ContractSubCommand {
     Bonding(BondingArgs),
     MintXt(MintXTArgs),
     PreTermRedeem(PreTermRedeemArgs),
+    WithdrawCollateral(WithdrawCollateralArgs),
 }
 
 #[derive(Clap, Clone, Debug, Serialize, Deserialize)]
@@ -133,4 +135,54 @@ pub struct PreTermRedeemArgs {
     pub unlock_address: String,
     #[clap(short, long)]
     pub redeemer_lockscript_addr: String,
+}
+
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
+pub struct WithdrawCollateralArgs {
+    #[clap(short, long)]
+    pub cell: String,
+    #[clap(short, long)]
+    pub spv_proof: String,
+}
+
+#[derive(Clap, Clone, Debug)]
+pub struct SudtArgs {
+    #[clap(long, default_value = "/tmp/.tockb-cli/config.toml")]
+    pub config_path: String,
+    #[clap(long, default_value = "http://127.0.0.1:8114")]
+    pub rpc_url: String,
+    #[clap(long, default_value = "http://127.0.0.1:8116")]
+    pub indexer_url: String,
+    #[clap(long, default_value = "0.1")]
+    pub tx_fee: String,
+    #[clap(short = 'k', long)]
+    pub private_key_path: String,
+    #[clap(short)]
+    pub kind: u8,
+    #[clap(subcommand)]
+    pub subcmd: SudtSubCommand,
+}
+
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
+pub enum SudtSubCommand {
+    Transfer(SudtTransferArgs),
+    GetBalance(SudtGetBalanceArgs),
+}
+
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
+pub struct SudtTransferArgs {
+    #[clap(short, long)]
+    pub to_addr: String,
+    #[clap(long)]
+    pub sudt_amount: u128,
+    #[clap(long, default_value = "200")]
+    pub ckb_amount: String,
+    #[clap(short, long)]
+    pub wait_for_committed: bool,
+}
+
+#[derive(Clap, Clone, Debug, Serialize, Deserialize)]
+pub struct SudtGetBalanceArgs {
+    #[clap(short, long)]
+    pub addr: String,
 }

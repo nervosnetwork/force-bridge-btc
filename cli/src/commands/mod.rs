@@ -1,6 +1,7 @@
 pub mod contract;
 pub mod server;
 pub mod types;
+pub mod sudt;
 
 use anyhow::{anyhow, Result};
 use ckb_hash::blake2b_256;
@@ -8,6 +9,7 @@ use ckb_sdk::SECP256K1;
 use ckb_sdk::{AddressPayload, HttpRpcClient};
 use ckb_types::packed::Script;
 use contract::contract_handler;
+use sudt::sudt_handler;
 use molecule::prelude::{Builder, Entity};
 use server::server_handler;
 use std::str::FromStr;
@@ -16,13 +18,14 @@ use tockb_sdk::settings::{BtcDifficulty, OutpointConf, PriceOracle, ScriptConf, 
 use tockb_sdk::tx_helper::deploy;
 use tockb_sdk::util::{parse_privkey_path, send_tx_sync};
 use tockb_types::generated::btc_difficulty::BTCDifficulty;
-use types::{ContractSubCommand, DevInitArgs, InitArgs, Opts, SubCommand};
+use types::{ContractSubCommand, DevInitArgs, InitArgs, Opts, SubCommand, SudtArgs};
 
 pub fn handler(opt: Opts) -> Result<()> {
     match opt.subcmd {
         SubCommand::Init(args) => init_handler(args),
         SubCommand::DevInit(args) => dev_init_handler(args),
         SubCommand::Contract(args) => contract_handler(args),
+        SubCommand::Sudt(args) => sudt_handler(args),
         SubCommand::Server(args) => server_handler(args),
         _ => todo!(),
     }
