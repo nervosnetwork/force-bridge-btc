@@ -116,7 +116,7 @@ pub fn collect_sudt_cells_by_amout(
     lockscript: Script,
     sudt_typescript: Script,
     need_sudt_amount: u128,
-) -> Result<Vec<Cell>, String> {
+) -> Result<(u128, Vec<Cell>), String> {
     let mut collected_amount = 0u128;
     let terminator = |_, cell: &Cell| {
         if collected_amount >= need_sudt_amount {
@@ -130,6 +130,7 @@ pub fn collect_sudt_cells_by_amout(
                 buf.copy_from_slice(cell.output_data.as_bytes());
                 u128::from_le_bytes(buf)
             };
+            dbg!(collected_amount);
             (collected_amount > need_sudt_amount, true)
         } else {
             (false, false)
@@ -140,5 +141,7 @@ pub fn collect_sudt_cells_by_amout(
         script_type: ScriptType::Lock,
         args_len: None,
     };
-    get_live_cells(indexer_client, search_key, terminator)
+
+    let cells = get_live_cells(indexer_client, search_key, terminator)?;
+    Ok((collected_amount, cells))
 }

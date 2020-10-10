@@ -157,7 +157,7 @@ pub struct SudtArgs {
     pub tx_fee: String,
     #[clap(short = 'k', long)]
     pub private_key_path: String,
-    #[clap(short)]
+    #[clap(long)]
     pub kind: u8,
     #[clap(subcommand)]
     pub subcmd: SudtSubCommand,
