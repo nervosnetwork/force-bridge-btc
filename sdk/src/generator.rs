@@ -258,7 +258,6 @@ impl Generator {
             + 2 * XT_CELL_CAPACITY as u128
             + sudt_amount * (COLLATERAL_PERCENT as u128) / (100 * price) * CKB_UNITS as u128)
             as u64;
-
         let outpoints = vec![
             self.settings.price_oracle.outpoint.clone(),
             self.settings.typescript.outpoint.clone(),
@@ -381,7 +380,6 @@ impl Generator {
                 let signer_fee = lot_amount * SIGNER_FEE_RATE.0 / SIGNER_FEE_RATE.1;
                 (lot_amount - signer_fee, signer_fee)
             };
-
             let to_user_amount_data: Bytes = to_user.to_le_bytes().to_vec().into();
             helper.add_output(sudt_user_output, to_user_amount_data);
 

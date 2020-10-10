@@ -21,6 +21,7 @@ use ckb_sdk::{calc_max_mature_number, HttpRpcClient};
 use ckb_sdk::{AddressPayload, AddressType, CodeHashIndex, GenesisInfo, Since, SECP256K1};
 use ckb_types::core::BlockView;
 use secp256k1::SecretKey;
+use tockb_types::config::XT_CELL_CAPACITY;
 
 pub fn deploy(
     rpc_client: &mut HttpRpcClient,
@@ -407,10 +408,10 @@ impl TxHelper {
             get_live_cell_with_cache(&mut live_cell_cache, rpc_client, out_point, with_data)
                 .map(|(output, _)| output)
         };
-        let cells = collect_sudt_cells_by_amout(
+        let (collected_amount, cells) = collect_sudt_cells_by_amout(
             indexer_client,
-            lockscript,
-            sudt_typescript,
+            lockscript.clone(),
+            sudt_typescript.clone(),
             need_sudt_amount,
         )?;
         for cell in cells {
@@ -422,6 +423,16 @@ impl TxHelper {
                 true,
             )?;
         }
+        let sudt_change_output = CellOutput::new_builder()
+            .capacity(Capacity::shannons(XT_CELL_CAPACITY).pack())
+            .lock(lockscript)
+            .type_(Some(sudt_typescript).pack())
+            .build();
+        let sudt_change_data = (collected_amount - need_sudt_amount)
+            .to_le_bytes()
+            .to_vec()
+            .into();
+        self.add_output(sudt_change_output, sudt_change_data);
         Ok(self.transaction.clone())
     }
 
@@ -464,7 +475,6 @@ impl TxHelper {
                 cap
             })
             .sum();
-
         let cells = if to_capacity + tx_fee > from_capacity {
             let cells = get_live_cells_by_lock_and_capacity(
                 indexer_client,
