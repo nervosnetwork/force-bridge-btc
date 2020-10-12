@@ -30,9 +30,9 @@ enum SubCommand {
 struct MintXt {
     #[clap(short, long)]
     tx_hash: String,
-    #[clap(short = "i", long)]
+    #[clap(short = 'i', long)]
     funding_input_index: u32,
-    #[clap(short = "o", long)]
+    #[clap(short = 'o', long)]
     funding_output_index: u32,
 }
 
@@ -46,14 +46,14 @@ struct BTCClient {
 fn process_mint_xt(args: MintXt) -> Result<()> {
     let cli_toml = fs::read_to_string("tools/btc-proof-generator-by-rpc/src/cli.toml").unwrap();
     let cli: BTCClient = toml::from_str(&cli_toml).unwrap();
-
     let rpc = Client::new(cli.node, Auth::UserPass(cli.user, cli.password)).unwrap();
 
     let tx_id = Txid::from_hex(args.tx_hash.as_str()).expect("parse to Txid");
     let tx = rpc
-        .get_transaction(&tx_id, None)
-        .expect("rpc get_transaction");
-    let block_hash = tx.info.blockhash.expect("get block_hash from tx");
+        .get_raw_transaction_info(&tx_id, None)
+        .expect("rpc get_raw_transaction");
+
+    let block_hash = tx.blockhash.expect("get block_hash from tx");
     let block = rpc.get_block(&block_hash).expect("rpc get_block");
 
     let mint_xt_proof = generate_mint_xt_proof(
