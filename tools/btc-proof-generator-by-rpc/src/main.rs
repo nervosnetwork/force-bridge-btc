@@ -1,10 +1,11 @@
 pub mod utils;
-
 use anyhow::Result;
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::Txid;
 use clap::Clap;
+use serde::Deserialize;
 use std::convert::TryInto;
+use std::fs;
 
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 
@@ -35,12 +36,18 @@ struct MintXt {
     funding_output_index: u32,
 }
 
+#[derive(Deserialize)]
+struct BTCClient {
+    node: String,
+    user: String,
+    password: String,
+}
+
 fn process_mint_xt(args: MintXt) -> Result<()> {
-    let rpc = Client::new(
-        "http://localhost:18443".to_string(),
-        Auth::UserPass("test".to_string(), "test".to_string()),
-    )
-    .unwrap();
+    let cli_toml = fs::read_to_string("tools/btc-proof-generator-by-rpc/src/cli.toml").unwrap();
+    let cli: BTCClient = toml::from_str(&cli_toml).unwrap();
+
+    let rpc = Client::new(cli.node, Auth::UserPass(cli.user, cli.password)).unwrap();
 
     let tx_id = Txid::from_hex(args.tx_hash.as_str()).expect("parse to Txid");
     let tx = rpc

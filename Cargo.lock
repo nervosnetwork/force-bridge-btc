@@ -291,6 +291,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tockb-types",
+ "toml",
 ]
 
 [[package]]

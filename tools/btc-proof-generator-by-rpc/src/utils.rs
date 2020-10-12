@@ -59,7 +59,6 @@ pub fn generate_mint_xt_proof(
         .collect::<Vec<_>>();
     assert_eq!(tx_index.len(), 1);
     let tx_index = tx_index[0].0;
-    println!("txindex {}", tx_index);
     let tx = block.txdata[tx_index].clone();
     let proof = get_merkle_proof(block, tx_index).unwrap();
     let flat_proof = proof
