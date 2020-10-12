@@ -10,10 +10,10 @@ user和signer都需要准备一个P2WPKH 格式的BTC地址用于接收BTC，以
 
 |              | user                                                         | signer                                                       |
 | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| btc 私钥     | cUDfdzioB3SqjbN9vutRTUrpw5EH9srrg6RPibacPo1fGHpfPKqL         | cU9PYTnSkcWoAE15U26JJCwtKiYvTCKYdbWt8e7ovidEGDBwJQ5x         |
-| btc 地址     | bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf                 | bcrt1qfzdcp53u29yt9u5u3d0sx3u2f5xav7sqatfxm2                 |
+| btc 私钥     | cUDfdzioB3SqjbN9vutRTUrpw5EH9srrg6RPibacPo1fGHpfPKqL               | cU9PYTnSkcWoAE15U26JJCwtKiYvTCKYdbWt8e7ovidEGDBwJQ5x         |
+| btc 地址     | bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf                       | bcrt1qfzdcp53u29yt9u5u3d0sx3u2f5xav7sqatfxm2                 |
 | ckb 私钥     | 0xd00c06bfd800d27397002dca6fb0993d5ba6399b4238b2f29ee9deb97593d2bc | 0x63d86723e08f0f813a36ce6aa123bb2289d90680ae1e99d4de8cdb334553f24d |
-| ckb 地址     | ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37               | ckt1qyqywrwdchjyqeysjegpzw38fvandtktdhrs0zaxl4               |
+| ckb 地址     | ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37                     | ckt1qyqywrwdchjyqeysjegpzw38fvandtktdhrs0zaxl4               |
 
 #### 搭建CKB私链
 
@@ -37,7 +37,9 @@ $ RUST_LOG=info ./target/release/ckb-indexer -s /tmp/ckb-indexer-test
 
 #### 搭建BTC私链
 
-参考 https://github.com/nervosnetwork/axon-internal/issues/89#issuecomment-696560967 搭建私链，其中bitcoin.conf 文件如下：
+[下载bitcoind/bitcoin-cli](https://bitcoin.org/en/download): BTC节点及客户端
+
+编辑/etc/bitcoin/bitcoin.conf文件，内容如下：
 
 ```shell
 daemon=1
@@ -50,6 +52,12 @@ rpcallowip=0.0.0.0/0
 discover=0
 listen=0
 fallbackfee=0.1
+```
+
+执行bitcoind启动私链：
+
+```shell
+$ bitcoind -conf=/etc/bitcoin/bitcoin.conf
 ```
 
 创建user和signer的钱包：
@@ -145,6 +153,53 @@ $ ../target/debug/tockb-cli contract -k privkeys/signer --wait-for-committed bon
 
 在CKB网络上执行完上述两步后，user此时要在BTC网络上向signer提供的地址转账，并且生成spv proof。具体执行过程请参考生成spv proof。
 
+```shell
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="user" sendtoaddress bcrt1qfzdcp53u29yt9u5u3d0sx3u2f5xav7sqatfxm2 10
+```
+
+此时会得到交易hash：
+
+```shell
+7259f8a389b8847860b9394ab98ad22340056204bd1c4dddfc636c17e60159b0
+```
+
+将该交易打包：
+
+```shell
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf generatetoaddress 100 bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf
+```
+
+使用btc-proof-generator-by-rpc生成spv proof：
+
+```shell
+$ cd /toCKB/path
+$ ./target/release/btc-proof-generator-by-rpc mint-xt --tx-hash 7259f8a389b8847860b9394ab98ad22340056204bd1c4dddfc636c17e60159b0 -i 0 -o 1
+```
+
+结果如下：
+
+```shell
+btc mint xt proof:
+
+{
+  "version": 2,
+  "vin": "014a0b532962e1e2006a4f1d1aa8ebcc53323a561611d96fcf9eb31d20f1eb9a140100000000feffffff",
+  "vout": "02ec2dcd1d00000000160014b01eba5de48f8c6f637c1882e19d7e22fdc0eb8a0065cd1d00000000160014a8cb707e4d0a5c6e690189bc0065a8f787aabced",
+  "locktime": 402,
+  "tx_id": "7bd96e4f1927c1d3123998ef2498a73a4aee6bb2c37ec38f79ff5d28382dfe9e",
+  "index": 1,
+  "headers": "000000300767b75998bc0ff87045a59c834deeb4ac606270fb28f16ebbb33e74c115ac75b4f9e27ccd56246fc44b2e47ddc73b5fdc4dd5d6d94b011bda628ae9d6bef5419f5a845fffff7f2000000000",
+  "intermediate_nodes": "1b05aca434b82d3e3c3a39070eae3e96b3db1ebd788e2fc21c7e964b0702b77a",
+  "funding_output_index": 1,
+  "funding_input_index": 0
+}
+
+
+proof in molecule bytes:
+
+4d0100002c000000300000005e000000a1000000a5000000c5000000cd000000210100004501000049010000020000002a000000014a0b532962e1e2006a4f1d1aa8ebcc53323a561611d96fcf9eb31d20f1eb9a140100000000feffffff3f00000002ec2dcd1d00000000160014b01eba5de48f8c6f637c1882e19d7e22fdc0eb8a0065cd1d00000000160014a8cb707e4d0a5c6e690189bc0065a8f787aabced920100007bd96e4f1927c1d3123998ef2498a73a4aee6bb2c37ec38f79ff5d28382dfe9e010000000000000050000000000000300767b75998bc0ff87045a59c834deeb4ac606270fb28f16ebbb33e74c115ac75b4f9e27ccd56246fc44b2e47ddc73b5fdc4dd5d6d94b011bda628ae9d6bef5419f5a845fffff7f2000000000200000001b05aca434b82d3e3c3a39070eae3e96b3db1ebd788e2fc21c7e964b0702b77a0100000000000000
+```
+
 #### user 执行 mint_xt
 
 user 使用上一步交易的spv proof 构造mint-xt交易。
@@ -170,6 +225,53 @@ $	../target/debug/tockb-cli contract -k privkeys/user --wait-for-committed pre-t
 
 signer收到user的redeem请求后，在BTC网络上将user抵押的BTC打给user提供的BTC地址，并且生成spv proof。具体执行过程请参考生成spv proof。
 
+```shell
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="signer" sendtoaddress bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf 5
+```
+
+此时会得到交易hash：
+
+```shell
+6e557a9f861200ebbefbe2f4e8ba791100a5606b8660536c79813db0539103e0
+```
+
+将该交易打包：
+
+```shell
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf generatetoaddress 100 bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf
+```
+
+使用btc-proof-generator-by-rpc生成spv proof：
+
+```shell
+$ cd /toCKB/path
+$ ./target/release/btc-proof-generator-by-rpc mint-xt --tx-hash 7259f8a389b8847860b9394ab98ad22340056204bd1c4dddfc636c17e60159b0 -i 0 -o 1
+```
+
+结果如下：
+
+```shell
+btc mint xt proof:
+
+{
+  "version": 2,
+  "vin": "01b05901e6176c63fcdd4d1cbd0462054023d28ab94a39b9607884b889a3f859720000000000feffffff",
+  "vout": "02ec2dcd1d000000001600144aad12ca19ebf7ea9570d2185f7754cbafcb161c0065cd1d00000000160014a8cb707e4d0a5c6e690189bc0065a8f787aabced",
+  "locktime": 804,
+  "tx_id": "e0039153b03d81796c5360866b60a5001179bae8f4e2fbbeeb0012869f7a556e",
+  "index": 1,
+  "headers": "00000020638bf16c82a148220b14b5fbea6a5af1b5ca1f387a10c25255ff930c1c63423eb345045cdefdab06f8cc4eb6914771a3e6313502488a9c139df8cbc31427f9e3635f845fffff7f2000000000",
+  "intermediate_nodes": "59e95e473dd84923e3bbe58a641a55cfed456fac44654c07cdf50aff3d493725",
+  "funding_output_index": 1,
+  "funding_input_index": 0
+}
+
+
+proof in molecule bytes:
+
+4d0100002c000000300000005e000000a1000000a5000000c5000000cd000000210100004501000049010000020000002a00000001b05901e6176c63fcdd4d1cbd0462054023d28ab94a39b9607884b889a3f859720000000000feffffff3f00000002ec2dcd1d000000001600144aad12ca19ebf7ea9570d2185f7754cbafcb161c0065cd1d00000000160014a8cb707e4d0a5c6e690189bc0065a8f787aabced24030000e0039153b03d81796c5360866b60a5001179bae8f4e2fbbeeb0012869f7a556e01000000000000005000000000000020638bf16c82a148220b14b5fbea6a5af1b5ca1f387a10c25255ff930c1c63423eb345045cdefdab06f8cc4eb6914771a3e6313502488a9c139df8cbc31427f9e3635f845fffff7f20000000002000000059e95e473dd84923e3bbe58a641a55cfed456fac44654c07cdf50aff3d4937250100000000000000
+```
+
 #### signer 执行 withdraw_collateral
 
 signer 使用上一步交易的spv proof 构造withdraw-collateral交易。
@@ -179,51 +281,50 @@ $ ../target/debug/tockb-cli contract -k privkeys/signer --wait-for-committed wit
 
 ```
 
-> ### 生成spv proof
->
-> btc 发送转账交易：
->
-> ```shell
-> $ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="user" sendtoaddress bcrt1qfzdcp53u29yt9u5u3d0sx3u2f5xav7sqatfxm2 10
-> ```
->
-> 发送完交易后，需要将交易打包：
->
-> ```shell
-> $ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf generatetoaddress 100 bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf
-> ```
->
-> 在btc网络上发送交易后，使用 btc-proof-generator-by-rpc 工具即可生成 spv proof:
->
-> ```shell
-> $ cd /toCKB/path
-> $ cargo build -p btc-proof-generator-by-rpc --release
-> $ ./target/release/btc-proof-generator-by-rpc mint-xt --tx-hash 8b83cdd5673ae6a77856232948df8d8cd5027d905aeed7456c07ac87c97e12d1 -i 0 -o 0
-> ```
->
-> 执行结果如下：
->
-> ```shell
-> btc mint xt proof:
-> 
-> {
->   "version": 2,
->   "vin": "013add6ebdbc5209a8e597603d73c6fbbdec905914c826d1b88fce808de1a2db290000000000feffffff",
->   "vout": "02ecf06aee000000001600142eb014a336e210cc8397365f599113e37939fd8600ca9a3b00000000160014489b80d23c5148b2f29c8b5f03478a4d0dd67a00",
->   "locktime": 201,
->   "tx_id": "d1127ec987ac076c45d7ee5a907d02d58c8ddf4829235678a7e63a67d5cd838b",
->   "index": 1,
->   "headers": "0000003004645f210ec2471e7e6834ab4f91d0e9dda9a2fb4daaab2f5d30737c2e6cd604cf0492b4812e0192e3ef4d56b7a1795e295da2bf3eaf462b73d902d5abc235ccec41845fffff7f2000000000",
->   "intermediate_nodes": "b62ac217d5b62f1a4948825b6c8576870b2feed55f9b8a0ad9a2e702bef08e8a",
->   "funding_output_index": 0,
->   "funding_input_index": 0
-> }
-> 
-> 
-> proof in molecule bytes:
-> 
-> 4d0100002c000000300000005e000000a1000000a5000000c5000000cd000000210100004501000049010000020000002a000000013add6ebdbc5209a8e597603d73c6fbbdec905914c826d1b88fce808de1a2db290000000000feffffff3f00000002ecf06aee000000001600142eb014a336e210cc8397365f599113e37939fd8600ca9a3b00000000160014489b80d23c5148b2f29c8b5f03478a4d0dd67a00c9000000d1127ec987ac076c45d7ee5a907d02d58c8ddf4829235678a7e63a67d5cd838b0100000000000000500000000000003004645f210ec2471e7e6834ab4f91d0e9dda9a2fb4daaab2f5d30737c2e6cd604cf0492b4812e0192e3ef4d56b7a1795e295da2bf3eaf462b73d902d5abc235ccec41845fffff7f200000000020000000b62ac217d5b62f1a4948825b6c8576870b2feed55f9b8a0ad9a2e702bef08e8a0000000000000000
-> ```
->
+### 生成spv proof
+
+btc 发送转账交易：
+
+```shell
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="user" sendtoaddress bcrt1qfzdcp53u29yt9u5u3d0sx3u2f5xav7sqatfxm2 10
+```
+
+发送完交易后，需要将交易打包：
+
+```shell
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf generatetoaddress 100 bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf
+```
+
+在btc网络上发送交易后，使用 btc-proof-generator-by-rpc 工具即可生成 spv proof:
+
+```shell
+$ cd /toCKB/path
+$ cargo build -p btc-proof-generator-by-rpc --release
+$ ./target/release/btc-proof-generator-by-rpc mint-xt --tx-hash 8b83cdd5673ae6a77856232948df8d8cd5027d905aeed7456c07ac87c97e12d1 -i 0 -o 0
+```
+
+执行结果如下：
+
+```shell
+btc mint xt proof:
+
+{
+  "version": 2,
+  "vin": "013add6ebdbc5209a8e597603d73c6fbbdec905914c826d1b88fce808de1a2db290000000000feffffff",
+  "vout": "02ecf06aee000000001600142eb014a336e210cc8397365f599113e37939fd8600ca9a3b00000000160014489b80d23c5148b2f29c8b5f03478a4d0dd67a00",
+  "locktime": 201,
+  "tx_id": "d1127ec987ac076c45d7ee5a907d02d58c8ddf4829235678a7e63a67d5cd838b",
+  "index": 1,
+  "headers": "0000003004645f210ec2471e7e6834ab4f91d0e9dda9a2fb4daaab2f5d30737c2e6cd604cf0492b4812e0192e3ef4d56b7a1795e295da2bf3eaf462b73d902d5abc235ccec41845fffff7f2000000000",
+  "intermediate_nodes": "b62ac217d5b62f1a4948825b6c8576870b2feed55f9b8a0ad9a2e702bef08e8a",
+  "funding_output_index": 0,
+  "funding_input_index": 0
+}
+
+
+proof in molecule bytes:
+
+4d0100002c000000300000005e000000a1000000a5000000c5000000cd000000210100004501000049010000020000002a000000013add6ebdbc5209a8e597603d73c6fbbdec905914c826d1b88fce808de1a2db290000000000feffffff3f00000002ecf06aee000000001600142eb014a336e210cc8397365f599113e37939fd8600ca9a3b00000000160014489b80d23c5148b2f29c8b5f03478a4d0dd67a00c9000000d1127ec987ac076c45d7ee5a907d02d58c8ddf4829235678a7e63a67d5cd838b0100000000000000500000000000003004645f210ec2471e7e6834ab4f91d0e9dda9a2fb4daaab2f5d30737c2e6cd604cf0492b4812e0192e3ef4d56b7a1795e295da2bf3eaf462b73d902d5abc235ccec41845fffff7f200000000020000000b62ac217d5b62f1a4948825b6c8576870b2feed55f9b8a0ad9a2e702bef08e8a0000000000000000
+```
 
 
