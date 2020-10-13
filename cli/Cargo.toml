@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 tockb-sdk = { path = "../sdk" }
 env_logger = "0.7.1"
-clap = "3.0.0-beta.2"
+clap = "3.0.0-beta.1"
 int-enum = "0.4"
 toml = "0.5"
 config = "0.10"

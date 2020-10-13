@@ -35,10 +35,6 @@ env_logger = "0.7.1"
 name = "tockb_sdk"
 path = "src/lib.rs"
 
-[[bin]]
-name = "tockb-cli"
-path = "../cli/src/main.rs"
-
 [[example]]
 name = "demo"
 path = "examples/demo.rs"

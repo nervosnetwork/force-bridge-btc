@@ -197,9 +197,9 @@ enum SubCommand {
 struct MintXt {
     #[clap(short, long)]
     tx_hash: String,
-    #[clap(short = "i", long)]
+    #[clap(short = 'i', long)]
     funding_input_index: u32,
-    #[clap(short = "o", long)]
+    #[clap(short = 'o', long)]
     funding_output_index: u32,
 }
 
