@@ -11,10 +11,10 @@
 跨链流程包含的组件有：
 
 ##### 1. CKB 开发链: 开发友好的 CKB 私链
-  > 搭建流程参考[官方文档]()
+  > 搭建流程参考[官方文档](https://docs.nervos.org/docs/basics/guides/devchain)
 
 ##### 2. CKB Indexer：提供 CKB 链上数据的索引服务，tockb-cli 依赖该服务
-  > 搭建流程参考[官方库]()
+  > 搭建流程参考[官方库](https://github.com/nervosnetwork/ckb-indexer)
 
 ##### 3. Bitcoin Regtest: 比特币私链
   > 搭建流程参考[文档](https://gist.github.com/System-Glitch/cb4e87bf1ae3fec9925725bb3ebe223a)
