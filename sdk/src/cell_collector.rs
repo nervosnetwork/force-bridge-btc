@@ -145,3 +145,32 @@ pub fn collect_sudt_cells_by_amout(
     let cells = get_live_cells(indexer_client, search_key, terminator)?;
     Ok((collected_amount, cells))
 }
+
+pub fn collect_sudt_amount(
+    indexer_client: &mut IndexerRpcClient,
+    lockscript: Script,
+    sudt_typescript: Script,
+) -> Result<u128, String> {
+    let mut collected_amount = 0u128;
+    let terminator = |_, cell: &Cell| {
+        if cell.output.type_.is_some()
+            && packed::Script::from(cell.output.type_.clone().unwrap()) == sudt_typescript
+            && cell.output_data.len() >= UDT_LEN
+        {
+            collected_amount += {
+                let mut buf = [0u8; UDT_LEN];
+                buf.copy_from_slice(cell.output_data.as_bytes());
+                u128::from_le_bytes(buf)
+            };
+        }
+        (false, false)
+    };
+    let search_key = SearchKey {
+        script: lockscript.into(),
+        script_type: ScriptType::Lock,
+        args_len: None,
+    };
+
+    get_live_cells(indexer_client, search_key, terminator)?;
+    Ok(collected_amount)
+}

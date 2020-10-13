@@ -153,10 +153,6 @@ pub struct SudtArgs {
     pub rpc_url: String,
     #[clap(long, default_value = "http://127.0.0.1:8116")]
     pub indexer_url: String,
-    #[clap(long, default_value = "0.1")]
-    pub tx_fee: String,
-    #[clap(short = 'k', long)]
-    pub private_key_path: String,
     #[clap(long)]
     pub kind: u8,
     #[clap(subcommand)]
@@ -171,6 +167,10 @@ pub enum SudtSubCommand {
 
 #[derive(Clap, Clone, Debug, Serialize, Deserialize)]
 pub struct SudtTransferArgs {
+    #[clap(long, default_value = "0.1")]
+    pub tx_fee: String,
+    #[clap(short = 'k', long)]
+    pub private_key_path: String,
     #[clap(short, long)]
     pub to_addr: String,
     #[clap(long)]

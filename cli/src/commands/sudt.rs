@@ -21,23 +21,25 @@ pub fn parse_cell(cell: &str) -> Result<Script> {
 
 pub fn sudt_handler(args: SudtArgs) -> Result<()> {
     let mut rpc_client = HttpRpcClient::new(args.rpc_url.clone());
-    let from_privkey = parse_privkey_path(&args.private_key_path)?;
-    let from_public_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &from_privkey);
-    let address_payload = AddressPayload::from_pubkey(&from_public_key);
-    let from_lockscript = Script::from(&address_payload);
-
     let mut indexer_client = IndexerRpcClient::new(args.indexer_url.clone());
     ensure_indexer_sync(&mut rpc_client, &mut indexer_client, 60).unwrap();
     let settings = Settings::new(&args.config_path)?;
     let mut generator = Generator::new(args.rpc_url.clone(), args.indexer_url.clone(), settings)
         .map_err(|e| anyhow::anyhow!(e))?;
-    let tx_fee: u64 = HumanCapacity::from_str(&args.tx_fee)
-        .map_err(|e| anyhow!(e))?
-        .into();
+
     let kind = args.kind;
 
     match args.subcmd {
         SudtSubCommand::Transfer(args) => {
+            let from_privkey = parse_privkey_path(&args.private_key_path)?;
+            let from_public_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &from_privkey);
+            let address_payload = AddressPayload::from_pubkey(&from_public_key);
+            let from_lockscript = Script::from(&address_payload);
+
+            let tx_fee: u64 = HumanCapacity::from_str(&args.tx_fee)
+                .map_err(|e| anyhow!(e))?
+                .into();
+
             let to_lockscript = Script::from(Address::from_str(&args.to_addr).unwrap().payload());
             let ckb_amount = HumanCapacity::from_str(&args.ckb_amount)
                 .map_err(|e| anyhow!(e))?
@@ -70,6 +72,10 @@ pub fn sudt_handler(args: SudtArgs) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&print_res)?);
             Ok(())
         }
-        SudtSubCommand::GetBalance(args) => Ok(()),
+        SudtSubCommand::GetBalance(args) => {
+            let balance = generator.get_sudt_balance(args.addr.clone(), kind).unwrap();
+            println!("{:?} sudt balance {:?}", args.addr, balance);
+            Ok(())
+        }
     }
 }
