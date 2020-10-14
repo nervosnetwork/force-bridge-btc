@@ -73,8 +73,8 @@ pub fn sudt_handler(args: SudtArgs) -> Result<()> {
             Ok(())
         }
         SudtSubCommand::GetBalance(args) => {
-            let balance = generator.get_sudt_balance(args.addr.clone(), kind).unwrap();
-            println!("{:?} sudt balance {:?}", args.addr, balance);
+            let balance = generator.get_sudt_balance(args.addr, kind).unwrap();
+            println!("{:?}", balance);
             Ok(())
         }
     }

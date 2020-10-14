@@ -130,12 +130,12 @@ pub fn collect_sudt_cells_by_amout(
                 buf.copy_from_slice(cell.output_data.as_bytes());
                 u128::from_le_bytes(buf)
             };
-            dbg!(collected_amount);
-            (collected_amount > need_sudt_amount, true)
+            (collected_amount >= need_sudt_amount, true)
         } else {
             (false, false)
         }
     };
+
     let search_key = SearchKey {
         script: lockscript.into(),
         script_type: ScriptType::Lock,
