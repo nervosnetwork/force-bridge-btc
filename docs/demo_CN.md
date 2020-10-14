@@ -1,4 +1,61 @@
-### 准备
+# BTC <-> CKB 跨链 Demo
+
+[toCKB](./design.md) 是将其他链（eg. Bitcoin, Ethereum）的资产跨到 CKB 上的去中心协议。
+
+本文向读者描述和演示如何将 BTC 跨到 CKB 上生成 cBTC，以及将 cBTC 跨回 Bitcoin 得到 BTC。
+
+## 准备
+
+### 环境搭建
+
+跨链流程包含的组件有：
+
+##### 1. CKB 开发链: 开发友好的 CKB 私链
+  > 搭建流程参考[官方文档](https://docs.nervos.org/docs/basics/guides/devchain)
+
+##### 2. CKB Indexer：提供 CKB 链上数据的索引服务，tockb-cli 依赖该服务
+  > 搭建流程参考[官方库](https://github.com/nervosnetwork/ckb-indexer)
+
+##### 3. Bitcoin Regtest: 比特币私链
+  > 搭建流程参考[文档](https://gist.github.com/System-Glitch/cb4e87bf1ae3fec9925725bb3ebe223a)
+
+我们使用的配置如下：
+```shell
+// bitcoin.conf
+daemon=1
+server=1
+rpcuser=test
+rpcpassword=test
+regtest=1
+txindex=1
+rpcallowip=0.0.0.0/0
+discover=0
+listen=0
+fallbackfee=0.02
+```
+
+##### 4. toCKB 仓库：提供 CKB 跨链合约，合约部署及交互工具(tockb-cli)，跨链消息生成工具(proof-generator-by-rpc)
+
+```shell
+$ git clone https://github.com/nervosnetwork/toCKB.git
+$ cd toCKB
+$ git checkout demo
+// 编译合约
+$ capsule build --release
+// 编译 tockb-cli， proof-generator-by-rpc
+$ cargo build
+```
+
+### 使用 Docker 搭建比特币私链、CKB 私链、CKB Indexer
+使用 docker-compose 一键搭建：
+
+```shell
+$ git clone https://github.com/nervosnetwork/toCKB.git
+$ cd toCKB/docker
+$ docker-compose up
+```
+
+### 账户准备
 
 #### 准备user和signer的私钥及地址
 
