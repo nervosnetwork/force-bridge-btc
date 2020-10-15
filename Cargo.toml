@@ -2,6 +2,7 @@
 members = [
     "tests",
     "tools/btc-proof-generator",
+    "tools/btc-proof-generator-by-rpc",
     "types",
     "sdk",
     "cli",

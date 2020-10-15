@@ -147,7 +147,7 @@ pub fn verify_btc_witness(
             addr_u5.extend(pkh.to_base32());
             debug!("addr_u5: {:?}", &addr_u5);
             let addr =
-                bech32::encode("bc", addr_u5).expect("bech32 encode should not return error");
+                bech32::encode("bcrt", addr_u5).expect("bech32 encode should not return error");
             debug!(
                 "hex format: addr: {}, expect_address: {}",
                 hex::encode(addr.as_bytes().to_vec()),
@@ -282,7 +282,7 @@ pub fn verify_btc_faulty_witness(
                     addr_u5.push(bech32::u5::try_from_u8(0).unwrap());
                     addr_u5.extend(pkh.to_base32());
                     debug!("addr_u5: {:?}", &addr_u5);
-                    let addr = bech32::encode("bc", addr_u5)
+                    let addr = bech32::encode("bcrt", addr_u5)
                         .expect("bech32 encode should not return error");
                     debug!(
                         "hex format: addr: {}, x_lock_address: {}",
@@ -397,7 +397,7 @@ pub fn verify_btc_address(addr: &[u8]) -> Result<(), Error> {
     let (hrp, data) =
         bech32::decode(core::str::from_utf8(addr).map_err(|_| Error::XChainAddressInvalid)?)
             .map_err(|_| Error::XChainAddressInvalid)?;
-    if hrp != "bc" {
+    if hrp != "bcrt" {
         return Err(Error::XChainAddressInvalid);
     }
     if data.len() != 33 {

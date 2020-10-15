@@ -1,4 +1,4 @@
-use crate::cell_collector::get_live_cell_by_typescript;
+use crate::cell_collector::{collect_sudt_amount, get_live_cell_by_typescript};
 use crate::indexer::{Cell, IndexerRpcClient};
 use crate::settings::{OutpointConf, Settings};
 use crate::tx_helper::TxHelper;
@@ -22,6 +22,8 @@ use int_enum::IntEnum;
 use molecule::prelude::Byte;
 use secp256k1::SecretKey;
 use std::collections::HashMap;
+use std::str::FromStr;
+
 use tockb_types::config::{
     CKB_UNITS, COLLATERAL_PERCENT, PLEDGE, SIGNER_FEE_RATE, UDT_LEN, XT_CELL_CAPACITY,
 };
@@ -669,5 +671,39 @@ impl Generator {
             tx_fee,
         )?;
         Ok(tx)
+    }
+
+    pub fn get_sudt_balance(&mut self, address: String, kind: u8) -> Result<u128, String> {
+        let addr_lockscript: Script = Address::from_str(&address)?.payload().into();
+
+        let lockscript_code_hash = hex::decode(&self.settings.lockscript.code_hash)
+            .expect("wrong lockscript code hash config");
+        let typescript_code_hash = hex::decode(&self.settings.typescript.code_hash)
+            .expect("wrong typescript code hash config");
+
+        let typescript_args = ToCKBTypeArgs::new_builder()
+            .xchain_kind(Byte::new(kind))
+            .build();
+
+        let typescript = Script::new_builder()
+            .code_hash(Byte32::from_slice(&typescript_code_hash).unwrap())
+            .hash_type(DepType::Code.into())
+            .args(typescript_args.as_bytes().pack())
+            .build();
+        let lockscript = Script::new_builder()
+            .code_hash(Byte32::from_slice(&lockscript_code_hash).unwrap())
+            .hash_type(DepType::Code.into())
+            .args(typescript.as_slice()[0..54].pack())
+            .build();
+
+        let sudt_typescript_code_hash =
+            hex::decode(&self.settings.sudt.code_hash).expect("wrong sudt_script code hash config");
+        let sudt_typescript = Script::new_builder()
+            .code_hash(Byte32::from_slice(&sudt_typescript_code_hash).unwrap())
+            .hash_type(DepType::Code.into())
+            .args(lockscript.calc_script_hash().as_bytes().pack())
+            .build();
+
+        collect_sudt_amount(&mut self.indexer_client, addr_lockscript, sudt_typescript)
     }
 }

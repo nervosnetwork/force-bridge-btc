@@ -414,6 +414,12 @@ impl TxHelper {
             sudt_typescript.clone(),
             need_sudt_amount,
         )?;
+        if collected_amount < need_sudt_amount {
+            return Err(format!(
+                "sudt balance not enough, got {}, need {}",
+                collected_amount, need_sudt_amount,
+            ));
+        }
         for cell in cells {
             self.add_input(
                 OutPoint::from(cell.out_point),
@@ -423,16 +429,19 @@ impl TxHelper {
                 true,
             )?;
         }
-        let sudt_change_output = CellOutput::new_builder()
-            .capacity(Capacity::shannons(XT_CELL_CAPACITY).pack())
-            .lock(lockscript)
-            .type_(Some(sudt_typescript).pack())
-            .build();
-        let sudt_change_data = (collected_amount - need_sudt_amount)
-            .to_le_bytes()
-            .to_vec()
-            .into();
-        self.add_output(sudt_change_output, sudt_change_data);
+        if collected_amount - need_sudt_amount > 0 {
+            let sudt_change_output = CellOutput::new_builder()
+                .capacity(Capacity::shannons(XT_CELL_CAPACITY).pack())
+                .lock(lockscript)
+                .type_(Some(sudt_typescript).pack())
+                .build();
+            let sudt_change_data = (collected_amount - need_sudt_amount)
+                .to_le_bytes()
+                .to_vec()
+                .into();
+            self.add_output(sudt_change_output, sudt_change_data);
+        }
+
         Ok(self.transaction.clone())
     }
 
