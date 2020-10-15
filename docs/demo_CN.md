@@ -93,6 +93,7 @@ $ ../target/debug/tockb-cli dev-init --force --price 10000 --btc-difficulty 0 --
 $ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="alice" getbalance
 2.00000000
 ```
+> 本 demo 中所有的 bitcoin-cli 操作都是在 docker 中操作，请先 docker attach 再执行
 
 ### 导入 Alice 的 CKB 私钥方便后续操作：
 
@@ -353,7 +354,7 @@ $ ../target/debug/tockb-cli sudt --kind 1 get-balance --addr ckt1qyqywrwdchjyqey
 
 金额变动总结：
 
-|              | 跨链前                                                         | 跨链后 |
+|              | BTC->CKB 跨链前                                                         | 跨链后 |
 | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | 
 | Alice BTC    | 2                     | 0.99718000 |
 | Bob BTC      | 0.2                   | 1.2 |
@@ -364,15 +365,6 @@ $ ../target/debug/tockb-cli sudt --kind 1 get-balance --addr ckt1qyqywrwdchjyqey
 ## CKB->BTC 跨链
 
 ### Alice 归集 cBTC
-
-假设 CKB 网络中还有一个用户 Jack，Jack 的 BTC 地址及 CKB 私钥地址如下
-
-|              | Jack                                                         |
-| ------------ | ------------------------------------------------------------ | 
-| btc 地址     | bcrt1qfzdcp53u29yt9u5u3d0sx3u2f5xav7sqatfxm2                       | 
-| ckb 私钥     | 0x63d86723e08f0f813a36ce6aa123bb2289d90680ae1e99d4de8cdb334553f24d | 
-| ckb 地址     | ckt1qyqywrwdchjyqeysjegpzw38fvandtktdhrs0zaxl4                     | 
-
 
 Alice 现在想赎回自己锁仓的 BTC，于是她先在市场上（如交易所）中购买 200000 个 cBTC：
 > 实际场景是 Alice 在市场上购买 cBTC，此处为了简化，直接让 Bob 给 Alice 转账 cBTC
@@ -541,6 +533,43 @@ $ cd toCKB/cli
 $ ../target/debug/tockb-cli contract --private-key-path privkeys/bob --wait-for-committed withdraw-collateral -c $CELL --spv-proof $SPV_PROOF
 ```
 
+结果上述两步，就完成了 CKB->BTC 的跨链过程，此时看下 Alice 和 Bob 的资产情况。
+
+Alice 查询 BTC 余额：
+
+```
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="alice" getbalance
+1.99718000
+```
+
+Alice 查询 cBTC 余额：
+
+```
+$ ../target/debug/tockb-cli sudt --kind 1 get-balance --addr ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj37
+0
+```
+
+Bob 查询 BTC 余额：
+
+```
+$ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="bob" getbalance
+0.19584000
+```
+
+Bob 查询 cBTC 余额：
+```
+$ ../target/debug/tockb-cli sudt --kind 1 get-balance --addr ckt1qyqywrwdchjyqeysjegpzw38fvandtktdhrs0zaxl4
+0
+```
+
+金额变动总结：
+
+|              | CKB->BTC 跨链前                                                         | 跨链后 |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | 
+| Alice BTC    | 1.99718000                     | 1.99718000 |
+| Bob BTC      | 1.2                            | 0.19584000 |
+| Alice cBTC   | 100000000                      | 0 |
+| Bob cBTC     | 0                              | 0 |
 
 
 
