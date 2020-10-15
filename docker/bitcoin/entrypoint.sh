@@ -8,7 +8,6 @@ sleep 8
 MINER_ADDRESS=bcrt1q0yszr82fk9q8tu9z9ddxxvwqmlrdycsy378znz
 ALICE_ADDRESS=bcrt1q4r9hqljdpfwxu6gp3x7qqedg77r6408dn4wmnf
 BOB_ADDRESS=bcrt1qfzdcp53u29yt9u5u3d0sx3u2f5xav7sqatfxm2
-JACK_ADDRESS=bcrt1qgetdwuye26z9hqq05fezjxkkg8mwftrptz98dj
 
 bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf createwallet miner
 bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="miner" importprivkey "cURtxPqTGqaA5oLit5sMszceoEAbiLFsTRz7AHo23piqamtxbzav"
@@ -16,8 +15,6 @@ bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf createwallet alice
 bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="alice" importprivkey "cUDfdzioB3SqjbN9vutRTUrpw5EH9srrg6RPibacPo1fGHpfPKqL"
 bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf createwallet bob
 bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="bob" importprivkey "cU9PYTnSkcWoAE15U26JJCwtKiYvTCKYdbWt8e7ovidEGDBwJQ5x"
-bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf createwallet jack
-bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="jack" importprivkey "cT9hz3J53sRNYpytXuHrsexBPCuu4nbKJaKDUDrWsfyTu3nPVP1s"
 
 bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf generatetoaddress 201 $MINER_ADDRESS
 bitcoin-cli -conf=/etc/bitcoin/bitcoin.conf -rpcwallet="miner" sendtoaddress $ALICE_ADDRESS 2
