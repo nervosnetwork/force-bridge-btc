@@ -3,12 +3,9 @@ use ckb_testtool::{builtin::ALWAYS_SUCCESS, context::Context};
 use ckb_tool::ckb_types::{
     bytes::Bytes,
     core::{TransactionBuilder, TransactionView},
-    h256,
     packed::*,
     prelude::*,
-    H256,
 };
-use ckb_tool::{ckb_error::assert_error_eq, ckb_script::ScriptError};
 use tockb_types::basic;
 use tockb_types::generated::tockb_cell_data::ToCKBTypeArgs;
 
