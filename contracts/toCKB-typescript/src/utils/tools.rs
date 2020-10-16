@@ -5,7 +5,7 @@ use crate::utils::{
         Error, ToCKBCellDataView, XExtraView,
     },
 };
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 
 use bech32::ToBase32;
 use bitcoin_spv::{
