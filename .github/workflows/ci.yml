@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.47.0
+          override: true
+          components: rustfmt
       - name: format-typescript
         run: |
           cd contracts/toCKB-typescript
