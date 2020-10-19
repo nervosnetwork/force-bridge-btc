@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.47.0
+          override: true
+          components: rustfmt
       - name: format-typescript
         run: |
           cd contracts/toCKB-typescript
@@ -23,6 +29,17 @@ jobs:
         run: |
           cd tests
           cargo fmt --all -- --check
+  build-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.47.0
+          override: true
+      - name: build project
+        run: make cli
   build-test:
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +48,7 @@ jobs:
         run: |
           wget -c https://github.com/nervosnetwork/capsule/releases/download/v0.2.3/capsule_v0.2.3_x86_64-linux.tar.gz
           tar -zxvf capsule_v0.2.3_x86_64-linux.tar.gz
-      - name: build
+      - name: build contract
         run: ./capsule_v0.2.3_x86_64-linux/capsule build
-      - name: test
+      - name: test contract
         run: ./capsule_v0.2.3_x86_64-linux/capsule test

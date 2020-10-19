@@ -40,3 +40,5 @@ The time unit is second.
 */
 pub const AUCTION_MAX_TIME: u64 = 3 * 24 * 3600;
 pub const AUCTION_INIT_PERCENT: u8 = 67;
+
+pub const BTC_ADDRESS_PREFIX: &str = "bcrt";

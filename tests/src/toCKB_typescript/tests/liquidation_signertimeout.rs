@@ -68,9 +68,9 @@ fn get_correct_btc_case() -> TestCase {
                     status: 4,
                     lot_size: 1,
                     user_lockscript: Default::default(),
-                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_lock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     signer_lockscript: Default::default(),
-                    x_unlock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_unlock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     redeemer_lockscript: Default::default(),
                     liquidation_trigger_lockscript: Default::default(),
                     x_extra: XExtraView::Btc(BtcExtraView {
@@ -93,9 +93,9 @@ fn get_correct_btc_case() -> TestCase {
                     status: 5,
                     lot_size: 1,
                     user_lockscript: Default::default(),
-                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_lock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     signer_lockscript: Default::default(),
-                    x_unlock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_unlock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     redeemer_lockscript: Default::default(),
                     liquidation_trigger_lockscript: Default::default(),
                     x_extra: XExtraView::Btc(BtcExtraView {

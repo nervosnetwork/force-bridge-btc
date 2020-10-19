@@ -167,7 +167,7 @@ pub fn clear_0x(s: &str) -> &str {
     }
 }
 
-fn hex_string_le_be_transform(hex_str: &str) -> Result<String> {
+fn _hex_string_le_be_transform(hex_str: &str) -> Result<String> {
     let mut bytes = hex::decode(clear_0x(hex_str).as_bytes())?;
     bytes.reverse();
     Ok(hex::encode(bytes.as_slice()))
@@ -197,9 +197,9 @@ enum SubCommand {
 struct MintXt {
     #[clap(short, long)]
     tx_hash: String,
-    #[clap(short = "i", long)]
+    #[clap(short = 'i', long)]
     funding_input_index: u32,
-    #[clap(short = "o", long)]
+    #[clap(short = 'o', long)]
     funding_output_index: u32,
 }
 
@@ -235,7 +235,7 @@ fn main() -> Result<()> {
 
 #[test]
 fn test_reverse() {
-    let tx_id_be = hex_string_le_be_transform(
+    let tx_id_be = _hex_string_le_be_transform(
         "0x2b21846ae6f15cc29e41b2846c78d756abfedb0d6fea7222263cac0024713bc3",
     )
     .unwrap();
