@@ -40,7 +40,7 @@ $ git checkout demo
 // 编译合约
 $ capsule build --release
 // 编译 tockb-cli， proof-generator-by-rpc
-$ cargo build
+$ make cli
 ```
 
 ### 使用 Docker 搭建比特币私链、CKB 私链、CKB Indexer (推荐使用，此 demo 后续步骤均基于 docker 环境)
@@ -570,6 +570,5 @@ $ ../target/debug/tockb-cli sudt --kind 1 get-balance --addr ckt1qyqywrwdchjyqey
 | Bob BTC      | 1.2                            | 0.19584000 |
 | Alice cBTC   | 100000000                      | 0 |
 | Bob cBTC     | 0                              | 0 |
-
 
 
