@@ -29,7 +29,7 @@ jobs:
         run: |
           cd tests
           cargo fmt --all -- --check
-  build-project:
+  build-cli:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -39,16 +39,11 @@ jobs:
           toolchain: 1.47.0
           override: true
       - name: build project
-        run: cargo build
+        run: make cli
   build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.47.0
-          override: true
       - name: install-capsule
         run: |
           wget -c https://github.com/nervosnetwork/capsule/releases/download/v0.2.3/capsule_v0.2.3_x86_64-linux.tar.gz

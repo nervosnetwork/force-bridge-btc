@@ -14,4 +14,7 @@ test:
 
 ci: fmt build test
 
-.PHONY: fmt build test ci schema
+cli:
+	cargo +1.47.0 build
+
+.PHONY: fmt build test ci schema cli
