@@ -47,7 +47,7 @@ jobs:
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: 1.47.0
           override: true
       - name: install-capsule
         run: |

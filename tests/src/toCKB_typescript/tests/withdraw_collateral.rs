@@ -13,7 +13,7 @@ fn test_correct_tx() {
 fn test_wrong_unlock_address() {
     let mut case = get_correct_btc_case();
     case.toCKB_cells.inputs[0].data.x_unlock_address =
-        "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3aa".to_string();
+        "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03a".to_string();
     case.expect_return_code = Error::WrongFundingAddr as i8;
     case_runner::run_test(case)
 }
@@ -62,7 +62,7 @@ fn get_correct_btc_case() -> TestCase {
                     user_lockscript: Default::default(),
                     x_lock_address: Default::default(),
                     signer_lockscript: Default::default(),
-                    x_unlock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_unlock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     redeemer_lockscript: Default::default(),
                     liquidation_trigger_lockscript: Default::default(),
                     x_extra: XExtraView::Btc(BtcExtraView{ lock_tx_hash: "5227c5fbad9d9202ade7f02452cf880dac1ed270255ebfe6716e8b3e8956571d".to_string(), lock_vout_index: 1 }),

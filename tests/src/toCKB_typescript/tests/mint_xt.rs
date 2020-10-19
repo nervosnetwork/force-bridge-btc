@@ -24,7 +24,7 @@ fn test_wrong_lot_size() {
 fn test_wrong_x_lock_address() {
     let mut case = get_correct_btc_case();
     case.toCKB_cells.inputs[0].data.x_lock_address =
-        "bc1111111111111111111111111111111111111111111".to_owned();
+        "bcrt1111111111111111111111111111111111111111111".to_owned();
     case.expect_return_code = WrongFundingAddr as i8;
     case_runner::run_test(case)
 }
@@ -105,7 +105,7 @@ fn get_correct_btc_case() -> TestCase {
                     status: 2,
                     lot_size: 1,
                     user_lockscript: Default::default(),
-                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_lock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     signer_lockscript: Default::default(),
                     x_unlock_address: Default::default(),
                     redeemer_lockscript: Default::default(),
@@ -125,7 +125,7 @@ fn get_correct_btc_case() -> TestCase {
                     status: 3,
                     lot_size: 1,
                     user_lockscript: Default::default(),
-                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_lock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     signer_lockscript: Default::default(),
                     x_unlock_address: Default::default(),
                     redeemer_lockscript: Default::default(),

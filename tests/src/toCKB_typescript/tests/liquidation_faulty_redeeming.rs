@@ -80,9 +80,9 @@ fn test_wrong_toCKB_capacity() {
 fn test_wrong_liquidation_trigger() {
     let mut case = get_correct_btc_case();
     case.toCKB_cells.inputs[0].data.x_unlock_address =
-        "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string();
+        "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string();
     case.toCKB_cells.outputs[0].data.x_unlock_address =
-        "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string();
+        "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string();
     case.expect_return_code = Error::FaultyBtcWitnessInvalid as i8;
     case_runner::run_test(case)
 }
@@ -100,9 +100,9 @@ fn get_correct_btc_case() -> TestCase {
                     status: 4,
                     lot_size: 1,
                     user_lockscript: Default::default(),
-                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_lock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     signer_lockscript: Default::default(),
-                    x_unlock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00".to_string(),
+                    x_unlock_address: "bcrt1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00".to_string(),
                     redeemer_lockscript: Default::default(),
                     liquidation_trigger_lockscript: Default::default(),
                     x_extra: XExtraView::Btc(BtcExtraView{ lock_tx_hash: "5227c5fbad9d9202ade7f02452cf880dac1ed270255ebfe6716e8b3e8956571d".to_string(), lock_vout_index: 1 }),
@@ -120,9 +120,9 @@ fn get_correct_btc_case() -> TestCase {
                     status: 8,
                     lot_size: 1,
                     user_lockscript: Default::default(),
-                    x_lock_address: "bc1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku8mf3ah".to_string(),
+                    x_lock_address: "bcrt1qzulv8gfw9zd3qtuwmnqafmxnkkuf8cku05t03d".to_string(),
                     signer_lockscript: Default::default(),
-                    x_unlock_address: "bc1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00".to_string(),
+                    x_unlock_address: "bcrt1qq2pw0kr5yhz3xcs978desw5anfmtwynutwq8quz00".to_string(),
                     redeemer_lockscript: Default::default(),
                     liquidation_trigger_lockscript: Default::default(),
                     x_extra: XExtraView::Btc(BtcExtraView{ lock_tx_hash: "5227c5fbad9d9202ade7f02452cf880dac1ed270255ebfe6716e8b3e8956571d".to_string(), lock_vout_index: 1 }),
