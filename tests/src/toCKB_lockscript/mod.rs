@@ -13,8 +13,10 @@ use tockb_types::basic;
 use tockb_types::generated::tockb_cell_data::ToCKBTypeArgs;
 
 const MAX_CYCLES: u64 = 10_000_000;
+
+// first 54 bytes of toCKB typescript molecule bytes:
 // total_size(4 byte) + offset(4 byte) * 3 + code_hash(32 byte) + hash_type(1 byte) + args_size(4 byte) + xchain_kind(1 byte) = 54 byte
-const MOLECULE_TYPESCRIPT_SIZE: usize = 54;
+const TOCKB_LOCKSCRIPT_ARGS_LENGTH: usize = 54;
 
 #[repr(i8)]
 pub enum Error {
@@ -122,7 +124,7 @@ fn build_cell(
         .build_script(&always_success_out_point, args.as_bytes())
         .expect("script");
 
-    let lock_script_args = mock_toCKB_typescript.as_bytes()[0..MOLECULE_TYPESCRIPT_SIZE]
+    let lock_script_args = mock_toCKB_typescript.as_bytes()[0..TOCKB_LOCKSCRIPT_ARGS_LENGTH]
         .to_vec()
         .into();
 
