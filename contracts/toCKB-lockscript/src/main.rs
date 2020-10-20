@@ -16,6 +16,10 @@ use core::result::Result;
 entry!(entry);
 default_alloc!();
 
+// first 54 bytes of toCKB typescript molecule bytes:
+// total_size(4 byte) + offset(4 byte) * 3 + code_hash(32 byte) + hash_type(1 byte) + args_size(4 byte) + xchain_kind(1 byte) = 54 byte
+const TOCKB_LOCKSCRIPT_ARGS_LENGTH: usize = 54;
+
 /// Program entry
 fn entry() -> i8 {
     // Call main function and return error code
@@ -58,7 +62,8 @@ fn verify() -> Result<(), Error> {
     let count = QueryIter::new(load_cell_type, Source::GroupInput)
         .filter(|type_script_opt| {
             type_script_opt.is_none()
-                || (type_script_opt.as_ref().unwrap().as_slice()[0..54] != args[..])
+                || (type_script_opt.as_ref().unwrap().as_slice()[0..TOCKB_LOCKSCRIPT_ARGS_LENGTH]
+                    != args[..])
         })
         .count();
     if 0 != count {
