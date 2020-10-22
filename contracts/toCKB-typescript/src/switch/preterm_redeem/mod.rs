@@ -1,6 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
+use crate::utils::common::{verify_capacity, verify_data};
 use crate::utils::config::SIGNER_FEE_RATE;
-use crate::utils::tools::{check_capacity, is_XT_typescript, verify_btc_address, XChainKind};
+use crate::utils::tools::is_XT_typescript;
 use crate::utils::types::{Error, ToCKBCellDataView};
 use ckb_std::ckb_constants::Source;
 use ckb_std::debug;
@@ -8,38 +9,6 @@ use ckb_std::error::SysError;
 use ckb_std::high_level::{load_cell_data, load_cell_lock, load_cell_lock_hash, load_cell_type};
 use core::result::Result;
 use molecule::prelude::*;
-
-fn verify_data(
-    input_toCKB_data: &ToCKBCellDataView,
-    out_toCKB_data: &ToCKBCellDataView,
-) -> Result<u128, Error> {
-    let lot_size = match input_toCKB_data.get_xchain_kind() {
-        XChainKind::Btc => {
-            if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-            verify_btc_address(out_toCKB_data.x_unlock_address.as_ref())?;
-            out_toCKB_data.get_btc_lot_size()?.get_sudt_amount()
-        }
-        XChainKind::Eth => {
-            if out_toCKB_data.get_eth_lot_size()? != input_toCKB_data.get_eth_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-            if out_toCKB_data.x_unlock_address.as_ref().len() != 20 {
-                return Err(Error::XChainAddressInvalid);
-            }
-            out_toCKB_data.get_eth_lot_size()?.get_sudt_amount()
-        }
-    };
-    if input_toCKB_data.user_lockscript != out_toCKB_data.user_lockscript
-        || input_toCKB_data.x_lock_address != out_toCKB_data.x_lock_address
-        || input_toCKB_data.signer_lockscript != out_toCKB_data.signer_lockscript
-        || input_toCKB_data.x_extra != out_toCKB_data.x_extra
-    {
-        return Err(Error::InvariantDataMutated);
-    }
-    Ok(lot_size)
-}
 
 fn verify_burn(lot_size: u128, out_toCKB_data: &ToCKBCellDataView) -> Result<(), Error> {
     let mut deposit_requestor = false;
@@ -137,7 +106,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .1
         .as_ref()
         .expect("outputs contain toCKB cell");
-    check_capacity()?;
+    verify_capacity()?;
     let lot_size = verify_data(input_toCKB_data, output_toCKB_data)?;
     verify_burn(lot_size, output_toCKB_data)
 }

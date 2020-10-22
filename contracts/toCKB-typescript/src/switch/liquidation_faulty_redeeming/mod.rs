@@ -1,13 +1,10 @@
 use crate::switch::ToCKBCellDataTuple;
+use crate::utils::common::verify_capacity;
 use crate::utils::{
     tools::{verify_btc_faulty_witness, XChainKind},
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView},
 };
-use ckb_std::{
-    ckb_constants::Source,
-    debug,
-    high_level::{load_cell_capacity, load_witness_args},
-};
+use ckb_std::{ckb_constants::Source, debug, high_level::load_witness_args};
 use core::result::Result;
 use molecule::prelude::Reader;
 
@@ -24,15 +21,6 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     verify_capacity()?;
     verify_data(input_data, output_data)?;
     verify_witness(input_data)
-}
-
-fn verify_capacity() -> Result<(), Error> {
-    let cap_input = load_cell_capacity(0, Source::GroupInput).expect("get input capacity");
-    let cap_output = load_cell_capacity(0, Source::GroupOutput).expect("get output capacity");
-    if cap_input != cap_output {
-        return Err(Error::CapacityInvalid);
-    }
-    Ok(())
 }
 
 fn verify_data(

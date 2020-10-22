@@ -142,7 +142,7 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn verify_capacity() -> Result<(), Error> {
+fn verify_capacity() -> Result<(), Error> {
     let toCKB_output_cap = load_cell_capacity(0, Source::GroupOutput)?;
     let toCKB_input_cap = load_cell_capacity(0, Source::GroupInput)?;
     if toCKB_input_cap - toCKB_output_cap != PLEDGE + XT_CELL_CAPACITY {

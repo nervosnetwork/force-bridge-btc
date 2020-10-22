@@ -1,51 +1,12 @@
 use crate::switch::ToCKBCellDataTuple;
+use crate::utils::common::{verify_capacity, verify_data, verify_since_by_value};
 use crate::utils::config::SINCE_AT_TERM_REDEEM;
-use crate::utils::tools::{check_capacity, is_XT_typescript, verify_btc_address, XChainKind};
-use crate::utils::types::{Error, ToCKBCellDataView};
+use crate::utils::tools::is_XT_typescript;
+use crate::utils::types::Error;
 use ckb_std::ckb_constants::Source;
 use ckb_std::error::SysError;
-use ckb_std::high_level::{load_cell_data, load_cell_lock_hash, load_cell_type, load_input_since};
+use ckb_std::high_level::{load_cell_data, load_cell_lock_hash, load_cell_type};
 use core::result::Result;
-
-fn verify_data(
-    input_toCKB_data: &ToCKBCellDataView,
-    out_toCKB_data: &ToCKBCellDataView,
-) -> Result<u128, Error> {
-    let lot_size = match input_toCKB_data.get_xchain_kind() {
-        XChainKind::Btc => {
-            if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-            verify_btc_address(out_toCKB_data.x_unlock_address.as_ref())?;
-            out_toCKB_data.get_btc_lot_size()?.get_sudt_amount()
-        }
-        XChainKind::Eth => {
-            if out_toCKB_data.get_eth_lot_size()? != input_toCKB_data.get_eth_lot_size()? {
-                return Err(Error::InvariantDataMutated);
-            }
-            if out_toCKB_data.x_unlock_address.as_ref().len() != 20 {
-                return Err(Error::XChainAddressInvalid);
-            }
-            out_toCKB_data.get_eth_lot_size()?.get_sudt_amount()
-        }
-    };
-    if input_toCKB_data.user_lockscript != out_toCKB_data.user_lockscript
-        || input_toCKB_data.x_lock_address != out_toCKB_data.x_lock_address
-        || input_toCKB_data.signer_lockscript != out_toCKB_data.signer_lockscript
-        || input_toCKB_data.x_extra != out_toCKB_data.x_extra
-    {
-        return Err(Error::InvariantDataMutated);
-    }
-    Ok(lot_size)
-}
-
-fn verify_since() -> Result<(), Error> {
-    let since = load_input_since(0, Source::GroupInput)?;
-    if since != SINCE_AT_TERM_REDEEM {
-        return Err(Error::InputSinceInvalid);
-    }
-    Ok(())
-}
 
 fn verify_burn(lot_size: u128) -> Result<(), Error> {
     let lock_hash = load_cell_lock_hash(0, Source::GroupInput)?;
@@ -118,8 +79,8 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .1
         .as_ref()
         .expect("outputs contain toCKB cell");
-    check_capacity()?;
+    verify_capacity()?;
     let lot_size = verify_data(input_toCKB_data, output_toCKB_data)?;
     verify_burn(lot_size)?;
-    verify_since()
+    verify_since_by_value(SINCE_AT_TERM_REDEEM)
 }
