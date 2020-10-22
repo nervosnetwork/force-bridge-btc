@@ -136,6 +136,7 @@ fn get_transformation_tx_type(
 fn get_deletion_tx_type(data: &ToCKBCellDataView) -> Result<TxType, Error> {
     verify_unique(Source::Input)?;
     use ToCKBStatus::*;
+    use TxType::*;
     match data.status {
         Initial => Ok(WithdrawPledge),
         Bonded => Ok(WithdrawPledgeAndCollateral),
