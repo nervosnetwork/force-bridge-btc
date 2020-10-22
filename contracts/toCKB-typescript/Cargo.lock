@@ -381,6 +381,7 @@ dependencies = [
  "bitcoin-spv 5.0.0 (git+https://github.com/summa-tx/bitcoin-spv.git?branch=rust/dep-change)",
  "ckb-std 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "eth-spv-lib 0.1.0 (git+https://github.com/LeonLi000/eth-spv-lib.git)",
+ "ethereum-types 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "int-enum 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "molecule 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",

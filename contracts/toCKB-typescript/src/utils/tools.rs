@@ -261,6 +261,7 @@ pub fn verify_eth_witness(
     let proof_reader = ETHSPVProofReader::new_unchecked(proof);
     let header_data = proof_reader.header_data().raw_data().to_vec();
     let header: BlockHeader = rlp::decode(header_data.as_slice()).expect("invalid header data");
+    debug!("the witness header data: {:?}", header);
     //verify the header is on main chain.
     verify_eth_header_on_main_chain(&header, cell_dep_index_list)?;
 
@@ -284,12 +285,21 @@ pub fn verify_eth_witness(
     for i in 0..proof_reader.proof().len() {
         proof.push(proof_reader.proof().get_unchecked(i).raw_data().to_vec());
     }
+    debug!("proof: {:?}", hex::encode(proof[0].clone()));
     let log_entry: LogEntry =
         rlp::decode(log_entry_data.as_slice()).map_err(|_e| Error::LogEntryInvalid)?;
     debug!("log_entry is {:?}", &log_entry);
     let receipt: Receipt =
         rlp::decode(receipt_data.as_slice()).map_err(|_e| Error::ReceiptInvalid)?;
     debug!("receipt_data is {:?}", &receipt);
+    let log_data = log_entry.data.clone();
+    let slices = slice_data(log_data.as_slice())?;
+    debug!("log data slice: {:?}", slices);
+    let xt_amount:U256 = U256::from(slices[0]);
+    debug!("log data xt_amount: {:?}", xt_amount);
+    let expect_value = data.get_eth_lot_size()?.get_sudt_amount();
+    debug!("expect_value: {:?}", expect_value);
+    //FIXME: verify xt amount.
     let locker_address = (log_entry.address.clone().0).0;
     debug!(
         "addr: {:?}, x_lock_address: {}",
@@ -313,6 +323,23 @@ pub fn verify_eth_witness(
         return Err(Error::BadMerkleProof);
     }
     Ok(EthExtraView {})
+}
+
+/// Converts a vector of bytes with len equal n * 32, to a vector of slices.
+pub fn slice_data(data: &[u8]) -> Result<Vec<[u8;32]>, Error> {
+    if data.len() % 32 != 0 {
+        return Err(Error::Encoding);
+    }
+
+    let times = data.len() / 32;
+    let mut result = Vec::with_capacity(times);
+    for i in 0..times {
+        let mut slice = [0u8; 32];
+        let offset = 32 * i;
+        slice.copy_from_slice(&data[offset..offset + 32]);
+        result.push(slice);
+    }
+    Ok(result)
 }
 
 pub fn verify_btc_faulty_witness(
