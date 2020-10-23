@@ -1,11 +1,8 @@
 use crate::switch::ToCKBCellDataTuple;
+use crate::utils::common::{verify_capacity, verify_since_by_value};
 use crate::utils::{
     config::SINCE_SIGNER_TIMEOUT,
     types::{Error, ToCKBCellDataView},
-};
-use ckb_std::{
-    ckb_constants::Source,
-    high_level::{load_cell_capacity, load_input_since},
 };
 use core::result::Result;
 
@@ -19,26 +16,9 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
         .as_ref()
         .expect("outputs should contain toCKB cell");
 
-    verify_since()?;
+    verify_since_by_value(SINCE_SIGNER_TIMEOUT)?;
     verify_capacity()?;
     verify_data(input_data, output_data)?;
-    Ok(())
-}
-
-fn verify_since() -> Result<(), Error> {
-    let since = load_input_since(0, Source::GroupInput).map_err(|_| Error::InputSinceInvalid)?;
-    if since != SINCE_SIGNER_TIMEOUT {
-        return Err(Error::InputSinceInvalid);
-    }
-    Ok(())
-}
-
-fn verify_capacity() -> Result<(), Error> {
-    let cap_input = load_cell_capacity(0, Source::GroupInput).expect("get input capacity");
-    let cap_output = load_cell_capacity(0, Source::GroupOutput).expect("get output capacity");
-    if cap_input != cap_output {
-        return Err(Error::CapacityInvalid);
-    }
     Ok(())
 }
 

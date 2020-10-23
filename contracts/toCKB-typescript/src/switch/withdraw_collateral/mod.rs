@@ -4,14 +4,14 @@ use crate::utils::{
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView, XExtraView},
 };
 
+use crate::utils::common::verify_capacity_with_value;
 use ckb_std::ckb_types::prelude::*;
 use ckb_std::{
     ckb_constants::Source,
     debug,
-    high_level::{load_cell, load_cell_capacity, load_witness_args, QueryIter},
+    high_level::{load_cell_capacity, load_witness_args},
 };
 use core::result::Result;
-use molecule::prelude::*;
 
 /// ensure transfer happen on XChain by verifying the spv proof
 fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
@@ -46,20 +46,6 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
     }
 }
 
-fn verify_capacity(input_data: &ToCKBCellDataView) -> Result<(), Error> {
-    let signer_xt_cell_cap = QueryIter::new(load_cell, Source::Output)
-        .filter(|cell| cell.lock().as_bytes() == input_data.signer_lockscript)
-        .map(|cell| cell.capacity().unpack())
-        .collect::<Vec<u64>>()
-        .into_iter()
-        .sum::<u64>();
-    let ckb_cell_cap = load_cell_capacity(0, Source::GroupInput)?;
-    if signer_xt_cell_cap < ckb_cell_cap {
-        return Err(Error::CapacityInvalid);
-    }
-    Ok(())
-}
-
 fn verify_extra(data: &ToCKBCellDataView, x_extra: &XExtraView) -> Result<(), Error> {
     if &data.x_extra != x_extra {
         return Err(Error::FaultyBtcWitnessInvalid);
@@ -70,7 +56,9 @@ fn verify_extra(data: &ToCKBCellDataView, x_extra: &XExtraView) -> Result<(), Er
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("start withdraw collateral");
     let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
-    verify_capacity(input_data)?;
+    // verify_capacity(input_data)?;
+    let ckb_cell_cap = load_cell_capacity(0, Source::GroupInput)?;
+    verify_capacity_with_value(input_data, ckb_cell_cap)?;
     debug!("verify capacity finish");
     let extra = verify_witness(input_data)?;
     debug!("verify witness finish");

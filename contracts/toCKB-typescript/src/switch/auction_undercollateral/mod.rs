@@ -1,16 +1,14 @@
 use crate::switch::ToCKBCellDataTuple;
+use crate::utils::common::{verify_inputs, verify_since};
 use crate::utils::{
-    config::{
-        AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK,
-        REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, VALUE_MASK, XT_CELL_CAPACITY,
-    },
+    config::{AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, XT_CELL_CAPACITY},
     tools::get_sum_sudt_amount,
     types::{Error, ToCKBCellDataView},
 };
 use ckb_std::{
     ckb_constants::Source,
     debug,
-    high_level::{load_cell_capacity, load_cell_lock, load_cell_lock_hash, load_input_since},
+    high_level::{load_cell_capacity, load_cell_lock, load_cell_lock_hash},
 };
 use core::result::Result;
 use molecule::prelude::Entity;
@@ -28,7 +26,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("begin verify since");
     let auction_time = verify_since()?;
     debug!("begin verify input");
-    let inputs_xt_amount = verify_inputs(toCKB_lock_hash.as_ref(), lot_amount)?;
+    let inputs_xt_amount = verify_inputs(toCKB_lock_hash.as_ref(), lot_amount, 0)?;
     debug!("begin verify output");
     verify_outputs(
         input_data,
@@ -39,32 +37,6 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     )?;
 
     Ok(())
-}
-
-fn verify_since() -> Result<u64, Error> {
-    let since = load_input_since(0, Source::GroupInput).map_err(|_| Error::InputSinceInvalid)?;
-
-    if since & REMAIN_FLAGS_BITS != 0 // check flags is valid
-        || since & LOCK_TYPE_FLAG == 0 // check if it is relative_flag
-        || since & METRIC_TYPE_FLAG_MASK != SINCE_TYPE_TIMESTAMP
-    // check if it is timestamp value
-    {
-        return Err(Error::InputSinceInvalid);
-    }
-
-    let auction_time = since & VALUE_MASK;
-    Ok(auction_time)
-}
-
-fn verify_inputs(toCKB_lock_hash: &[u8], lot_amount: u128) -> Result<u128, Error> {
-    // inputs[0]: toCKB cell
-    // inputs[1:]: XT cell the bidder provides
-    // check XT cell on inputs
-    let inputs_amount = get_sum_sudt_amount(1, Source::Input, toCKB_lock_hash)?;
-    if inputs_amount < lot_amount {
-        return Err(Error::FundingNotEnough);
-    }
-    Ok(inputs_amount)
 }
 
 fn verify_outputs(
