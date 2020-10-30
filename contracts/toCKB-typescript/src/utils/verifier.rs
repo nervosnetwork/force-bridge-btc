@@ -1,94 +1,118 @@
 use crate::utils::{
-    config::{BTC_ADDRESS_PREFIX, SUDT_CODE_HASH, TX_PROOF_DIFFICULTY_FACTOR, UDT_LEN},
-    types::{
-        btc_difficulty::BTCDifficultyReader, mint_xt_witness::BTCSPVProofReader, BtcExtraView,
-        Error, ToCKBCellDataView, XExtraView,
+    config::{
+        LOCK_TYPE_FLAG, METRIC_TYPE_FLAG_MASK, REMAIN_FLAGS_BITS, SINCE_TYPE_TIMESTAMP, VALUE_MASK,
     },
+    transaction::{get_sum_sudt_amount, XChainKind},
+    types::{Error, ToCKBCellDataView},
 };
-use alloc::{string::String, vec::Vec};
-
+use alloc::string::String;
+use alloc::vec::Vec;
 use bech32::ToBase32;
-use bitcoin_spv::{
-    btcspv,
-    types::{HeaderArray, MerkleArray, PayloadType, Vin, Vout},
-    validatespv,
+use bitcoin_spv::types::{HeaderArray, MerkleArray, PayloadType, Vin, Vout};
+use bitcoin_spv::{btcspv, validatespv};
+use ckb_std::ckb_constants::Source;
+use ckb_std::ckb_types::{bytes::Bytes, prelude::*};
+use ckb_std::debug;
+use ckb_std::high_level::{
+    load_cell, load_cell_capacity, load_cell_data, load_input_since, QueryIter,
 };
-use ckb_std::{
-    ckb_constants::Source,
-    ckb_types::{bytes::Bytes, packed::Script},
-    debug,
-    high_level::{load_cell_data, load_cell_type, load_script},
-};
-use core::{convert::From, result::Result};
-use molecule::prelude::Reader;
 use primitive_types::U256;
-use tockb_types::generated::basic::OutPoint;
-pub use tockb_types::tockb_cell::{ToCKBTypeArgsView, XChainKind};
+use tockb_types::config::{BTC_ADDRESS_PREFIX, TX_PROOF_DIFFICULTY_FACTOR};
+use tockb_types::generated::btc_difficulty::BTCDifficultyReader;
+use tockb_types::generated::mint_xt_witness::BTCSPVProofReader;
+use tockb_types::{BtcExtraView, XExtraView};
 
-pub fn get_toCKB_type_args() -> Result<ToCKBTypeArgsView, Error> {
-    let toCKB_type_args = load_script()?.args().raw_data();
-    debug!("before molecule decode toCKB type args");
-    let toCKB_type_args = ToCKBTypeArgsView::from_slice(toCKB_type_args.as_ref())?;
-    debug!("molecule decode toCKB type args succ");
-    Ok(toCKB_type_args)
-}
+pub fn verify_since() -> Result<u64, Error> {
+    let since = load_input_since(0, Source::GroupInput).map_err(|_| Error::InputSinceInvalid)?;
 
-pub fn get_xchain_kind() -> Result<XChainKind, Error> {
-    Ok(get_toCKB_type_args()?.xchain_kind)
-}
-
-pub fn get_cell_id() -> Result<OutPoint, Error> {
-    Ok(get_toCKB_type_args()?.cell_id)
-}
-
-pub fn get_price() -> Result<u128, Error> {
-    let price_cell_data = load_cell_data(0, Source::CellDep)?;
-    if price_cell_data.len() != 16 {
-        return Err(Error::Encoding);
-    }
-    let mut buf = [0u8; 16];
-    buf.copy_from_slice(&price_cell_data);
-    let price: u128 = u128::from_le_bytes(buf);
-    Ok(price)
-}
-
-pub fn is_XT_typescript(script: &Script, toCKB_lock_hash: &[u8]) -> bool {
-    if script.code_hash().raw_data().as_ref() == SUDT_CODE_HASH.as_ref()
-        && script.args().raw_data().as_ref() == toCKB_lock_hash
-        && script.hash_type() == 0u8.into()
+    if since & REMAIN_FLAGS_BITS != 0 // check flags is valid
+        || since & LOCK_TYPE_FLAG == 0 // check if it is relative_flag
+        || since & METRIC_TYPE_FLAG_MASK != SINCE_TYPE_TIMESTAMP
+    // check if it is timestamp value
     {
-        return true;
+        return Err(Error::InputSinceInvalid);
     }
-    false
+
+    let auction_time = since & VALUE_MASK;
+    Ok(auction_time)
 }
 
-pub fn get_sum_sudt_amount(
-    start_index: usize,
-    source: Source,
-    toCKB_lock_hash: &[u8],
-) -> Result<u128, Error> {
-    let mut index = start_index;
-    let mut sum_amount = 0;
-    loop {
-        let res = load_cell_type(index, source);
-        if res.is_err() {
-            break;
-        }
-        let script = res.unwrap();
-        if script.is_none() || !is_XT_typescript(&script.unwrap(), toCKB_lock_hash) {
-            continue;
-        }
-
-        let cell_data = load_cell_data(index, source)?;
-        let mut data = [0u8; UDT_LEN];
-        data.copy_from_slice(&cell_data);
-        let amount = u128::from_le_bytes(data);
-        sum_amount += amount;
-
-        index += 1;
+pub fn verify_since_by_value(value: u64) -> Result<(), Error> {
+    let since = load_input_since(0, Source::GroupInput)?;
+    if since != value {
+        return Err(Error::InputSinceInvalid);
     }
+    Ok(())
+}
 
-    Ok(sum_amount)
+pub fn verify_auction_inputs(
+    toCKB_lock_hash: &[u8],
+    lot_amount: u128,
+    signer_fee: u128,
+) -> Result<u128, Error> {
+    // inputs[0]: toCKB cell
+    // inputs[1:]: XT cell the bidder provides
+    // check XT cell on inputs
+    let inputs_amount = get_sum_sudt_amount(1, Source::Input, toCKB_lock_hash)?;
+
+    if inputs_amount < lot_amount + signer_fee {
+        return Err(Error::FundingNotEnough);
+    }
+    Ok(inputs_amount)
+}
+
+pub fn verify_capacity() -> Result<(), Error> {
+    let cap_input = load_cell_capacity(0, Source::GroupInput).expect("get input capacity");
+    let cap_output = load_cell_capacity(0, Source::GroupOutput).expect("get output capacity");
+    if cap_input != cap_output {
+        return Err(Error::CapacityInvalid);
+    }
+    Ok(())
+}
+
+pub fn verify_capacity_with_value(input_data: &ToCKBCellDataView, value: u64) -> Result<(), Error> {
+    let sum = QueryIter::new(load_cell, Source::Output)
+        .filter(|cell| cell.lock().as_bytes() == input_data.signer_lockscript)
+        .map(|cell| cell.capacity().unpack())
+        .collect::<Vec<u64>>()
+        .into_iter()
+        .sum::<u64>();
+    if sum < value {
+        return Err(Error::CapacityInvalid);
+    }
+    Ok(())
+}
+
+pub fn verify_data(
+    input_toCKB_data: &ToCKBCellDataView,
+    out_toCKB_data: &ToCKBCellDataView,
+) -> Result<u128, Error> {
+    let lot_size = match input_toCKB_data.get_xchain_kind() {
+        XChainKind::Btc => {
+            if out_toCKB_data.get_btc_lot_size()? != input_toCKB_data.get_btc_lot_size()? {
+                return Err(Error::InvariantDataMutated);
+            }
+            verify_btc_address(out_toCKB_data.x_unlock_address.as_ref())?;
+            out_toCKB_data.get_btc_lot_size()?.get_sudt_amount()
+        }
+        XChainKind::Eth => {
+            if out_toCKB_data.get_eth_lot_size()? != input_toCKB_data.get_eth_lot_size()? {
+                return Err(Error::InvariantDataMutated);
+            }
+            if out_toCKB_data.x_unlock_address.as_ref().len() != 20 {
+                return Err(Error::XChainAddressInvalid);
+            }
+            out_toCKB_data.get_eth_lot_size()?.get_sudt_amount()
+        }
+    };
+    if input_toCKB_data.user_lockscript != out_toCKB_data.user_lockscript
+        || input_toCKB_data.x_lock_address != out_toCKB_data.x_lock_address
+        || input_toCKB_data.signer_lockscript != out_toCKB_data.signer_lockscript
+        || input_toCKB_data.x_extra != out_toCKB_data.x_extra
+    {
+        return Err(Error::InvariantDataMutated);
+    }
+    Ok(lot_size)
 }
 
 pub fn verify_btc_witness(

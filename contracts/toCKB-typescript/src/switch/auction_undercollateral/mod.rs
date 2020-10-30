@@ -1,9 +1,9 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::common::{verify_inputs, verify_since};
 use crate::utils::{
     config::{AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, XT_CELL_CAPACITY},
-    tools::get_sum_sudt_amount,
+    transaction::get_sum_sudt_amount,
     types::{Error, ToCKBCellDataView},
+    verifier::{verify_auction_inputs, verify_since},
 };
 use ckb_std::{
     ckb_constants::Source,
@@ -26,7 +26,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("begin verify since");
     let auction_time = verify_since()?;
     debug!("begin verify input");
-    let inputs_xt_amount = verify_inputs(toCKB_lock_hash.as_ref(), lot_amount, 0)?;
+    let inputs_xt_amount = verify_auction_inputs(toCKB_lock_hash.as_ref(), lot_amount, 0)?;
     debug!("begin verify output");
     verify_outputs(
         input_data,

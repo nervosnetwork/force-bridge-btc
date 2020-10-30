@@ -16,9 +16,9 @@ mod withdraw_collateral;
 mod withdraw_pledge;
 mod withdraw_pledge_collateral;
 
-use crate::utils::tools::get_xchain_kind;
 use crate::utils::{
     config::SUDT_CODE_HASH,
+    transaction::get_xchain_kind,
     types::{Error, ToCKBCellDataView, ToCKBStatus, XChainKind},
 };
 use alloc::vec::Vec;

@@ -1,7 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::common::{verify_capacity_with_value, verify_since_by_value};
 use crate::utils::config::SINCE_WITHDRAW_PLEDGE_COLLATERAL;
 use crate::utils::types::Error;
+use crate::utils::verifier::{verify_capacity_with_value, verify_since_by_value};
 use ckb_std::ckb_constants::Source;
 use ckb_std::high_level::load_cell_capacity;
 use core::result::Result;

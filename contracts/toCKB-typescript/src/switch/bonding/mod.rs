@@ -1,11 +1,29 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::*;
-use crate::utils::tools::{get_price, verify_btc_address, XChainKind};
+use crate::utils::transaction::{get_price, XChainKind};
 use crate::utils::types::{Error, ToCKBCellDataView};
+use crate::utils::verifier::verify_btc_address;
 use ckb_std::ckb_constants::Source;
 use ckb_std::debug;
 use ckb_std::high_level::load_cell_capacity;
 use core::result::Result;
+
+pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
+    debug!("start bonding");
+
+    let input_toCKB_data = toCKB_data_tuple
+        .0
+        .as_ref()
+        .expect("inputs contain toCKB cell");
+    let output_toCKB_data = toCKB_data_tuple
+        .1
+        .as_ref()
+        .expect("outputs contain toCKB cell");
+    let amount = verify_data(input_toCKB_data, output_toCKB_data)?;
+    debug!("amount {:?}", amount);
+
+    verify_collateral(amount)
+}
 
 fn verify_data(
     input_toCKB_data: &ToCKBCellDataView,
@@ -25,13 +43,19 @@ fn verify_data(
             eth_lot_size.get_sudt_amount()
         }
     };
-    if input_toCKB_data.user_lockscript != out_toCKB_data.user_lockscript
-        || input_toCKB_data.get_raw_lot_size() != out_toCKB_data.get_raw_lot_size()
-        || input_toCKB_data.x_extra != out_toCKB_data.x_extra
-    {
+    if is_data_mutated(input_toCKB_data, out_toCKB_data) {
         return Err(Error::InvariantDataMutated);
     }
     Ok(amount)
+}
+
+fn is_data_mutated(
+    input_toCKB_data: &ToCKBCellDataView,
+    out_toCKB_data: &ToCKBCellDataView,
+) -> bool {
+    input_toCKB_data.user_lockscript != out_toCKB_data.user_lockscript
+        || input_toCKB_data.get_raw_lot_size() != out_toCKB_data.get_raw_lot_size()
+        || input_toCKB_data.x_extra != out_toCKB_data.x_extra
 }
 
 fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
@@ -56,21 +80,4 @@ fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
         return Err(Error::CollateralInvalid);
     }
     Ok(())
-}
-
-pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
-    debug!("start bonding");
-
-    let input_toCKB_data = toCKB_data_tuple
-        .0
-        .as_ref()
-        .expect("inputs contain toCKB cell");
-    let output_toCKB_data = toCKB_data_tuple
-        .1
-        .as_ref()
-        .expect("outputs contain toCKB cell");
-    let amount = verify_data(input_toCKB_data, output_toCKB_data)?;
-    debug!("amount {:?}", amount);
-
-    verify_collateral(amount)
 }

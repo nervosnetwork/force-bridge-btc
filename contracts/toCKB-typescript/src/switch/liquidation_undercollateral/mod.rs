@@ -1,6 +1,6 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::config::{CKB_UNITS, LIQUIDATION_COLLATERAL_PERCENT, XT_CELL_CAPACITY};
-use crate::utils::tools::get_price;
+use crate::utils::transaction::get_price;
 use crate::utils::types::{Error, ToCKBCellDataView};
 use ckb_std::{ckb_constants::Source, debug, high_level::load_cell_capacity};
 use core::result::Result;

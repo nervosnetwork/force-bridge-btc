@@ -1,7 +1,7 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::common::{verify_capacity_with_value, verify_since_by_value};
 use crate::utils::config::{PLEDGE, SINCE_WITHDRAW_PLEDGE};
 use crate::utils::types::Error;
+use crate::utils::verifier::{verify_capacity_with_value, verify_since_by_value};
 use core::result::Result;
 
 pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {

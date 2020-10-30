@@ -1,8 +1,8 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::common::verify_capacity;
 use crate::utils::{
-    tools::{verify_btc_faulty_witness, XChainKind},
+    transaction::XChainKind,
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView},
+    verifier::{verify_btc_faulty_witness, verify_capacity},
 };
 use ckb_std::{ckb_constants::Source, debug, high_level::load_witness_args};
 use core::result::Result;

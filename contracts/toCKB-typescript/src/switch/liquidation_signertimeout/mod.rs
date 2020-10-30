@@ -1,5 +1,5 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::common::{verify_capacity, verify_since_by_value};
+use crate::utils::verifier::{verify_capacity, verify_since_by_value};
 use crate::utils::{
     config::SINCE_SIGNER_TIMEOUT,
     types::{Error, ToCKBCellDataView},

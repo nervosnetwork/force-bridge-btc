@@ -1,7 +1,8 @@
 use crate::switch::ToCKBCellDataTuple;
+use crate::utils::verifier::verify_btc_witness;
 use crate::utils::{
     config::{PLEDGE, SIGNER_FEE_RATE, SUDT_CODE_HASH, XT_CELL_CAPACITY},
-    tools::{is_XT_typescript, verify_btc_witness, XChainKind},
+    transaction::{is_XT_typescript, XChainKind},
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView, XExtraView},
 };
 use ckb_std::{
@@ -14,6 +15,20 @@ use ckb_std::{
 };
 use core::result::Result;
 use molecule::prelude::{Entity, Reader};
+
+pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
+    debug!("start mint_xt");
+    let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
+    let output_data = toCKB_data_tuple.1.as_ref().expect("should not happen");
+    verify_capacity()?;
+    let x_extra = verify_witness(input_data)?;
+    debug!("verify witness finish");
+    verify_data(input_data, output_data, &x_extra)?;
+    debug!("verify data finish");
+    verify_xt_issue(input_data)?;
+    debug!("verify xt issue finish");
+    Ok(())
+}
 
 fn verify_data(
     input_data: &ToCKBCellDataView,
@@ -75,7 +90,6 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     debug!("lockscript hash: {:?}", hex::encode(lock_hash));
     let input_xt_num = QueryIter::new(load_cell_type, Source::Input)
         .filter(|type_opt| type_opt.is_some())
-        .map(|type_opt| type_opt.unwrap())
         .filter(|script| is_XT_typescript(script, lock_hash.as_ref()))
         .count();
     if input_xt_num != 0 {
@@ -83,7 +97,6 @@ fn verify_btc_xt_issue(data: &ToCKBCellDataView) -> Result<(), Error> {
     }
     let output_xt_num = QueryIter::new(load_cell_type, Source::Output)
         .filter(|type_opt| type_opt.is_some())
-        .map(|type_opt| type_opt.unwrap())
         .filter(|script| is_XT_typescript(script, lock_hash.as_ref()))
         .count();
     debug!("output_xt_num: {}", output_xt_num);
@@ -156,19 +169,5 @@ fn verify_capacity() -> Result<(), Error> {
     if signer_xt_cell_cap != XT_CELL_CAPACITY {
         return Err(Error::CapacityInvalid);
     }
-    Ok(())
-}
-
-pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
-    debug!("start mint_xt");
-    let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
-    let output_data = toCKB_data_tuple.1.as_ref().expect("should not happen");
-    verify_capacity()?;
-    let x_extra = verify_witness(input_data)?;
-    debug!("verify witness finish");
-    verify_data(input_data, output_data, &x_extra)?;
-    debug!("verify data finish");
-    verify_xt_issue(input_data)?;
-    debug!("verify xt issue finish");
     Ok(())
 }

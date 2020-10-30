@@ -1,10 +1,10 @@
 use crate::switch::ToCKBCellDataTuple;
 use crate::utils::{
-    tools::{verify_btc_witness, XChainKind},
+    transaction::XChainKind,
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView, XExtraView},
+    verifier::{verify_btc_witness, verify_capacity_with_value},
 };
 
-use crate::utils::common::verify_capacity_with_value;
 use ckb_std::ckb_types::prelude::*;
 use ckb_std::{
     ckb_constants::Source,
@@ -12,6 +12,20 @@ use ckb_std::{
     high_level::{load_cell_capacity, load_witness_args},
 };
 use core::result::Result;
+
+pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
+    debug!("start withdraw collateral");
+    let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
+    // verify_capacity(input_data)?;
+    let ckb_cell_cap = load_cell_capacity(0, Source::GroupInput)?;
+    verify_capacity_with_value(input_data, ckb_cell_cap)?;
+    debug!("verify capacity finish");
+    let extra = verify_witness(input_data)?;
+    debug!("verify witness finish");
+    verify_extra(input_data, &extra)?;
+    debug!("verify extra finish");
+    Ok(())
+}
 
 /// ensure transfer happen on XChain by verifying the spv proof
 fn verify_witness(data: &ToCKBCellDataView) -> Result<XExtraView, Error> {
@@ -50,19 +64,5 @@ fn verify_extra(data: &ToCKBCellDataView, x_extra: &XExtraView) -> Result<(), Er
     if &data.x_extra != x_extra {
         return Err(Error::FaultyBtcWitnessInvalid);
     }
-    Ok(())
-}
-
-pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
-    debug!("start withdraw collateral");
-    let input_data = toCKB_data_tuple.0.as_ref().expect("should not happen");
-    // verify_capacity(input_data)?;
-    let ckb_cell_cap = load_cell_capacity(0, Source::GroupInput)?;
-    verify_capacity_with_value(input_data, ckb_cell_cap)?;
-    debug!("verify capacity finish");
-    let extra = verify_witness(input_data)?;
-    debug!("verify witness finish");
-    verify_extra(input_data, &extra)?;
-    debug!("verify extra finish");
     Ok(())
 }
