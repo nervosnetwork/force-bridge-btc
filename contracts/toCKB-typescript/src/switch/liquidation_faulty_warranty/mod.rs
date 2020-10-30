@@ -47,9 +47,7 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     }
     let witness_args = witness_args.to_opt().unwrap().raw_data();
     debug!("witness_args parsed: {:?}", &witness_args);
-    if MintXTWitnessReader::verify(&witness_args, false).is_err() {
-        return Err(Error::InvalidWitness);
-    }
+    MintXTWitnessReader::verify(&witness_args, false).map_err(|_| Error::InvalidWitness)?;
     let witness = MintXTWitnessReader::new_unchecked(&witness_args);
     debug!("witness: {:?}", witness);
     let proof = witness.spv_proof().raw_data();
