@@ -1,9 +1,9 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::common::{verify_inputs, verify_since};
 use crate::utils::{
     config::{AUCTION_INIT_PERCENT, AUCTION_MAX_TIME, UDT_LEN, XT_CELL_CAPACITY},
-    tools::{get_sum_sudt_amount, is_XT_typescript},
+    transaction::{get_sum_sudt_amount, is_XT_typescript},
     types::{Error, ToCKBCellDataView},
+    verifier::{verify_auction_inputs, verify_since},
 };
 use ckb_std::high_level::load_cell_capacity;
 use ckb_std::{
@@ -26,7 +26,7 @@ pub fn verify(toCKB_data_tuple: &ToCKBCellDataTuple) -> Result<(), Error> {
     debug!("begin verify since");
     let auction_time = verify_since()?;
     debug!("begin verify input");
-    let inputs_xt_amount = verify_inputs(toCKB_lock_hash.as_ref(), lot_amount, 0)?;
+    let inputs_xt_amount = verify_auction_inputs(toCKB_lock_hash.as_ref(), lot_amount, 0)?;
     debug!("begin verify output");
     verify_outputs(
         input_data,
@@ -130,7 +130,7 @@ fn verify_outputs(
     debug!("1. check XT lock is redeemer's lock success!");
 
     // - 2. check if typescript is sudt typescript
-    let script = load_cell_type(output_index, Source::Output)?.expect("sudt typescript must exist");
+    let script = load_cell_type(output_index, Source::Output)?;
     if !is_XT_typescript(&script, toCKB_lock_hash) {
         return Err(Error::InvalidAuctionXTCell);
     }

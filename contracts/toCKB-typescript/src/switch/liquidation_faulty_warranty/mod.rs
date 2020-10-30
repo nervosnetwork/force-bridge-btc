@@ -1,8 +1,8 @@
 use crate::switch::ToCKBCellDataTuple;
-use crate::utils::common::verify_capacity;
 use crate::utils::{
-    tools::{verify_btc_faulty_witness, XChainKind},
+    transaction::XChainKind,
     types::{mint_xt_witness::MintXTWitnessReader, Error, ToCKBCellDataView},
+    verifier::{verify_btc_faulty_witness, verify_capacity},
 };
 use ckb_std::{ckb_constants::Source, debug, high_level::load_witness_args};
 use core::result::Result;
@@ -47,9 +47,7 @@ fn verify_witness(data: &ToCKBCellDataView) -> Result<(), Error> {
     }
     let witness_args = witness_args.to_opt().unwrap().raw_data();
     debug!("witness_args parsed: {:?}", &witness_args);
-    if MintXTWitnessReader::verify(&witness_args, false).is_err() {
-        return Err(Error::InvalidWitness);
-    }
+    MintXTWitnessReader::verify(&witness_args, false).map_err(|_| Error::InvalidWitness)?;
     let witness = MintXTWitnessReader::new_unchecked(&witness_args);
     debug!("witness: {:?}", witness);
     let proof = witness.spv_proof().raw_data();

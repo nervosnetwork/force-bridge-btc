@@ -94,7 +94,7 @@ fn test_wrong_trigger_refund() {
         index: 1,
     });
     case.sudt_cells.outputs[0].index = 2;
-    case.expect_return_code = -1 as i8;
+    case.expect_return_code = Error::InvalidAuctionXTCell as i8;
     case_runner::run_test(case)
 }
 
@@ -107,7 +107,7 @@ fn test_wrong_signer_refund() {
         index: 1,
     });
     case.sudt_cells.outputs[0].index = 2;
-    case.expect_return_code = -1 as i8;
+    case.expect_return_code = Error::InvalidAuctionXTCell as i8;
     case_runner::run_test(case)
 }
 
