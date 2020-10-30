@@ -69,14 +69,11 @@ fn verify_collateral(lot_amount: u128) -> Result<(), Error> {
         return Err(Error::CollateralInvalid);
     }
 
-    let diff_capacity = output_capacity - input_capacity;
-
     let price = get_price()?;
-
-    let collateral: u128 = lot_amount * (COLLATERAL_PERCENT as u128)
+    let expect_collateral: u128 = lot_amount * (COLLATERAL_PERCENT as u128)
         + (2 * XT_CELL_CAPACITY * 100 / CKB_UNITS) as u128 * price;
-    let diff: u128 = (diff_capacity * 100 / CKB_UNITS) as u128 * price;
-    if collateral != diff {
+    let actual_collateral: u128 = ((output_capacity - input_capacity) * 100 / CKB_UNITS) as u128 * price;
+    if actual_collateral != expect_collateral {
         return Err(Error::CollateralInvalid);
     }
     Ok(())
