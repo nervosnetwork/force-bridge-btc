@@ -1,9 +1,6 @@
-# toCKB
+# Force Bridge BTC
 
-![example workflow name](https://github.com/nervosnetwork/toCKB/workflows/ci/badge.svg)
+> force-bridge-btc is under active development and considered to be a work in progress.
 
-> toCKB is under active development and considered to be a work in progress.
+The BTC component of force bridge, maps BTC on [Bitcoin](https://github.com/bitcoin/bitcoin) to cBTC on [CKB](https://github.com/nervosnetwork/ckb) in a trustless way.
 
-toCKB maps assets on other blockchains to [CKB](https://github.com/nervosnetwork/ckb) in a trustless way.
-
-At this stage, we are focusing on [Bitcoin](https://github.com/bitcoin/bitcoin) and [Ethereum](https://github.com/ethereum).
